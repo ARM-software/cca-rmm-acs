@@ -1,0 +1,55 @@
+/*
+ * Copyright (c) 2023, Arm Limited or its affiliates. All rights reserved.
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
+ */
+
+/dts-v1/;
+
+/ {
+    compatible = "arm,ffa-manifest-1.0";
+
+    /* Properties */
+    description = "Base-1";
+    ffa-version = <0x00010001>; /* 31:16 - Major, 15:0 - Minor */
+    uuid = <0x1e67b5b4 0xe14f904a 0x13fb1fb8 0xcbdae1da>;
+    id = <1>;
+    auxiliary-id = <0xae>;
+    stream-endpoint-ids = <0 1 2 3>;
+    execution-ctx-count = <8>;
+    exception-level = <2>; /* S-EL1 */
+    execution-state = <0>; /* AARCH64 */
+    load-address = <0x7000000>;
+    entrypoint-offset = <0x1000>;
+    xlat-granule = <0>; /* 4KiB */
+    boot-order = <0>;
+    messaging-method = <3>; /* Direct messaging only */
+    notification-support; /* Support receipt of notifications. */
+    run-time-model = <0>; /* Run to completion */
+
+    /* Boot protocol */
+    gp-register-num = <0x0>;
+
+    device-regions {
+        compatible = "arm,ffa-manifest-device-regions";
+
+        uart2 {
+            base-address = <0x1c0b0000>;
+            pages-count = <16>;
+            attributes = <0x3>; /* read-write */
+        };
+    };
+
+    memory-regions {
+        compatible = "arm,ffa-manifest-memory-regions";
+
+        ns_memory_pool {
+            base-address = <0x00000000 0x88200000>;
+            pages-count = <1024>; /* 4MB normal memory - NS space */
+            attributes = <0x3>; /* read-write */
+        };
+
+    };
+
+};

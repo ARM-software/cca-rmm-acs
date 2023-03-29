@@ -1,0 +1,6 @@
+{
+    "acs_secure" : {
+         "image": "../../../../build/output/acs_secure.bin",
+         "pm": "acs_secure.dts"
+    }
+}
