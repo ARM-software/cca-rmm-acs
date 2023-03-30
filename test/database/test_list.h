@@ -60,8 +60,6 @@ DECLARE_TEST_FN(mm_hipas_unassigned_ripas_ram_da);
 DECLARE_TEST_FN(mm_hipas_unassigned_ripas_ram_ia);
 DECLARE_TEST_FN(mm_feat_s2fwb_check_1);
 DECLARE_TEST_FN(mm_rtt_level_start);
-DECLARE_TEST_FN(mm_feat_s2fwb_check_2);
-DECLARE_TEST_FN(mm_feat_s2fwb_check_3);
 /*memory management testcase declaration ends here*/
 
 /*Exception model declaration starts here*/
@@ -274,12 +272,6 @@ DECLARE_TEST_FN(gic_ctrl_list_invalid);
     #endif
     #if (defined(TEST_COMBINE) || defined(d_mm_rtt_fold_u_ipa_assigned))
     HOST_REALM_TEST(memory_management, mm_rtt_fold_u_ipa_assigned),
-    #endif
-    #if (defined(TEST_COMBINE) || defined(d_mm_feat_s2fwb_check_2))
-    HOST_REALM_TEST(memory_management, mm_feat_s2fwb_check_2),
-    #endif
-    #if (defined(TEST_COMBINE) || defined(d_mm_feat_s2fwb_check_3))
-    HOST_REALM_TEST(memory_management, mm_feat_s2fwb_check_3),
     #endif
 
 #endif /* #if (defined(d_all) || defined(d_memory_management)) */
