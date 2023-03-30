@@ -9,27 +9,25 @@ The reason for each failing test is listed here in this file.<br />
 
 | Test | Fail description                                                                |
 |------|---------------------------------------------------------------------------------|
-| cmd_rec_create | RMM implementation issue(GENFW-7292) |
-| cmd_rmi_version | RMM implementation issue(GENFW-7291) |
-| cmd_rsi_version | RMM implementation issue(GENFW-7291) |
+| cmd_rec_create | Reference implementation issue |
+| cmd_rmi_version | Reference implementation issue |
+| cmd_rsi_version | Reference implementation issue |
 | exception_rec_exit_wfe | Reference Platform limitation |
-| exception_non_emulatable_da | RMM implementation issue(GENFW-7272) |
-| gic_hcr_invalid | RMM implementation issue(GENFW-7279) |
+| exception_non_emulatable_da | Reference implementation issue |
+| gic_hcr_invalid | Reference implementation issue |
 | mm_gpf_exception | Reference Platform limitation |
-| mm_hipas_destroyed_ripas_ram_ia | RMM implementation issue(GENFW-7271) |
-| mm_hipas_destroyed_ripas_empty_ia | RMM implementation issue(GENFW-7271) |
-| mm_hipas_unassigned_ripas_ram_ia | RMM implementation issue(GENFW-7271) |
-| mm_rtt_fold_assigned | RMM implementation issue(GENFW-7293) |
-| mm_rtt_fold_unassigned | RMM implementation issue(GENFW-7293) |
-| mm_rtt_fold_destroyed | RMM implementation issue(GENFW-7293) |
-| mm_rtt_fold_u_ipa_assigned | RMM implementation issue(GENFW-7293) |
-| mm_feat_s2fwb_check_2 | RMM ACS infrastructure issue(GENFW-7297) |
-| mm_feat_s2fwb_check_3 | RMM ACS infrastructure issue(GENFW-7297) |
+| mm_hipas_destroyed_ripas_ram_ia | Reference implementation issue |
+| mm_hipas_destroyed_ripas_empty_ia | Reference implementation issue |
+| mm_hipas_unassigned_ripas_ram_ia | Reference implementation issue |
+| mm_rtt_fold_assigned | Reference implementation issue |
+| mm_rtt_fold_unassigned | Reference implementation issue |
+| mm_rtt_fold_destroyed | Reference implementation issue |
+| mm_rtt_fold_u_ipa_assigned | Reference implementation issue |
 
 
 ## License
 
-Arm RMM ACS is distributed under BSD-3-Clause License.
+Arm CCA RMM ACS is distributed under BSD-3-Clause License.
 
 --------------
 

@@ -72,7 +72,7 @@ git clone https://github.com/ARM-software/cca-rmm-acs.git
 To build the ACS for your target platform, perform the following steps:<br />
 
 ```
-cd rmm-acs ;
+cd cca-rmm-acs ;
 mkdir build ; cd build
 cmake ../ -G"<generator_name>" -DCROSS_COMPILE=<path-to-aarch64-gcc>/bin/aarch64-none-elf- -DTARGET=<platform_name>  -DTEST_COMBINE=ON -DSREC_CAT=<path-to-srec_cat>/bin/srec_cat
 make
@@ -92,7 +92,7 @@ make
 
 *To compile tests for tgt_tfa_fvp platform*:<br />
 ```
-cd rmm-acs ;
+cd cca-rmm-acs ;
 mkdir build ; cd build
 cmake ../ -G"Unix Makefiles" -DCROSS_COMPILE=<path-to-aarch64-gcc>/bin/aarch64-none-elf- -DTARGET=tgt_tfa_fvp -DTEST_COMBINE=ON -DSREC_CAT=<path_to_srec_cat>
 make
