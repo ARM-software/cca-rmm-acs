@@ -27,7 +27,7 @@ The Architecture Compliance Suite (ACS) contains a set of functional tests, demo
 This suite contains self-checking, and portable C and assembly based tests with directed stimulus. These tests are available as open source. The tests and the corresponding abstraction layers are available with a BSD-3-Clause License allowing for external contribution.
 This suite is not a substitute for design verification.
 
-For more information on Architecture Compliance Suite see [Validation Methodology](./docs/Arm CCA RMM Architecture Compliance Suite Validation Methodology.pdf) document.
+For more information on Architecture Compliance Suite see [Validation Methodology](<./docs/Arm CCA RMM Architecture Compliance Suite Validation Methodology.pdf>) document.
 
 ## This release
 - Release Version - 0.7
@@ -105,7 +105,7 @@ The ACS build generates the binaries as follow :<br />
 - build/output/acs_non_secure.bin
 - build/output/acs_secure.bin
 
-For information on integrating the binaries into the target platform, test suite execution flow, analysing the test results and more, see [Validation Methodology](./docs/Arm CCA RMM Architecture Compliance Suite Validation Methodology.pdf) document.
+For information on integrating the binaries into the target platform, test suite execution flow, analysing the test results and more, see [Validation Methodology](<./docs/Arm CCA RMM Architecture Compliance Suite Validation Methodology.pdf>) document.
 
 ## Security implication
 The ACS tests may run at higher privilege level. An attacker can utilize these tests to elevate privilege which can potentially reveal the platform secure attests. To prevent such security vulnerabilities into the production system, it is recommended that CCA-RMM-ACS is run on development platforms. If it is run on production system, ensure that the system is scrubbed after running the tests.
