@@ -31,7 +31,7 @@ For more information on Architecture Compliance Suite see [Validation Methodolog
 
 ## This release
 - Release Version - 0.7
-- Code Quality: Alpha2 - ACS is being developed, please use this opportunity to ameliorate.
+- Code Quality: Alpha - ACS is being developed, please use this opportunity to ameliorate.
 - The tests are written for Arm RMM Beta1 specification version.
 - For information about the test coverage scenarios that are implemented in the current release of ACS and the scenarios that are planned for the future releases, see [docs](./docs/).
 
