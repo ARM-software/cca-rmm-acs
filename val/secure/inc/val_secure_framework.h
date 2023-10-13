@@ -15,4 +15,5 @@
 
 void val_secure_main(bool primary_cpu_boot);
 uint32_t val_secure_return_to_host(void);
+uint32_t val_secure_return_to_preempted_host(void);
 #endif /* _VAL_SECURE_FRAMEWORK_H_ */

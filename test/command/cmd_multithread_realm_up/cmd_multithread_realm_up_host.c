@@ -7,24 +7,16 @@
 #include "test_database.h"
 #include "val_host_rmi.h"
 
-
 void cmd_multithread_realm_up_host(void)
 {
     val_host_realm_ts realm;
-    val_host_rmifeatureregister0_ts features_0;
     uint64_t ret;
 
     val_memset(&realm, 0, sizeof(realm));
-    val_memset(&features_0, 0, sizeof(features_0));
-    features_0.s2sz = 40;
-    val_memcpy(&realm.realm_feat_0, &features_0, sizeof(features_0));
 
-    realm.hash_algo = RMI_HASH_SHA_256;
-    realm.s2_starting_level = 0;
-    realm.num_s2_sl_rtts = 1;
-    realm.vmid = 0;
+    val_host_realm_params(&realm);
+
     realm.rec_count = 2;
-
 
     /* Populate realm with two RECs*/
     if (val_host_realm_setup(&realm, 1))

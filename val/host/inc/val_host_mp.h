@@ -11,6 +11,6 @@
 #include "val_mp_supp.h"
 #include "val_host_framework.h"
 
-uint32_t val_host_power_on_cpu(uint32_t target_cpuid);
-uint32_t val_host_power_off_cpu(void);
+uint64_t val_host_power_on_cpu(uint32_t target_cpuid);
+uint64_t val_host_power_off_cpu(void);
 #endif /* _VAL_HOST_MP_H_ */

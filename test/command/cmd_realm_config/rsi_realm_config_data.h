@@ -17,18 +17,15 @@ struct stimulus {
     uint64_t abi;
     enum test_intent label;
     uint64_t status;
-    uint64_t index;
 };
 
 static struct stimulus test_data[] = {
     {.msg = "addr_align",
     .abi = RSI_REALM_CONFIG,
     .label = ADDR_UNALIGNED,
-    .status = RMI_ERROR_INPUT,
-    .index = 0},
+    .status = RSI_ERROR_INPUT},
     {.msg = "addr_bound",
     .abi = RSI_REALM_CONFIG,
     .label = ADDR_UNPROTECTED,
-    .status = RMI_ERROR_INPUT,
-    .index = 0}
+    .status = RSI_ERROR_INPUT}
 };

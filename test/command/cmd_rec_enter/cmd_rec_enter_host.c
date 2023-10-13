@@ -33,6 +33,9 @@ static struct argument_store {
 
 static struct invalid_arguments {
     uint64_t rd_gran;
+    uint64_t rec_not_runnable;
+    uint64_t rec_owner_new;
+    uint64_t rec_owner_system_off;
 } c_args_invalid;
 
 struct arguments {
@@ -43,13 +46,10 @@ struct arguments {
 static uint64_t g_rd_new_prep_sequence(uint16_t vmid)
 {
     val_host_realm_ts realm_init;
-    val_host_rmifeatureregister0_ts features_0;
 
     val_memset(&realm_init, 0, sizeof(realm_init));
-    val_memset(&features_0, 0, sizeof(features_0));
-    features_0.s2sz = 40;
-    val_memcpy(&realm_init.realm_feat_0, &features_0, sizeof(features_0));
 
+    realm_init.s2sz = 40;
     realm_init.hash_algo = RMI_HASH_SHA_256;
     realm_init.s2_starting_level = 0;
     realm_init.num_s2_sl_rtts = 1;
@@ -96,7 +96,7 @@ static uint64_t add_rec(uint64_t entry, uint64_t flags, uint64_t mpidr, uint64_t
     if (val_host_rmi_rec_aux_count(rd, &aux_count))
         return VAL_TEST_PREP_SEQ_FAILED;
 
-    params->num_rec_aux = aux_count;
+    params->num_aux = aux_count;
 
     /* Create all aux granules */
     for (i = 0; i < aux_count; i++) {
@@ -104,11 +104,11 @@ static uint64_t add_rec(uint64_t entry, uint64_t flags, uint64_t mpidr, uint64_t
         if (aux_rec == VAL_TEST_PREP_SEQ_FAILED)
             return VAL_TEST_PREP_SEQ_FAILED;
 
-        params->rec_aux_granules[i] = aux_rec;
+        params->aux[i] = aux_rec;
     }
 
     /* Create the REC */
-    if (val_host_rmi_rec_create(rec, rd, (uint64_t)params))
+    if (val_host_rmi_rec_create(rd, rec, (uint64_t)params))
         return VAL_TEST_PREP_SEQ_FAILED;
 
     return VAL_SUCCESS;
@@ -244,7 +244,7 @@ static uint64_t g_rec_aux_prep_sequence(void)
     if (val_host_rmi_rec_aux_count(rd, &aux_count))
         return VAL_TEST_PREP_SEQ_FAILED;
 
-    params->num_rec_aux = aux_count;
+    params->num_aux = aux_count;
 
     /* Create all aux granules */
     for (i = 0; i < aux_count; i++) {
@@ -252,34 +252,27 @@ static uint64_t g_rec_aux_prep_sequence(void)
         if (aux_rec == VAL_TEST_PREP_SEQ_FAILED)
             return VAL_TEST_PREP_SEQ_FAILED;
 
-        params->rec_aux_granules[i] = aux_rec;
+        params->aux[i] = aux_rec;
     }
 
     /* Create the REC */
-    if (val_host_rmi_rec_create(rec, rd, (uint64_t)params)) {
+    if (val_host_rmi_rec_create(rd, rec, (uint64_t)params)) {
         LOG(ERROR, "\n\t REC create failed ", 0, 0);
         return VAL_TEST_PREP_SEQ_FAILED;
     }
 
-    return params->rec_aux_granules[0];
+    return params->aux[0];
 }
 
 static uint64_t g_rec_owner_state_system_off_prep_sequence(void)
 {
-    val_host_rmifeatureregister0_ts features_0;
     uint64_t ret;
 
     val_memset(&realm_test[SYSTEM_OFF_REALM], 0, sizeof(realm_test[SYSTEM_OFF_REALM]));
-    val_memset(&features_0, 0, sizeof(features_0));
-    features_0.s2sz = 40;
-    val_memcpy(&realm_test[SYSTEM_OFF_REALM].realm_feat_0, &features_0, sizeof(features_0));
 
-    realm_test[SYSTEM_OFF_REALM].hash_algo = RMI_HASH_SHA_256;
-    realm_test[SYSTEM_OFF_REALM].s2_starting_level = 0;
-    realm_test[SYSTEM_OFF_REALM].num_s2_sl_rtts = 1;
+    val_host_realm_params(&realm_test[SYSTEM_OFF_REALM]);
+
     realm_test[SYSTEM_OFF_REALM].vmid = SYSTEM_OFF_REALM;
-    realm_test[SYSTEM_OFF_REALM].rec_count = 1;
-
 
     /* Populate realm with one REC*/
     if (val_host_realm_setup(&realm_test[SYSTEM_OFF_REALM], 1))
@@ -399,6 +392,7 @@ static uint64_t intent_to_seq(struct stimulus *test_data, struct arguments *args
             args->rec = g_rec_ready_owner_state_new_prep_sequence();
             if (args->rec == VAL_TEST_PREP_SEQ_FAILED)
                 return VAL_ERROR;
+            c_args_invalid.rec_owner_new = args->rec;
             args->run_ptr = c_args.run_ptr_valid;
             break;
 
@@ -406,6 +400,7 @@ static uint64_t intent_to_seq(struct stimulus *test_data, struct arguments *args
             args->rec = g_rec_owner_state_system_off_prep_sequence();
             if (args->rec == VAL_TEST_PREP_SEQ_FAILED)
                 return VAL_ERROR;
+            c_args_invalid.rec_owner_system_off = args->rec;
             args->run_ptr = c_args.run_ptr_valid;
             break;
 
@@ -413,6 +408,7 @@ static uint64_t intent_to_seq(struct stimulus *test_data, struct arguments *args
             args->rec = g_rec_ready_not_runnable_prep_sequence();
             if (args->rec == VAL_TEST_PREP_SEQ_FAILED)
                 return VAL_ERROR;
+            c_args_invalid.rec_not_runnable = args->rec;
             args->run_ptr = c_args.run_ptr_valid;
             break;
 
@@ -423,7 +419,54 @@ static uint64_t intent_to_seq(struct stimulus *test_data, struct arguments *args
 
         case RUN_PTR_INVALID_GIV3_HCR:
             args->rec = c_args.rec_valid;
-           args->run_ptr = gicv3_invalid_prep_sequence();
+            args->run_ptr = gicv3_invalid_prep_sequence();
+            break;
+
+        case REC_UNALIGNED_INVALID_GICV3:
+            args->rec = g_unaligned_prep_sequence(c_args.rec_valid);
+            args->run_ptr = gicv3_invalid_prep_sequence();
+            break;
+
+        case REC_DEV_MEM_INVALID_GICV3:
+            args->rec = g_dev_mem_prep_sequence();
+            args->run_ptr = gicv3_invalid_prep_sequence();
+            break;
+
+        case REC_GRAN_STATE_UNDELEGATED_INVALID_GICV3:
+            args->rec = g_undelegated_prep_sequence();
+            if (args->rec == VAL_TEST_PREP_SEQ_FAILED)
+                return VAL_ERROR;
+            args->run_ptr = gicv3_invalid_prep_sequence();
+            break;
+
+        case RUN_PAS_SECURE_REC_NOT_RUNNABLE:
+            args->rec = c_args_invalid.rec_not_runnable;
+            args->run_ptr = g_secure_prep_sequence();
+            break;
+
+        case RUN_PAS_SECURE_REALM_NEW:
+            args->rec = c_args_invalid.rec_owner_new;
+            args->run_ptr = g_secure_prep_sequence();
+            break;
+
+        case RUN_PAS_SECURE_REALM_SYSTEM_OFF:
+            args->rec = c_args_invalid.rec_owner_system_off;
+            args->run_ptr = g_secure_prep_sequence();
+            break;
+
+        case RUN_DEV_MEM_REC_NOT_RUNNABLE:
+            args->rec = c_args_invalid.rec_not_runnable;
+            args->run_ptr = g_dev_mem_prep_sequence();
+            break;
+
+        case RUN_DEV_MEM_REALM_NEW:
+            args->rec = c_args_invalid.rec_owner_new;
+            args->run_ptr = g_dev_mem_prep_sequence();
+            break;
+
+        case RUN_DEV_MEM_REALM_SYSTEM_OFF:
+            args->rec = c_args_invalid.rec_owner_system_off;
+            args->run_ptr = g_dev_mem_prep_sequence();
             break;
 
         default:
@@ -443,7 +486,7 @@ void cmd_rec_enter_host(void)
 
     if (valid_input_args_prep_sequence() == VAL_TEST_PREP_SEQ_FAILED) {
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(1)));
-        goto fail;
+        goto exit;
     }
 
     /* Iterate over the input */
@@ -455,7 +498,7 @@ void cmd_rec_enter_host(void)
 
         if (intent_to_seq(&test_data[i], &args)) {
             val_set_status(RESULT_FAIL(VAL_ERROR_POINT(2)));
-            goto fail;
+            goto exit;
         }
 
         ret = val_host_rmi_rec_enter(args.rec, args.run_ptr);
@@ -464,13 +507,12 @@ void cmd_rec_enter_host(void)
             LOG(ERROR, "\tTest Failure!\n\tThe ABI call returned: %x\n\tExpected: %x\n",
                 ret, PACK_CODE(test_data[i].status, test_data[i].index));
             val_set_status(RESULT_FAIL(VAL_ERROR_POINT(5)));
-            goto fail;
+            goto exit;
         }
     }
 
     val_set_status(RESULT_PASS(VAL_SUCCESS));
-    return;
 
-fail:
+exit:
     return;
 }

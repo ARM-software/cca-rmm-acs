@@ -11,7 +11,6 @@
 #include "val.h"
 #include "val_framework.h"
 #include "val_mmu.h"
-#include "val_realm_memory.h"
 #include "val_psci.h"
 #include "val_mp_supp.h"
 

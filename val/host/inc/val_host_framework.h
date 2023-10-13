@@ -11,7 +11,6 @@
 #include "val.h"
 #include "val_framework.h"
 #include "val_mmu.h"
-#include "val_host_memory.h"
 #include "val_host_alloc.h"
 #include "val_host_mp.h"
 

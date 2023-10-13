@@ -23,30 +23,36 @@
  *  ------------------------------------
  * |  HIPAS = UNASSIGNED, RIPAS = RAM   |
  *  ------------------------------------
- * |   HIPAS = ASSIGNED, RIPAS = RAM    |
+ * |    HIPAS = ASSIGNED, RIPAS = RAM   |
  *  ------------------------------------
  * |         HIPAS = DESTROYED          |
  *  ------------------------------------
  * |  HIPAS = UNASSIGNED, RIPAS = EMPTY |
  *  ------------------------------------
- * ipa: 0x4000
+ * |  HIPAS = UNASSIGNED, RIPAS = EMPTY |
+ *  ------------------------------------
+ * |    HIPAS = ASSIGNED, RIPAS = RAM   |
+ *  ------------------------------------
+ * |    HIPAS = ASSIGNED, RIPAS = RAM   |
+ *  ------------------------------------
+ * ipa: 0x7000
  *
  *                  (...)
  *
  *
  * ipa: 0x1XXX000 (1st unprotected L3 Entry)
  *  ------------------------------------
- * |         HIPAS = VALID_NS           |
+ * |         HIPAS = ASSIGNED_NS        |
  *  ------------------------------------
- * |        HIPAS = UNASSIGNED          |
+ * |        HIPAS = UNASSIGNED_NS       |
  *  ------------------------------------
  * ipa: 0x1XX2000
  *
  */
 
-#define IPA_ADDR_UNASSIGNED 0x0
-#define IPA_ADDR_DATA1  (4 * PAGE_SIZE)
-#define IPA_ADDR_DATA2  (5 * PAGE_SIZE)
+#define IPA_ADDR_UNASSIGNED_RAM 0x0
+#define IPA_ADDR_DATA1  (5 * PAGE_SIZE)
+#define IPA_ADDR_DATA2  (6 * PAGE_SIZE)
 
 #define MAP_LEVEL 3
 
@@ -59,8 +65,8 @@
 static val_host_realm_ts realm_test[NUM_REALMS];
 
 static struct argument_store {
-    uint64_t data_valid;
     uint64_t rd_valid;
+    uint64_t data_valid;
     uint64_t ipa_valid;
     uint64_t src_valid;
     uint64_t flags_valid;
@@ -71,8 +77,8 @@ static struct invalid_argument_store {
 } c_args_invalid;
 
 struct arguments {
-    uint64_t data;
     uint64_t rd;
+    uint64_t data;
     uint64_t ipa;
     uint64_t src;
     uint64_t flags;
@@ -86,12 +92,10 @@ static uint64_t data_valid_prep_sequence(void)
 static uint64_t g_rd_new_prep_sequence(uint16_t vmid)
 {
     val_host_realm_ts realm_init;
-    val_host_rmifeatureregister0_ts features_0;
 
     val_memset(&realm_init, 0, sizeof(realm_init));
-    features_0.s2sz = 40;
-    val_memcpy(&realm_init.realm_feat_0, &features_0, sizeof(features_0));
 
+    realm_init.s2sz = 40;
     realm_init.hash_algo = RMI_HASH_SHA_256;
     realm_init.s2_starting_level = 0;
     realm_init.num_s2_sl_rtts = 1;
@@ -100,7 +104,6 @@ static uint64_t g_rd_new_prep_sequence(uint16_t vmid)
     if (val_host_realm_create_common(&realm_init))
     {
         LOG(ERROR, "\tRealm create failed\n", 0, 0);
-        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(1)));
         return VAL_TEST_PREP_SEQ_FAILED;
     }
     realm_test[vmid].rd = realm_init.rd;
@@ -115,15 +118,12 @@ static uint64_t rd_valid_prep_sequence(void)
 
 static uint64_t ipa_valid_prep_sequence(void)
 {
-    // RTTE[ipa].state = UNASSIGNED
-    // RTTE[ipa].ripas = RAM
-    if (create_mapping(IPA_ADDR_UNASSIGNED, true, c_args.rd_valid))
+    if (create_mapping(IPA_ADDR_UNASSIGNED_RAM, true, c_args.rd_valid))
     {
         LOG(ERROR, "\tCouldn't create the protected mapping\n", 0, 0);
-        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(2)));
         return VAL_TEST_PREP_SEQ_FAILED;
     }
-    return IPA_ADDR_UNASSIGNED;
+    return IPA_ADDR_UNASSIGNED_RAM;
 }
 
 static uint64_t src_valid_prep_sequence(void)
@@ -141,7 +141,6 @@ static uint64_t g_rd_active_prep_sequence(void)
     if (val_host_rmi_realm_activate(rd))
     {
         LOG(ERROR, "\tCouldn't activate the Realm\n", 0, 0);
-        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(3)));
         return VAL_TEST_PREP_SEQ_FAILED;
     }
     return rd;
@@ -160,7 +159,6 @@ static uint64_t g_rec_ready_prep_sequence(uint64_t rd)
     if (val_host_rec_create_common(&realm, &rec_params))
     {
         LOG(ERROR, "\tCouldn't destroy the Realm\n", 0, 0);
-        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(4)));
         return VAL_TEST_PREP_SEQ_FAILED;
     }
 
@@ -169,17 +167,13 @@ static uint64_t g_rec_ready_prep_sequence(uint64_t rd)
 
 static uint64_t g_rd_system_off_prep_sequence(void)
 {
-    val_host_rmifeatureregister0_ts features_0;
     uint64_t ret;
     val_memset(&realm_test[SYSTEM_OFF_REALM], 0, sizeof(realm_test[SYSTEM_OFF_REALM]));
-    val_memset(&features_0, 0, sizeof(features_0));
-    features_0.s2sz = 40;
-    val_memcpy(&realm_test[SYSTEM_OFF_REALM].realm_feat_0, &features_0, sizeof(features_0));
-    realm_test[SYSTEM_OFF_REALM].hash_algo = RMI_HASH_SHA_256;
-    realm_test[SYSTEM_OFF_REALM].s2_starting_level = 0;
-    realm_test[SYSTEM_OFF_REALM].num_s2_sl_rtts = 1;
+
+    val_host_realm_params(&realm_test[SYSTEM_OFF_REALM]);
+
     realm_test[SYSTEM_OFF_REALM].vmid = SYSTEM_OFF_REALM;
-    realm_test[SYSTEM_OFF_REALM].rec_count = 1;
+
     /* Populate realm with one REC*/
     if (val_host_realm_setup(&realm_test[SYSTEM_OFF_REALM], 1))
         LOG(ERROR, "\tRealm setup failed\n", 0, 0);
@@ -201,7 +195,6 @@ static uint64_t g_rd_null_prep_sequence(void)
     if (val_host_rmi_realm_destroy(rd))
     {
         LOG(ERROR, "\tCouldn't destroy the Realm\n", 0, 0);
-        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(5)));
         return VAL_TEST_PREP_SEQ_FAILED;
     }
     return rd;
@@ -210,12 +203,13 @@ static uint64_t g_rd_null_prep_sequence(void)
 
 static uint64_t valid_input_args_prep_sequence(void)
 {
-    c_args.data_valid = data_valid_prep_sequence();
-    if (c_args.data_valid == VAL_TEST_PREP_SEQ_FAILED)
-        return VAL_TEST_PREP_SEQ_FAILED;
-
     c_args.rd_valid = rd_valid_prep_sequence();
     if (c_args.rd_valid == VAL_TEST_PREP_SEQ_FAILED)
+        return VAL_TEST_PREP_SEQ_FAILED;
+
+
+    c_args.data_valid = data_valid_prep_sequence();
+    if (c_args.data_valid == VAL_TEST_PREP_SEQ_FAILED)
         return VAL_TEST_PREP_SEQ_FAILED;
 
     c_args.ipa_valid = ipa_valid_prep_sequence();
@@ -238,306 +232,316 @@ static uint64_t intent_to_seq(struct stimulus *test_data, struct arguments *args
     switch (label)
     {
         case SRC_UNALIGNED:
+            args->rd = c_args.rd_valid;
+            args->data = c_args.data_valid;
+            args->ipa = c_args.ipa_valid;
             args->src = g_unaligned_prep_sequence(c_args.src_valid);
             args->rd = c_args.rd_valid;
-            args->ipa = c_args.ipa_valid;
-            args->data = c_args.data_valid;
             args->flags = c_args.flags_valid;
             break;
 
         case SRC_DEV_MEM_MMIO:
-            args->src = g_dev_mem_prep_sequence();
             args->rd = c_args.rd_valid;
-            args->ipa = c_args.ipa_valid;
             args->data = c_args.data_valid;
+            args->ipa = c_args.ipa_valid;
+            args->src = g_dev_mem_prep_sequence();
             args->flags = c_args.flags_valid;
             break;
 
         case SRC_OUTSIDE_OF_PERMITTED_PA:
-            args->src = g_outside_of_permitted_pa_prep_sequence();
             args->rd = c_args.rd_valid;
-            args->ipa = c_args.ipa_valid;
             args->data = c_args.data_valid;
+            args->ipa = c_args.ipa_valid;
+            args->src = g_outside_of_permitted_pa_prep_sequence();
             args->flags = c_args.flags_valid;
             break;
 
         case SRC_PAS_REALM:
+            args->rd = c_args.rd_valid;
+            args->data = c_args.data_valid;
+            args->ipa = c_args.ipa_valid;
             args->src = g_delegated_prep_sequence();
             if (args->src == VAL_TEST_PREP_SEQ_FAILED)
                 return VAL_ERROR;
-            args->rd = c_args.rd_valid;
-            args->ipa = c_args.ipa_valid;
-            args->data = c_args.data_valid;
             args->flags = c_args.flags_valid;
             break;
 
         case SRC_PAS_SECURE:
-            args->src = g_secure_prep_sequence();
             args->rd = c_args.rd_valid;
-            args->ipa = c_args.ipa_valid;
             args->data = c_args.data_valid;
+            args->ipa = c_args.ipa_valid;
+            args->src = g_secure_prep_sequence();
             args->flags = c_args.flags_valid;
             break;
 
         case DATA_UNALIGNED:
-            args->src = c_args.src_valid;
             args->rd = c_args.rd_valid;
-            args->ipa = c_args.ipa_valid;
             args->data = g_unaligned_prep_sequence(c_args.data_valid);
+            args->ipa = c_args.ipa_valid;
+            args->src = c_args.src_valid;
             args->flags = c_args.flags_valid;
             break;
 
         case DATA_DEV_MEM_MMIO:
-            args->src = c_args.src_valid;
             args->rd = c_args.rd_valid;
-            args->ipa = c_args.ipa_valid;
             args->data = g_dev_mem_prep_sequence();
+            args->ipa = c_args.ipa_valid;
+            args->src = c_args.src_valid;
             args->flags = c_args.flags_valid;
             break;
 
         case DATA_OUTSIDE_OF_PERMITTED_PA:
-            args->src = c_args.src_valid;
             args->rd = c_args.rd_valid;
-            args->ipa = c_args.ipa_valid;
             args->data = g_outside_of_permitted_pa_prep_sequence();
+            args->ipa = c_args.ipa_valid;
+            args->src = c_args.src_valid;
             args->flags = c_args.flags_valid;
             break;
 
         case DATA_STATE_UNDELEGATED:
-            args->src = c_args.src_valid;
             args->rd = c_args.rd_valid;
-            args->ipa = c_args.ipa_valid;
             args->data = g_undelegated_prep_sequence();
             if (args->data == VAL_TEST_PREP_SEQ_FAILED)
                 return VAL_ERROR;
+            args->ipa = c_args.ipa_valid;
+            args->src = c_args.src_valid;
             args->flags = c_args.flags_valid;
             break;
 
         case DATA_STATE_REC:
-            args->src = c_args.src_valid;
             args->rd = c_args.rd_valid;
-            args->ipa = c_args.ipa_valid;
             args->data = g_rec_ready_prep_sequence(c_args.rd_valid);
             if (args->data == VAL_TEST_PREP_SEQ_FAILED)
                 return VAL_ERROR;
             c_args_invalid.rec_gran = args->data;
+            args->ipa = c_args.ipa_valid;
+            args->src = c_args.src_valid;
             args->flags = c_args.flags_valid;
             break;
 
         case DATA_STATE_RD:
-            args->src = c_args.src_valid;
             args->rd = c_args.rd_valid;
-            args->ipa = c_args.ipa_valid;
             args->data = c_args.rd_valid;
+            args->ipa = c_args.ipa_valid;
+            args->src = c_args.src_valid;
             args->flags = c_args.flags_valid;
             break;
 
         case DATA_STATE_RTT:
-            args->src = c_args.src_valid;
             args->rd = c_args.rd_valid;
-            args->ipa = c_args.ipa_valid;
             args->data = realm_test[VALID_REALM].rtt_l0_addr;
+            args->ipa = c_args.ipa_valid;
+            args->src = c_args.src_valid;
             args->flags = c_args.flags_valid;
             break;
 
         case DATA_STATE_DATA:
-            args->src = c_args.src_valid;
             args->rd = c_args.rd_valid;
-            args->ipa = c_args.ipa_valid;
             args->data = g_data_prep_sequence(c_args.rd_valid, IPA_ADDR_DATA1);
             if (args->data == VAL_TEST_PREP_SEQ_FAILED)
                 return VAL_ERROR;
+            args->ipa = c_args.ipa_valid;
+            args->src = c_args.src_valid;
             args->flags = c_args.flags_valid;
             break;
 
         case DATA_PAS_SECURE:
-            args->src = c_args.src_valid;
             args->rd = c_args.rd_valid;
-            args->ipa = c_args.ipa_valid;
             args->data = g_secure_prep_sequence();
+            args->ipa = c_args.ipa_valid;
+            args->src = c_args.src_valid;
             args->flags = c_args.flags_valid;
             break;
 
         case RD_UNALIGNED:
-            args->src = c_args.src_valid;
             args->rd = g_unaligned_prep_sequence(c_args.rd_valid);
-            args->ipa = c_args.ipa_valid;
             args->data = c_args.data_valid;
+            args->ipa = c_args.ipa_valid;
+            args->src = c_args.src_valid;
             args->flags = c_args.flags_valid;
             break;
 
         case RD_DEV_MEM_MMIO:
-            args->src = c_args.src_valid;
             args->rd = g_dev_mem_prep_sequence();
-            args->ipa = c_args.ipa_valid;
             args->data = c_args.data_valid;
+            args->ipa = c_args.ipa_valid;
+            args->src = c_args.src_valid;
             args->flags = c_args.flags_valid;
             break;
 
         case RD_OUTSIDE_OF_PERMITTED_PA:
-            args->src = c_args.src_valid;
             args->rd = g_outside_of_permitted_pa_prep_sequence();
-            args->ipa = c_args.ipa_valid;
             args->data = c_args.data_valid;
+            args->ipa = c_args.ipa_valid;
+            args->src = c_args.src_valid;
             args->flags = c_args.flags_valid;
             break;
 
         case RD_STATE_UNDELEGATED:
-            args->src = c_args.src_valid;
             args->rd = g_undelegated_prep_sequence();
             if (args->rd == VAL_TEST_PREP_SEQ_FAILED)
                 return VAL_ERROR;
-            args->ipa = c_args.ipa_valid;
             args->data = c_args.data_valid;
+            args->ipa = c_args.ipa_valid;
+            args->src = c_args.src_valid;
             args->flags = c_args.flags_valid;
             break;
 
         case RD_STATE_DELEGATED:
-            args->src = c_args.src_valid;
             args->rd = g_delegated_prep_sequence();
             if (args->rd == VAL_TEST_PREP_SEQ_FAILED)
                 return VAL_ERROR;
-            args->ipa = c_args.ipa_valid;
             args->data = c_args.data_valid;
+            args->ipa = c_args.ipa_valid;
+            args->src = c_args.src_valid;
             args->flags = c_args.flags_valid;
             break;
 
         case RD_STATE_REC:
-            args->src = c_args.src_valid;
             args->rd = c_args_invalid.rec_gran;
-            args->ipa = c_args.ipa_valid;
             args->data = c_args.data_valid;
+            args->ipa = c_args.ipa_valid;
+            args->src = c_args.src_valid;
             args->flags = c_args.flags_valid;
             break;
 
         case RD_STATE_RTT:
-            args->src = c_args.src_valid;
             args->rd = realm_test[VALID_REALM].rtt_l0_addr;
-            args->ipa = c_args.ipa_valid;
             args->data = c_args.data_valid;
+            args->ipa = c_args.ipa_valid;
+            args->src = c_args.src_valid;
             args->flags = c_args.flags_valid;
             break;
 
         case RD_STATE_DATA:
-            args->src = c_args.src_valid;
             args->rd = g_data_prep_sequence(c_args.rd_valid, IPA_ADDR_DATA2);
             if (args->rd == VAL_TEST_PREP_SEQ_FAILED)
                 return VAL_ERROR;
-            args->ipa = c_args.ipa_valid;
             args->data = c_args.data_valid;
+            args->ipa = c_args.ipa_valid;
+            args->src = c_args.src_valid;
             args->flags = c_args.flags_valid;
             break;
 
         case IPA_UNALIGNED:
-            args->src = c_args.src_valid;
             args->rd = c_args.rd_valid;
-            args->ipa = g_unaligned_prep_sequence(c_args.ipa_valid);
             args->data = c_args.data_valid;
+            args->ipa = g_unaligned_prep_sequence(c_args.ipa_valid);
+            args->src = c_args.src_valid;
             args->flags = c_args.flags_valid;
             break;
 
         case IPA_UNPROTECTED:
-            args->src = c_args.src_valid;
             args->rd = c_args.rd_valid;
+            args->data = c_args.data_valid;
             args->ipa = ipa_unprotected_unassigned_prep_sequence(c_args.rd_valid);
             if (args->ipa == VAL_TEST_PREP_SEQ_FAILED)
                 return VAL_ERROR;
-            args->data = c_args.data_valid;
+            args->src = c_args.src_valid;
             args->flags = c_args.flags_valid;
             break;
 
         case IPA_OUTSIDE_OF_PERMITTED_IPA:
-            args->src = c_args.src_valid;
             args->rd = c_args.rd_valid;
+            args->data = c_args.data_valid;
             args->ipa = ipa_outside_of_permitted_ipa_prep_sequence();
             if (args->ipa == VAL_TEST_PREP_SEQ_FAILED)
                 return VAL_ERROR;
-            args->data = c_args.data_valid;
+            args->src = c_args.src_valid;
             args->flags = c_args.flags_valid;
             break;
 
         case REALM_ACTIVE:
-            args->src = c_args.src_valid;
             args->rd = g_rd_active_prep_sequence();
             if (args->rd == VAL_TEST_PREP_SEQ_FAILED)
                 return VAL_ERROR;
-            args->ipa = c_args.ipa_valid;
             args->data = c_args.data_valid;
+            args->ipa = c_args.ipa_valid;
+            args->src = c_args.src_valid;
             args->flags = c_args.flags_valid;
             break;
 
         case REALM_SYSTEM_OFF:
-            args->src = c_args.src_valid;
             args->rd = g_rd_system_off_prep_sequence();
             if (args->rd == VAL_TEST_PREP_SEQ_FAILED)
                 return VAL_ERROR;
-            args->ipa = c_args.ipa_valid;
             args->data = c_args.data_valid;
+            args->ipa = c_args.ipa_valid;
+            args->src = c_args.src_valid;
             args->flags = c_args.flags_valid;
             break;
 
         case REALM_NULL:
-            args->src = c_args.src_valid;
             args->rd = g_rd_null_prep_sequence();
             if (args->rd == VAL_TEST_PREP_SEQ_FAILED)
                 return VAL_ERROR;
-            args->ipa = c_args.ipa_valid;
             args->data = c_args.data_valid;
+            args->ipa = c_args.ipa_valid;
+            args->src = c_args.src_valid;
             args->flags = c_args.flags_valid;
             break;
 
         case IPA_NOT_MAPPED:
-            args->src = c_args.src_valid;
             args->rd = c_args.rd_valid;
+            args->data = c_args.data_valid;
             args->ipa = ipa_protected_unmapped_prep_sequence();
             if (args->ipa == VAL_TEST_PREP_SEQ_FAILED)
                 return VAL_ERROR;
-            args->data = c_args.data_valid;
+            args->src = c_args.src_valid;
             args->flags = c_args.flags_valid;
             break;
 
         case RTTE_STATE_ASSIGNED:
-            args->src = c_args.src_valid;
             args->rd = c_args.rd_valid;
+            args->data = c_args.data_valid;
             args->ipa = ipa_protected_assigned_ram_prep_sequence(c_args.rd_valid);
             if (args->ipa == VAL_TEST_PREP_SEQ_FAILED)
                 return VAL_ERROR;
-            args->data = c_args.data_valid;
+            args->src = c_args.src_valid;
             args->flags = c_args.flags_valid;
             break;
 
-        case RTTE_STATE_DESTROYED:
-            args->src = c_args.src_valid;
+        case RIPAS_DESTROYED:
             args->rd = c_args.rd_valid;
-            args->ipa = ipa_protected_destroyed_empty_prep_sequence(c_args.rd_valid);
+            args->data = c_args.data_valid;
+            args->ipa = ipa_protected_destroyed_prep_sequence(c_args.rd_valid);
             if (args->ipa == VAL_TEST_PREP_SEQ_FAILED)
                 return VAL_ERROR;
+            args->src = c_args.src_valid;
+            args->flags = c_args.flags_valid;
+            break;
+
+        case RIPAS_EMPTY:
+            args->rd = c_args.rd_valid;
             args->data = c_args.data_valid;
+            args->ipa = ipa_protected_unassigned_empty_prep_sequence(c_args.rd_valid);
+            if (args->ipa == VAL_TEST_PREP_SEQ_FAILED)
+                return VAL_ERROR;
+            args->src = c_args.src_valid;
             args->flags = c_args.flags_valid;
             break;
 
         case IPA_UNPROTECTED_NOT_MAPPED:
-            args->src = c_args.src_valid;
             args->rd = c_args.rd_valid;
+            args->data = c_args.data_valid;
             args->ipa = ipa_unprotected_unmapped_prep_sequence();
             if (args->ipa == VAL_TEST_PREP_SEQ_FAILED)
                 return VAL_ERROR;
-            args->data = c_args.data_valid;
+            args->src = c_args.src_valid;
             args->flags = c_args.flags_valid;
             break;
 
         case IPA_UNPROTECTED_RTTE_ASSIGNED:
-            args->src = c_args.src_valid;
             args->rd = c_args.rd_valid;
+            args->data = c_args.data_valid;
             args->ipa = ipa_unprotected_assinged_prep_sequence(c_args.rd_valid);
             if (args->ipa == VAL_TEST_PREP_SEQ_FAILED)
                 return VAL_ERROR;
-            args->data = c_args.data_valid;
+            args->src = c_args.src_valid;
             args->flags = c_args.flags_valid;
             break;
 
         default:
-            val_set_status(RESULT_FAIL(VAL_ERROR_POINT(6)));
             LOG(ERROR, "\n\tUnknown intent label encountered\n", 0, 0);
             return VAL_ERROR;
     }
@@ -546,13 +550,13 @@ static uint64_t intent_to_seq(struct stimulus *test_data, struct arguments *args
 
 void cmd_data_create_host(void)
 {
-    uint64_t ret, i;
+    uint64_t ret = 0, i;
     struct arguments args;
     val_host_rtt_entry_ts rtte;
 
     if (valid_input_args_prep_sequence() == VAL_TEST_PREP_SEQ_FAILED) {
-        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(7)));
-        goto fail;
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(1)));
+        goto exit;
     }
 
     for (i = 0; i < (sizeof(test_data) / sizeof(struct stimulus)); i++)
@@ -562,48 +566,50 @@ void cmd_data_create_host(void)
         LOG(TEST, "; intent id : 0x%x \n", test_data[i].label, 0);
 
         if (intent_to_seq(&test_data[i], &args)) {
-            val_set_status(RESULT_FAIL(VAL_ERROR_POINT(8)));
-            goto fail;
+            val_set_status(RESULT_FAIL(VAL_ERROR_POINT(2)));
+            goto exit;
         }
 
-        ret = val_host_rmi_data_create(args.data, args.rd, args.ipa, args.src, args.flags);
-        if (ret != PACK_CODE(test_data[i].status, test_data[i].index))
-        {
-            LOG(ERROR, "\tERROR status code : %d index %d\n", test_data[i].status,
-                                                              test_data[i].index);
-            val_set_status(RESULT_FAIL(VAL_ERROR_POINT(9)));
-            goto fail;
+        ret = val_host_rmi_data_create(args.rd, args.data, args.ipa, args.src, args.flags);
+
+        if (ret != PACK_CODE(test_data[i].status, test_data[i].index)) {
+            LOG(ERROR, "\tTest Failure!\n\tThe ABI call returned: %x\n\tExpected: %x\n",
+                ret, PACK_CODE(test_data[i].status, test_data[i].index));
+            val_set_status(RESULT_FAIL(VAL_ERROR_POINT(3)));
+            goto exit;
         }
     }
 
     LOG(TEST, "\n\tPositive Observability Check\n", 0, 0);
-    ret = val_host_rmi_data_create(c_args.data_valid, c_args.rd_valid,
+
+    ret = val_host_rmi_data_create(c_args.rd_valid, c_args.data_valid,
                               c_args.ipa_valid, c_args.src_valid, c_args.flags_valid);
+
     if (ret != 0)
     {
         LOG(ERROR, "\n\tData Create command failed. %x\n", ret, 0);
-        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(10)));
-        goto fail;
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(4)));
+        goto exit;
     }
 
-    // Check that rtte.addr and rtte.state have changed
+    /* Check that rtte.addr and rtte.state have changed */
     ret = val_host_rmi_rtt_read_entry(c_args.rd_valid, c_args.ipa_valid,
-                                      3, &rtte);
+                                      MAP_LEVEL, &rtte);
     if (ret) {
         LOG(ERROR, "\tREAD_ENTRY failed!\n", 0, 0);
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(5)));
+        goto exit;
     } else {
         if (rtte.state != RMI_ASSIGNED || OA(rtte.desc) != c_args.data_valid
                                                    || rtte.ripas != RMI_RAM)
         {
             LOG(ERROR, "\tState was: %d & OA was: %x\n", rtte.state, OA(rtte.desc));
-            val_set_status(RESULT_FAIL(VAL_ERROR_POINT(11)));
-            goto fail;
+            val_set_status(RESULT_FAIL(VAL_ERROR_POINT(6)));
+            goto exit;
         }
     }
     val_set_status(RESULT_PASS(VAL_SUCCESS));
-    return;
 
-fail:
-    val_set_status(RESULT_FAIL(VAL_ERROR_POINT(12)));
+exit:
     return;
 }

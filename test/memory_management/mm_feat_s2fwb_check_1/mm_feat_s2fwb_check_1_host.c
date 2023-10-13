@@ -13,22 +13,14 @@
 void mm_feat_s2fwb_check_1_host(void)
 {
     val_host_realm_ts realm;
-    val_host_rmifeatureregister0_ts features_0;
     val_host_rec_entry_ts *rec_entry = NULL;
     uint32_t index;
     uint64_t ret, mem_attr;
     uint64_t *addr = NULL;
 
     val_memset(&realm, 0, sizeof(realm));
-    val_memset(&features_0, 0, sizeof(features_0));
-    features_0.s2sz = 40;
-    val_memcpy(&realm.realm_feat_0, &features_0, sizeof(features_0));
 
-    realm.hash_algo = RMI_HASH_SHA_256;
-    realm.s2_starting_level = 0;
-    realm.num_s2_sl_rtts = 1;
-    realm.vmid = 0;
-    realm.rec_count = 1;
+    val_host_realm_params(&realm);
 
     /* Populate realm with one REC*/
     if (val_host_realm_setup(&realm, 1))
@@ -62,7 +54,9 @@ void mm_feat_s2fwb_check_1_host(void)
     }
 
     addr = (uint64_t *)realm.granules[index].pa;
-    *addr = NS_HOST_DATA;
+    addr[0] = NS_HOST_DATA;
+    addr[1] = NS_HOST_DATA;
+    addr[2] = NS_HOST_DATA;
 
     rec_entry = &(((val_host_rec_run_ts *)realm.run[0])->entry);
     rec_entry->gprs[1] = realm.granules[index].ipa;
@@ -85,7 +79,7 @@ void mm_feat_s2fwb_check_1_host(void)
     }
 
     /* Compare the REALM data */
-    if (*addr != REALM_DATA)
+    if (addr[0] != REALM_DATA || addr[1] != REALM_DATA || addr[2] != REALM_DATA)
     {
         LOG(ERROR, "\tREALM data mismatch\n", 0, 0);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(7)));

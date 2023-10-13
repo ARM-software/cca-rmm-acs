@@ -86,14 +86,24 @@ void cmd_realm_config_realm(void)
 
         ret = val_realm_rsi_realm_config(args.addr);
 
-        if (ret != PACK_CODE(test_data[i].status, test_data[i].index))
+        if (ret != test_data[i].status)
         {
-            LOG(ERROR, "\n\tUnexpected Command Return Status\n ret status : 0x%x index : 0x%x \n",
-                          RMI_STATUS(ret), RMI_INDEX(ret));
+            LOG(ERROR, "\n\tUnexpected Command Return Status\n ret status : 0x%x \n", ret, 0);
             val_set_status(RESULT_FAIL(VAL_ERROR_POINT(2)));
             goto exit;
         }
     }
+
+    LOG(TEST, "\n\tPositive Observability Check\n", 0, 0);
+
+    ret = val_realm_rsi_realm_config(c_args.addr_valid);
+    if (ret)
+    {
+        LOG(ERROR, "\n\tPositive Observability failed. Ret = 0x%x\n", ret, 0);
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(3)));
+        goto exit;
+    }
+
 
 exit:
     val_realm_return_to_host();

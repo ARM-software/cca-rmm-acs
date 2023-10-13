@@ -17,6 +17,7 @@ const test_db_t test_list[] = {
     {"", "", NULL, NULL, NULL},
 
 #include "test_list.h"
+    {"", "", NULL, NULL, NULL},
 
 };
 

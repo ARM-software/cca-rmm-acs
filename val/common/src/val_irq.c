@@ -70,3 +70,13 @@ int val_irq_unregister_handler(uint32_t irq_num)
 {
     return pal_irq_unregister_handler(irq_num);
 }
+
+/**
+ *   @brief    End of IRQ interrupt
+ *   @param    irq_num        - IRQ number
+ *   @return   void
+ **/
+void val_gic_end_of_intr(unsigned int irq_num)
+{
+    pal_gic_end_of_intr(irq_num);
+}

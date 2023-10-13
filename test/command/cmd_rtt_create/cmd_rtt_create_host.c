@@ -35,7 +35,6 @@
  */
 
 #define IPA_ADDR_PROTECTED_UNMAPPED L1_SIZE
-//#define IPA_ADDR_TABLE L0_SIZE
 #define IPA_ADDR_DATA  4 * PAGE_SIZE
 #define IPA_ADDR_DATA_1  (IPA_ADDR_DATA + PAGE_SIZE)
 
@@ -45,8 +44,8 @@
 static val_host_realm_ts realm_test[NUM_REALMS];
 
 static struct argument_store {
-    uint64_t rtt_valid;
     uint64_t rd_valid;
+    uint64_t rtt_valid;
     uint64_t ipa_valid;
     uint64_t level_valid;
 } c_args;
@@ -56,8 +55,8 @@ static struct invalid_arguments {
 } c_args_invalid;
 
 struct arguments {
-    uint64_t rtt;
     uint64_t rd;
+    uint64_t rtt;
     uint64_t ipa;
     uint64_t level;
 };
@@ -70,13 +69,10 @@ static uint64_t rtt_valid_prep_sequence(void)
 static uint64_t g_rd_new_prep_sequence(uint16_t vmid)
 {
     val_host_realm_ts realm_init;
-    val_host_rmifeatureregister0_ts features_0;
 
     val_memset(&realm_init, 0, sizeof(realm_init));
-    val_memset(&features_0, 0, sizeof(features_0));
-    features_0.s2sz = 40;
-    val_memcpy(&realm_init.realm_feat_0, &features_0, sizeof(features_0));
 
+    realm_init.s2sz = 40;
     realm_init.hash_algo = RMI_HASH_SHA_256;
     realm_init.s2_starting_level = 0;
     realm_init.num_s2_sl_rtts = 1;
@@ -92,7 +88,10 @@ static uint64_t g_rd_new_prep_sequence(uint16_t vmid)
     return realm_init.rd;
 }
 
-
+static uint64_t ipa_level_1_unaligned_prep_sequence(void)
+{
+    return 2 * L2_SIZE;
+}
 static uint64_t rd_valid_prep_sequence(void)
 {
     return g_rd_new_prep_sequence(VALID_REALM);
@@ -108,13 +107,11 @@ static uint64_t ipa_valid_prep_sequence(void)
 
 static uint64_t level_valid_prep_sequence(void)
 {
-    // TODO: get start_level from VAL and derive MAP_LEVEL from that
     return MAP_LEVEL;
 }
 
 static uint64_t level_invalid_start_prep_sequence(void)
 {
-    // TODO: get start_level from VAL
     return START_RTT_LEVEL;
 }
 
@@ -173,80 +170,80 @@ static uint64_t intent_to_seq(struct stimulus *test_data, struct arguments *args
     switch (label)
     {
         case RD_UNALIGNED:
-            args->rtt = c_args.rtt_valid;
             args->rd = g_unaligned_prep_sequence(c_args.rd_valid);
+            args->rtt = c_args.rtt_valid;
             args->ipa = c_args.ipa_valid;
             args->level = c_args.level_valid;
             break;
 
         case RD_DEV_MEM:
-            args->rtt = c_args.rtt_valid;
             args->rd = g_dev_mem_prep_sequence();
+            args->rtt = c_args.rtt_valid;
             args->ipa = c_args.ipa_valid;
             args->level = c_args.level_valid;
             break;
 
        case RD_OUTSIDE_OF_PERMITTED_PA:
-            args->rtt = c_args.rtt_valid;
             args->rd = g_outside_of_permitted_pa_prep_sequence();
+            args->rtt = c_args.rtt_valid;
             args->ipa = c_args.ipa_valid;
             args->level = c_args.level_valid;
             break;
 
         case RD_STATE_UNDELEGATED:
-            args->rtt = c_args.rtt_valid;
             args->rd = g_undelegated_prep_sequence();
             if (args->rd == VAL_TEST_PREP_SEQ_FAILED)
                 return VAL_ERROR;
+            args->rtt = c_args.rtt_valid;
             args->ipa = c_args.ipa_valid;
             args->level = c_args.level_valid;
             break;
 
         case RD_STATE_DELEGATED:
-            args->rtt = c_args.rtt_valid;
             args->rd = g_delegated_prep_sequence();
             if  (args->rd == VAL_TEST_PREP_SEQ_FAILED)
                 return VAL_ERROR;
+            args->rtt = c_args.rtt_valid;
             args->ipa = c_args.ipa_valid;
             args->level = c_args.level_valid;
             break;
 
         case RD_STATE_REC:
-            args->rtt = c_args.rtt_valid;
             args->rd = g_rec_ready_prep_sequence(c_args.rd_valid);
             if (args->rd == VAL_TEST_PREP_SEQ_FAILED)
                 return VAL_ERROR;
+            args->rtt = c_args.rtt_valid;
             c_args_invalid.rec_gran = args->rd; /* Storing this for future reference */
             args->ipa = c_args.ipa_valid;
             args->level = c_args.level_valid;
             break;
 
         case RD_STATE_RTT:
-            args->rtt = c_args.rtt_valid;
             args->rd = realm_test[VALID_REALM].rtt_l0_addr;
+            args->rtt = c_args.rtt_valid;
             args->ipa = c_args.ipa_valid;
             args->level = c_args.level_valid;
             break;
 
         case RD_STATE_DATA:
-            args->rtt = c_args.rtt_valid;
             args->rd = g_data_prep_sequence(c_args.rd_valid, IPA_ADDR_DATA);
             if (args->rd == VAL_TEST_PREP_SEQ_FAILED)
                 return VAL_ERROR;
+            args->rtt = c_args.rtt_valid;
             args->ipa = c_args.ipa_valid;
             args->level = c_args.level_valid;
             break;
 
         case LEVEL_STARTING:
-            args->rtt = c_args.rtt_valid;
             args->rd = c_args.rd_valid;
+            args->rtt = c_args.rtt_valid;
             args->ipa = c_args.ipa_valid;
             args->level = level_invalid_start_prep_sequence();
             break;
 
         case LEVEL_OOB:
-            args->rtt = c_args.rtt_valid;
             args->rd = c_args.rd_valid;
+            args->rtt = c_args.rtt_valid;
             /* Note: we require the RTT walk to succeed here */
             args->ipa = ipa_unprotected_unassigned_prep_sequence(c_args.rd_valid);
             if (args->ipa == VAL_TEST_PREP_SEQ_FAILED)
@@ -255,89 +252,89 @@ static uint64_t intent_to_seq(struct stimulus *test_data, struct arguments *args
             break;
 
         case IPA_UNALIGNED:
-            args->rtt = c_args.rtt_valid;
             args->rd = c_args.rd_valid;
-            args->ipa = g_unaligned_prep_sequence(c_args.ipa_valid);
+            args->rtt = c_args.rtt_valid;
+            args->ipa = ipa_level_1_unaligned_prep_sequence();
             args->level = c_args.level_valid;
             break;
 
         case IPA_OOB:
-            args->rtt = c_args.rtt_valid;
             args->rd = c_args.rd_valid;
+            args->rtt = c_args.rtt_valid;
             args->ipa = ipa_outside_of_permitted_ipa_prep_sequence();
             args->level = c_args.level_valid;
             break;
 
         case RTT_UNALIGNED:
-            args->rtt = g_unaligned_prep_sequence(c_args.rtt_valid);
             args->rd = c_args.rd_valid;
+            args->rtt = g_unaligned_prep_sequence(c_args.rtt_valid);
             args->ipa = c_args.ipa_valid;
             args->level = c_args.level_valid;
             break;
 
         case RTT_DEV_MEM:
-            args->rtt = g_dev_mem_prep_sequence();
             args->rd = c_args.rd_valid;
+            args->rtt = g_dev_mem_prep_sequence();
             args->ipa = c_args.ipa_valid;
             args->level = c_args.level_valid;
             break;
 
         case RTT_OUTSIDE_PERMITTED_PA:
-            args->rtt = g_outside_of_permitted_pa_prep_sequence();
             args->rd = c_args.rd_valid;
+            args->rtt = g_outside_of_permitted_pa_prep_sequence();
             args->ipa = c_args.ipa_valid;
             args->level = c_args.level_valid;
             break;
 
         case RTT_STATE_UNDELEGATED:
+            args->rd = c_args.rd_valid;
             args->rtt = g_undelegated_prep_sequence();
             if (args->rtt == VAL_TEST_PREP_SEQ_FAILED)
                 return VAL_ERROR;
-            args->rd = c_args.rd_valid;
             args->ipa = c_args.ipa_valid;
             args->level = c_args.level_valid;
             break;
 
         case RTT_STATE_RD:
-            args->rtt = c_args.rd_valid;
             args->rd = c_args.rd_valid;
+            args->rtt = c_args.rd_valid;
             args->ipa = c_args.ipa_valid;
             args->level = c_args.level_valid;
             break;
 
         case RTT_STATE_REC:
-            args->rtt = c_args_invalid.rec_gran;
             args->rd = c_args.rd_valid;
+            args->rtt = c_args_invalid.rec_gran;
             args->ipa = c_args.ipa_valid;
             args->level = c_args.level_valid;
             break;
 
         case RTT_STATE_RTT:
-            args->rtt = realm_test[VALID_REALM].rtt_l0_addr;
             args->rd = c_args.rd_valid;
+            args->rtt = realm_test[VALID_REALM].rtt_l0_addr;
             args->ipa = c_args.ipa_valid;
             args->level = c_args.level_valid;
             break;
 
         case RTT_STATE_DATA:
+            args->rd = c_args.rd_valid;
             args->rtt = g_data_prep_sequence(c_args.rd_valid, IPA_ADDR_DATA_1);
             if (args->rtt == VAL_TEST_PREP_SEQ_FAILED)
                 return VAL_ERROR;
-            args->rd = c_args.rd_valid;
             args->ipa = c_args.ipa_valid;
             args->level = c_args.level_valid;
             break;
 
         case LEVEL_NO_PARENT_RTTE:
-            args->rtt = c_args.rtt_valid;
             args->rd = c_args.rd_valid;
+            args->rtt = c_args.rtt_valid;
             args->ipa = c_args.ipa_valid;
             args->level = level_no_parent_rtt_prep_sequence();
             break;
 
         case RTTE_STATE_TABLE:
-            args->rtt = c_args.rtt_valid;
             args->rd = c_args.rd_valid;
+            args->rtt = c_args.rtt_valid;
             args->ipa = ipa_unprotected_assinged_prep_sequence(c_args.rd_valid);
             if (args->ipa == VAL_TEST_PREP_SEQ_FAILED)
                 return VAL_ERROR;
@@ -355,14 +352,14 @@ static uint64_t intent_to_seq(struct stimulus *test_data, struct arguments *args
 
 void cmd_rtt_create_host(void)
 {
-    uint64_t ret;
+    uint64_t ret = 0;
     struct arguments args;
     val_host_rtt_entry_ts rtte;
     uint64_t i;
 
     if (valid_input_args_prep_sequence() == VAL_TEST_PREP_SEQ_FAILED) {
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(1)));
-        goto fail;
+        goto exit;
     }
 
     /* Iterate over the input */
@@ -374,16 +371,16 @@ void cmd_rtt_create_host(void)
 
         if (intent_to_seq(&test_data[i], &args)) {
             val_set_status(RESULT_FAIL(VAL_ERROR_POINT(2)));
-            goto fail;
+            goto exit;
         }
 
-        ret = val_host_rmi_rtt_create(args.rtt, args.rd, args.ipa, args.level);
+        ret = val_host_rmi_rtt_create(args.rd, args.rtt, args.ipa, args.level);
 
         if (ret != PACK_CODE(test_data[i].status, test_data[i].index)) {
             LOG(ERROR, "\tTest Failure!\n\tThe ABI call returned: %x\n\tExpected: %x\n",
                 ret, PACK_CODE(test_data[i].status, test_data[i].index));
             val_set_status(RESULT_FAIL(VAL_ERROR_POINT(3)));
-            goto fail;
+            goto exit;
         }
     }
 
@@ -391,43 +388,48 @@ void cmd_rtt_create_host(void)
     ret = val_host_rmi_rtt_read_entry(c_args.rd_valid, c_args.ipa_valid,
                                       (c_args.level_valid - 1), &rtte);
     if (ret) {
-        LOG(ERROR, "\tREAD_ENTRY failed!\n", 0, 0);
+        LOG(ERROR, "\tREAD_ENTRY failed with ret value: %d\n", ret, 0);
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(4)));
+        goto exit;
     } else {
         if (rtte.state != RMI_UNASSIGNED || OA(rtte.desc) == c_args.rtt_valid) {
-            LOG(ERROR, "\tState was: %d & OA was: %x\n", rtte.state, OA(rtte.desc));
-            val_set_status(RESULT_FAIL(VAL_ERROR_POINT(4)));
-            goto fail;
+            LOG(ERROR, "\tUnexptected RTT entry received\n", 0, 0);
+            LOG(ERROR, "\tState is: %d & OA is: %x\n", rtte.state, OA(rtte.desc));
+            val_set_status(RESULT_FAIL(VAL_ERROR_POINT(5)));
+            goto exit;
         }
     }
 
     LOG(TEST, "\n\tPositive Observability Check\n", 0, 0);
-    ret = val_host_rmi_rtt_create(c_args.rtt_valid, c_args.rd_valid,
+
+    ret = val_host_rmi_rtt_create(c_args.rd_valid, c_args.rtt_valid,
                               c_args.ipa_valid, c_args.level_valid);
+
     /* Valid call should give success if footprints have not changed */
     if (ret != 0) {
         LOG(ERROR, "\n\tPositive Observability failed ", 0, 0);
-        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(5)));
-        goto fail;
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(6)));
+        goto exit;
     }
 
     /* Check that rtte.addr and rtte.state have changed */
     ret = val_host_rmi_rtt_read_entry(c_args.rd_valid, c_args.ipa_valid,
                                       (c_args.level_valid - 1), &rtte);
     if (ret) {
-        LOG(ERROR, "\tREAD_ENTRY failed!\n", 0, 0);
-        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(6)));
-        goto fail;
+        LOG(ERROR, "\tREAD_ENTRY failed with ret value: %d\n", ret, 0);
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(7)));
+        goto exit;
     } else {
         if (rtte.state != RMI_TABLE || OA(rtte.desc) != c_args.rtt_valid) {
-            LOG(ERROR, "\tState was: %d & OA was: %x\n", rtte.state, OA(rtte.desc));
-            val_set_status(RESULT_FAIL(VAL_ERROR_POINT(7)));
-            goto fail;
+            LOG(ERROR, "\tUnexptected RTT entry received\n", 0, 0);
+            LOG(ERROR, "\tState is: %d & OA is: %x\n", rtte.state, OA(rtte.desc));
+            val_set_status(RESULT_FAIL(VAL_ERROR_POINT(8)));
+            goto exit;
         }
     }
 
     val_set_status(RESULT_PASS(VAL_SUCCESS));
-    return;
 
-fail:
+exit:
     return;
 }

@@ -55,7 +55,6 @@
 /*
  * The MPIDR_MAX_AFFLVL count starts from 0. Take care to
  * add one while using this macro to define array sizes.
- * TODO: Support only the first 3 affinity levels for now.
  */
 #define MPIDR_MAX_AFFLVL    U(2)
 
@@ -101,6 +100,13 @@
 #define ICC_EOIR0_EL1        S3_0_c12_c8_1
 #define ICC_EOIR1_EL1        S3_0_c12_c12_1
 #define ICC_SGI0R_EL1        S3_0_c12_c11_7
+
+#define ICV_CTRL_EL1        S3_0_C12_C12_4
+#define ICV_IAR1_EL1        S3_0_C12_C12_0
+#define ICV_IGRPEN1_EL1     S3_0_C12_C12_7
+#define ICV_EOIR1_EL1       S3_0_C12_C12_1
+#define ICV_PMR_EL1     S3_0_C4_C6_0
+#define ICV_BPR0_EL1        S3_0_C12_C8_3
 
 /*******************************************************************************
  * Generic timer memory mapped registers & offsets
@@ -270,6 +276,12 @@
 
 #define ID_AA64MMFR2_EL1_CNP_SHIFT    U(0)
 #define ID_AA64MMFR2_EL1_CNP_MASK    ULL(0xf)
+
+#define ID_AA64MMFR2_EL1_CCIDX_SHIFT		U(20)
+#define ID_AA64MMFR2_EL1_CCIDX_MASK		ULL(0xf)
+#define ID_AA64MMFR2_EL1_CCIDX_LENGTH		U(4)
+
+
 
 /* ID_AA64PFR1_EL1 definitions */
 #define ID_AA64PFR1_EL1_SSBS_SHIFT    U(4)
@@ -516,6 +528,7 @@
 #define TCR_EL3_PS_SHIFT    U(16)
 
 #define TCR_TxSZ_MIN        ULL(16)
+#define TCR_TxSZ_MIN_LPA2	UL(12)
 #define TCR_TxSZ_MAX        ULL(39)
 #define TCR_TxSZ_MAX_TTST    ULL(48)
 
@@ -739,39 +752,55 @@
 #define CNTP_CTL        U(0x2c)
 
 /* PMCR_EL0 definitions */
-#define PMCR_EL0_RESET_VAL    U(0x0)
+#define PMCR_EL0_RESET_VAL  U(0x0)
 #define PMCR_EL0_N_SHIFT    U(11)
-#define PMCR_EL0_N_MASK        U(0x1f)
-#define PMCR_EL0_N_BITS        (PMCR_EL0_N_MASK << PMCR_EL0_N_SHIFT)
-#define PMCR_EL0_LC_BIT        (U(1) << 6)
-#define PMCR_EL0_DP_BIT        (U(1) << 5)
-#define PMCR_EL0_X_BIT        (U(1) << 4)
-#define PMCR_EL0_D_BIT        (U(1) << 3)
-#define PMCR_EL0_E_BIT        (U(1) << 0)
+#define PMCR_EL0_N_MASK     U(0x1f)
+#define PMCR_EL0_N_BITS     (PMCR_EL0_N_MASK << PMCR_EL0_N_SHIFT)
+#define PMCR_EL0_LC_BIT     (U(1) << 6)
+#define PMCR_EL0_DP_BIT     (U(1) << 5)
+#define PMCR_EL0_X_BIT      (U(1) << 4)
+#define PMCR_EL0_D_BIT      (U(1) << 3)
+#define PMCR_EL0_C_BIT      (U(1) << 2)
+#define PMCR_EL0_P_BIT      (U(1) << 1)
+#define PMCR_EL0_E_BIT      (U(1) << 0)
 
 /* PMCNTENSET_EL0 definitions */
 #define PMCNTENSET_EL0_C_BIT        (U(1) << 31)
-#define PMCNTENSET_EL0_P_BIT(x)        (U(1) << x)
+#define PMCNTENSET_EL0_P_BIT(x)     (U(1) << x)
 
 /* PMEVTYPER<n>_EL0 definitions */
-#define PMEVTYPER_EL0_P_BIT        (U(1) << 31)
-#define PMEVTYPER_EL0_NSK_BIT        (U(1) << 29)
-#define PMEVTYPER_EL0_NSH_BIT        (U(1) << 27)
-#define PMEVTYPER_EL0_M_BIT        (U(1) << 26)
+#define PMEVTYPER_EL0_P_BIT     (U(1) << 31)
+#define PMEVTYPER_EL0_U_BIT     (U(1) << 30)
+#define PMEVTYPER_EL0_NSK_BIT       (U(1) << 29)
+#define PMEVTYPER_EL0_NSU_BIT       (U(1) << 28)
+#define PMEVTYPER_EL0_NSH_BIT       (U(1) << 27)
+#define PMEVTYPER_EL0_M_BIT     (U(1) << 26)
 #define PMEVTYPER_EL0_MT_BIT        (U(1) << 25)
 #define PMEVTYPER_EL0_SH_BIT        (U(1) << 24)
-#define PMEVTYPER_EL0_EVTCOUNT_BITS    U(0x000003FF)
+#define PMEVTYPER_EL0_T_BIT     (U(1) << 23)
+#define PMEVTYPER_EL0_RLK_BIT       (U(1) << 22)
+#define PMEVTYPER_EL0_RLU_BIT       (U(1) << 21)
+#define PMEVTYPER_EL0_RLH_BIT       (U(1) << 20)
+#define PMEVTYPER_EL0_EVTCOUNT_BITS U(0x0000FFFF)
 
 /* PMCCFILTR_EL0 definitions */
-#define PMCCFILTR_EL0_P_BIT        (U(1) << 31)
-#define PMCCFILTR_EL0_NSK_BIT        (U(1) << 29)
-#define PMCCFILTR_EL0_NSH_BIT        (U(1) << 27)
-#define PMCCFILTR_EL0_M_BIT        (U(1) << 26)
-#define PMCCFILTR_EL0_MT_BIT        (U(1) << 25)
+#define PMCCFILTR_EL0_P_BIT     (U(1) << 31)
+#define PMCCFILTR_EL0_U_BIT     (U(1) << 30)
+#define PMCCFILTR_EL0_NSK_BIT       (U(1) << 29)
+#define PMCCFILTR_EL0_NSH_BIT       (U(1) << 27)
+#define PMCCFILTR_EL0_M_BIT     (U(1) << 26)
 #define PMCCFILTR_EL0_SH_BIT        (U(1) << 24)
+#define PMCCFILTR_EL0_T_BIT     (U(1) << 23)
+#define PMCCFILTR_EL0_RLK_BIT       (U(1) << 22)
+#define PMCCFILTR_EL0_RLU_BIT       (U(1) << 21)
+#define PMCCFILTR_EL0_RLH_BIT       (U(1) << 20)
+
+/* PMSELR_EL0 definitions */
+#define PMSELR_EL0_SEL_SHIFT        U(0)
+#define PMSELR_EL0_SEL_MASK     U(0x1f)
 
 /* PMU event counter ID definitions */
-#define PMU_EV_PC_WRITE_RETIRED        U(0x000C)
+#define PMU_EV_PC_WRITE_RETIRED     U(0x000C)
 
 /*******************************************************************************
  * Definitions for system register interface to SVE
@@ -1123,4 +1152,102 @@
 #define HCRX_EL2_EnALS_BIT    (UL(1) << 1)
 #define HCRX_EL2_EnAS0_BIT    (UL(1) << 0)
 
+/* Added for XLAT */
+
+#define ID_AA64MMFR2_EL1_ST_WIDTH	UL(4)
+#define ID_AA64MMFR2_EL1_CNP_WIDTH	UL(4)
+
+/* ID_AA64PFR0_EL1 definitions */
+#define ID_AA64PFR0_EL1_SVE_SHIFT	UL(32)
+#define ID_AA64PFR0_EL1_SVE_WIDTH	UL(4)
+
+/* RNDR definitions */
+#define ID_AA64ISAR0_EL1_RNDR_SHIFT		UL(60)
+#define ID_AA64ISAR0_EL1_RNDR_WIDTH		UL(4)
+
+/* ID_AA64MMFR1_EL1 definitions */
+#define ID_AA64MMFR1_EL1_VMIDBits_SHIFT		UL(4)
+#define ID_AA64MMFR1_EL1_VMIDBits_WIDTH		UL(4)
+#define ID_AA64MMFR1_EL1_VMIDBits_8		UL(0)
+#define ID_AA64MMFR1_EL1_VMIDBits_16		UL(2)
+
+#define ID_AA64MMFR0_EL1_TGRAN4_WIDTH		UL(4)
+#define ID_AA64MMFR0_EL1_TGRAN16_WIDTH		UL(4)
+#define ID_AA64MMFR0_EL1_TGRAN64_WIDTH		UL(4)
+#define ID_AA64MMFR0_EL1_TGRAN4_2_SHIFT		U(40)
+#define ID_AA64MMFR0_EL1_TGRAN4_2_WIDTH		U(4)
+#define ID_AA64MMFR0_EL1_TGRAN4_LPA2		UL(0x1)
+#define ID_AA64MMFR0_EL1_TGRAN4_2_LPA2		UL(0x3)
+#define ID_AA64MMFR0_EL1_TGRAN4_2_TGRAN4	UL(0x0)
+
+#define ID_AA64DFR0_EL1_PMUVer_SHIFT		UL(8)
+#define ID_AA64DFR0_EL1_PMUVer_WIDTH		UL(4)
+
+#define TCR_PS_BITS_4PB		INPLACE(TCR_EL2_IPS, UL(6))
+#define SCTLR_ELx_M_BIT			(UL(1) << 0)
+#define MAIR_DEV_NGNRE		UL(0x4)
+
+#define TCR_EL2_T0SZ_SHIFT	UL(0)
+#define TCR_EL2_T0SZ_WIDTH	UL(6)
+
+#define TCR_EL2_T1SZ_SHIFT	UL(16)
+#define TCR_EL2_T1SZ_WIDTH	UL(6)
+
+#define TCR_EL2_EPD0_BIT	(UL(1) << 7)
+
+#define TCR_EL2_IRGN0_SHIFT	UL(8)
+#define TCR_EL2_IRGN0_WIDTH	UL(2)
+#define TCR_EL2_IRGN0_WBWA	INPLACE(TCR_EL2_IRGN0, UL(1))
+
+#define TCR_EL2_ORGN0_SHIFT	UL(10)
+#define TCR_EL2_ORGN0_WIDTH	UL(2)
+#define TCR_EL2_ORGN0_WBWA	INPLACE(TCR_EL2_ORGN0, UL(1))
+
+#define TCR_EL2_IRGN1_SHIFT	UL(24)
+#define TCR_EL2_IRGN1_WIDTH	UL(2)
+#define TCR_EL2_IRGN1_WBWA	INPLACE(TCR_EL2_IRGN1, UL(1))
+
+#define TCR_EL2_ORGN1_SHIFT	UL(26)
+#define TCR_EL2_ORGN1_WIDTH	UL(2)
+#define TCR_EL2_ORGN1_WBWA	INPLACE(TCR_EL2_ORGN1, UL(1))
+
+#define TCR_EL2_SH0_SHIFT	UL(12)
+#define TCR_EL2_SH0_WIDTH	UL(2)
+#define TCR_EL2_SH0_IS		INPLACE(TCR_EL2_SH0, UL(3))
+
+#define TCR_EL2_SH1_SHIFT	UL(28)
+#define TCR_EL2_SH1_WIDTH	UL(2)
+#define TCR_EL2_SH1_IS		INPLACE(TCR_EL2_SH1, UL(3))
+
+#define TCR_EL2_TG0_SHIFT	UL(14)
+#define TCR_EL2_TG0_WIDTH	UL(2)
+#define TCR_EL2_TG0_4K		INPLACE(TCR_EL2_TG0, UL(0))
+
+#define TCR_EL2_TG1_SHIFT	UL(30)
+#define TCR_EL2_TG1_WIDTH	UL(2)
+#define TCR_EL2_TG1_4K		INPLACE(TCR_EL2_TG1, UL(2))
+
+#define TCR_EL2_IPS_SHIFT	UL(32)
+#define TCR_EL2_IPS_WIDTH	UL(3)
+
+#define TCR_EL2_DS_SHIFT	UL(59)
+#define TCR_EL2_DS_WIDTH	UL(1)
+#define TCR_EL2_DS_LPA2_EN	INPLACE(TCR_EL2_DS, UL(1))
+
+#define TCR_EL2_AS		(UL(1) << 36)
+#define TCR_EL2_HPD0		(UL(1) << 41)
+#define TCR_EL2_HPD1		(UL(1) << 42)
+
+#define TTBRx_EL2_BADDR_SHIFT	1
+#define TTBRx_EL2_BADDR_WIDTH	47
+
+#define PARANGE_0000_WIDTH	U(32)
+#define PARANGE_0001_WIDTH	U(36)
+#define PARANGE_0010_WIDTH	U(40)
+#define PARANGE_0011_WIDTH	U(42)
+#define PARANGE_0100_WIDTH	U(44)
+#define PARANGE_0101_WIDTH	U(48)
+#define PARANGE_0110_WIDTH	U(52)
+
+#define ID_AA64MMFR0_EL1_PARANGE_WIDTH	UL(4)
 #endif /* ARCH_H */

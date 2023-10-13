@@ -102,6 +102,7 @@ uint32_t pal_wait_for_sync_call(void);
  *   @return   - SUCCESS(0)/FAILURE
 **/
 uint32_t pal_sync_resp_call_to_host(void);
+uint32_t pal_sync_resp_call_to_preempted_host(void);
 
 /**
  *   @brief    - Normal sends message to secure world and wait for the respond
@@ -127,5 +128,7 @@ uint32_t pal_twdog_enable(uint32_t ms);
  *   @return   - SUCCESS/FAILURE
 **/
 uint32_t pal_twdog_disable(void);
+
+uint32_t pal_verify_signature(uint8_t *token);
 
 #endif /* _PAL_INTERFACES_H_ */

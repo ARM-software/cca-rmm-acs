@@ -12,7 +12,11 @@
 
 void cmd_secure_test_host(void)
 {
-    uint64_t *test_shared_region = (val_get_shared_region_base() + TEST_USE_OFFSET);
+#ifndef SECURE_TEST_ENABLE
+    val_set_status(RESULT_SKIP(VAL_SKIP_CHECK));
+    goto exit;
+#else
+    uint64_t *test_shared_region = (val_get_shared_region_base() + TEST_USE_OFFSET1);
 
     /* Update shared region with test pattern */
     *test_shared_region = DATA_PATTERN_1;
@@ -22,7 +26,7 @@ void cmd_secure_test_host(void)
     {
         LOG(ERROR, "\tval_execute_secure_payload() failed\n", 0, 0);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(1)));
-        return;
+        goto exit;
     }
 
     /* Compare data pattern with expected value */
@@ -31,5 +35,7 @@ void cmd_secure_test_host(void)
     else
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(2)));
 
+#endif
+exit:
     return;
 }

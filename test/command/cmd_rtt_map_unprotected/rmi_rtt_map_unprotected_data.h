@@ -25,7 +25,7 @@ enum test_intent {
     IPA_PROTECTED = 0XE,
     IPA_OOB = 0XF,
     IPA_NOT_MAPPED = 0X10,
-    RTTE_STATE_VALID_NS = 0X11
+    RTTE_STATE_ASSIGNED_NS = 0X11
 };
 
 struct stimulus {
@@ -124,7 +124,7 @@ static struct stimulus test_data[] = {
     .index = 2},
     {.msg = "rtte_state",
     .abi = RMI_RTT_MAP_UNPROTECTED,
-    .label = RTTE_STATE_VALID_NS,
+    .label = RTTE_STATE_ASSIGNED_NS,
     .status = RMI_ERROR_RTT,
     .index = 3}
 };

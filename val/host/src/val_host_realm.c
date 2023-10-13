@@ -7,6 +7,7 @@
 
 #include "val_host_realm.h"
 #include "val_host_alloc.h"
+#include "val_host_helpers.h"
 
 int current_realm = 1;
 val_host_granule_ts *head = NULL;
@@ -26,7 +27,7 @@ val_host_memory_track_ts mem_track[VAL_HOST_MAX_REALMS] = {
     {.rd = 0x00000000FFFFFFFF}
 };
 
-static uint64_t val_host_rtt_level_mapsize(uint32_t rtt_level)
+static uint64_t val_host_rtt_level_mapsize(uint64_t rtt_level)
 {
     if (rtt_level > VAL_RTT_MAX_LEVEL)
         return PAGE_SIZE;
@@ -37,7 +38,7 @@ static uint64_t val_host_rtt_level_mapsize(uint32_t rtt_level)
 static uint64_t val_host_rtt_create(uint64_t phys,
                 val_host_realm_ts *realm,
                 uint64_t rtt_addr,
-                uint32_t rtt_level
+                uint64_t rtt_level
                 )
 {
     rtt_addr = ADDR_ALIGN_DOWN(rtt_addr, val_host_rtt_level_mapsize(rtt_level - 1));
@@ -57,7 +58,7 @@ static uint64_t val_host_rtt_create(uint64_t phys,
         realm->rtt_l1[realm->rtt_l1_count].ipa = rtt_addr;
         realm->rtt_l1_count++;
     }
-    return val_host_rmi_rtt_create(phys, realm->rd, rtt_addr, rtt_level);
+    return val_host_rmi_rtt_create(realm->rd, phys, rtt_addr, rtt_level);
 }
 
 /**
@@ -71,8 +72,8 @@ static uint64_t val_host_rtt_create(uint64_t phys,
 **/
 uint32_t val_host_create_rtt_levels(val_host_realm_ts *realm,
                    uint64_t ipa,
-                   uint32_t rtt_level,
-                   uint32_t rtt_max_level,
+                   uint64_t rtt_level,
+                   uint64_t rtt_max_level,
                    uint64_t rtt_alignment)
 {
     uint64_t rtt;
@@ -121,12 +122,13 @@ uint32_t val_host_map_protected_data(val_host_realm_ts *realm,
                 uint64_t src_pa)
 {
     uint64_t rd = realm->rd;
-    uint32_t map_level, rtt_level;
+    uint64_t map_level, rtt_level;
     uint64_t ret = 0;
     uint64_t size = 0;
     uint64_t phys = target_pa;
     uint64_t flags = RMI_NO_MEASURE_CONTENT;
     val_host_rtt_entry_ts  rtte;
+    val_host_data_destroy_ts data_destroy;
 
     if (!ADDR_IS_ALIGNED(ipa, rtt_map_size))
         return VAL_ERROR;
@@ -149,12 +151,18 @@ uint32_t val_host_map_protected_data(val_host_realm_ts *realm,
             return VAL_ERROR;
         }
 
-        ret = val_host_rmi_data_create(phys, rd, ipa, src_pa, flags);
+        ret = val_host_rmi_data_create(rd, phys, ipa, src_pa, flags);
 
         if (RMI_STATUS(ret) == RMI_ERROR_RTT)
         {
             rtt_level = RMI_INDEX(ret);
-            ret = val_host_rmi_rtt_read_entry(realm->rd, ipa, rtt_level, &rtte);
+            ret = val_host_rmi_rtt_read_entry(realm->rd,
+                        val_host_addr_align_to_level(ipa, rtt_level), rtt_level, &rtte);
+            if (ret)
+            {
+                LOG(ERROR, "\tval_host_rmi_rtt_read_entry, ret=0x%x\n", ret, 0);
+                return VAL_ERROR;
+            }
 
             if (rtte.state == RMI_UNASSIGNED)
             {
@@ -167,7 +175,7 @@ uint32_t val_host_map_protected_data(val_host_realm_ts *realm,
                     goto error;
                 }
 
-                ret = val_host_rmi_data_create(phys, rd, ipa, src_pa, flags);
+                ret = val_host_rmi_data_create(rd, phys, ipa, src_pa, flags);
             }
         }
 
@@ -188,7 +196,7 @@ uint32_t val_host_map_protected_data(val_host_realm_ts *realm,
 error:
     for (; size > 0;)
     {
-        ret = val_host_rmi_data_destroy(rd, ipa);
+        ret = val_host_rmi_data_destroy(rd, ipa, &data_destroy);
         if (ret)
             LOG(ERROR, "\tval_rmi_rtt_mapprotected failed, ret=0x%x\n", ret, 0);
 
@@ -219,11 +227,12 @@ uint32_t val_host_map_protected_data_unknown(val_host_realm_ts *realm,
                         uint64_t rtt_map_size)
 {
     uint64_t rd = realm->rd;
-    uint32_t map_level;
+    uint32_t map_level, rtt_level;
     uint64_t ret = 0;
     uint64_t size = 0;
     uint64_t phys = target_pa;
     val_host_rtt_entry_ts rtte;
+    val_host_data_destroy_ts data_destroy;
 
     if (!ADDR_IS_ALIGNED(ipa, rtt_map_size))
         return VAL_ERROR;
@@ -246,11 +255,18 @@ uint32_t val_host_map_protected_data_unknown(val_host_realm_ts *realm,
             return VAL_ERROR;
         }
 
-        ret = val_host_rmi_data_create_unknown(phys, rd, ipa);
+        ret = val_host_rmi_data_create_unknown(rd, phys, ipa);
 
         if (RMI_STATUS(ret) == RMI_ERROR_RTT)
         {
-            ret = val_host_rmi_rtt_read_entry(realm->rd, ipa, VAL_RTT_MAX_LEVEL, &rtte);
+            rtt_level = RMI_INDEX(ret);
+            ret = val_host_rmi_rtt_read_entry(realm->rd,
+                            val_host_addr_align_to_level(ipa, rtt_level), rtt_level, &rtte);
+            if (ret)
+            {
+                LOG(ERROR, "\tval_host_rmi_rtt_read_entry, ret=0x%x\n", ret, 0);
+                return VAL_ERROR;
+            }
 
             if (rtte.state == RMI_UNASSIGNED)
             {
@@ -263,7 +279,7 @@ uint32_t val_host_map_protected_data_unknown(val_host_realm_ts *realm,
                     goto error;
                 }
 
-                ret = val_host_rmi_data_create_unknown(phys, rd, ipa);
+                ret = val_host_rmi_data_create_unknown(rd, phys, ipa);
             }
         }
 
@@ -283,7 +299,7 @@ uint32_t val_host_map_protected_data_unknown(val_host_realm_ts *realm,
 error:
     for (; size > 0;)
     {
-        val_host_rmi_data_destroy(rd, ipa);
+        val_host_rmi_data_destroy(rd, ipa, &data_destroy);
         if (ret)
             LOG(ERROR, "\tval_rmi_rtt_mapprotected failed, ret=0x%x\n", ret, 0);
 
@@ -316,7 +332,7 @@ uint32_t val_host_map_unprotected(val_host_realm_ts *realm,
                         uint64_t rtt_alignment)
 {
     uint64_t rd = realm->rd;
-    uint32_t map_level, rtt_level;
+    uint64_t map_level, rtt_level;
     uint64_t ret = 0;
     uint64_t mem_desc = ns_pa | ATTR_NORMAL_WB | ATTR_STAGE2_MASK | ATTR_INNER_SHARED;
     val_host_rtt_entry_ts rtte;
@@ -339,13 +355,20 @@ uint32_t val_host_map_unprotected(val_host_realm_ts *realm,
     if (RMI_STATUS(ret) == RMI_ERROR_RTT)
         {
             rtt_level = RMI_INDEX(ret);
-            ret = val_host_rmi_rtt_read_entry(realm->rd, ipa, rtt_level, &rtte);
+            ret = val_host_rmi_rtt_read_entry(realm->rd,
+                       val_host_addr_align_to_level(ipa, rtt_level), rtt_level, &rtte);
+
+            if (ret)
+            {
+                LOG(ERROR, "\tval_host_rmi_rtt_read_entry, ret=0x%x\n", ret, 0);
+                return VAL_ERROR;
+            }
 
             if (rtte.state == RMI_UNASSIGNED)
             {
                 /* Create missing RTT levels and retry map unprotected again */
-                /* TODO: Debug level vs rtte.walk_level */
-                ret = val_host_create_rtt_levels(realm, ipa, rtt_level, map_level, rtt_alignment);
+                ret = val_host_create_rtt_levels(realm, ipa, rtte.walk_level,
+                                                   map_level, rtt_alignment);
                 if (ret)
                 {
                     LOG(ERROR, "\tval_realm_create_rtt_levels failed, ret=0x%x\n", ret, 0);
@@ -382,7 +405,7 @@ uint32_t val_host_map_unprotected_attr(val_host_realm_ts *realm,
                         uint64_t rtt_alignment, uint64_t mem_attr)
 {
     uint64_t rd = realm->rd;
-    uint32_t map_level, rtt_level;
+    uint64_t map_level, rtt_level;
     uint64_t ret = 0;
     uint64_t mem_desc = 0;
     val_host_rtt_entry_ts rtte;
@@ -407,12 +430,17 @@ uint32_t val_host_map_unprotected_attr(val_host_realm_ts *realm,
     if (RMI_STATUS(ret) == RMI_ERROR_RTT)
         {
             rtt_level = RMI_INDEX(ret);
-            ret = val_host_rmi_rtt_read_entry(realm->rd, ipa, rtt_level, &rtte);
+            ret = val_host_rmi_rtt_read_entry(realm->rd,
+                        val_host_addr_align_to_level(ipa, rtt_level), rtt_level, &rtte);
+            if (ret)
+            {
+                LOG(ERROR, "\tval_host_rmi_rtt_read_entry, ret=0x%x\n", ret, 0);
+                return VAL_ERROR;
+            }
 
             if (rtte.state == RMI_UNASSIGNED)
             {
                 /* Create missing RTT levels and retry map unprotected again */
-                /* TODO: Debug level vs rtte.walk_level */
                 ret = val_host_create_rtt_levels(realm, ipa, rtt_level, map_level, rtt_alignment);
                 if (ret)
                 {
@@ -426,7 +454,6 @@ uint32_t val_host_map_unprotected_attr(val_host_realm_ts *realm,
 
     if (ret)
     {
-        LOG(ERROR, "\tval_rmi_rtt_map_unprotected failed, ret=0x%x\n", ret, 0);
         return VAL_ERROR;
     }
 
@@ -461,6 +488,7 @@ uint32_t val_host_realm_create(val_host_realm_ts *realm)
     /* Allocate and delegate RTT */
     realm->rtt_l0_addr = (uint64_t)val_host_mem_alloc((realm->num_s2_sl_rtts * PAGE_SIZE),
                                                     (realm->num_s2_sl_rtts * PAGE_SIZE));
+
     if (!realm->rtt_l0_addr)
     {
         LOG(ERROR, "\tFailed to allocate memory for rtt_addr\n", 0, 0);
@@ -495,19 +523,24 @@ uint32_t val_host_realm_create(val_host_realm_ts *realm)
 
     /* Allocate memory for params */
     params = val_host_mem_alloc(PAGE_SIZE, PAGE_SIZE);
+
     if (params == NULL)
     {
         LOG(ERROR, "\tFailed to allocate memory for params\n", 0, 0);
         goto undelegate_rtt;
     }
+    val_memset(params, 0, PAGE_SIZE_4K);
 
     /* Populate params */
-    params->rtt_addr = realm->rtt_l0_addr;
+    params->flags = realm->flags;
+    params->pmu_num_ctrs = realm->pmu_num_ctrs;
+    params->s2sz = realm->s2sz;
+    params->rtt_base = realm->rtt_l0_addr;
     params->hash_algo = realm->hash_algo;
-    params->realm_feat_0 = realm->realm_feat_0;
-    params->s2_starting_level = realm->s2_starting_level;
-    params->num_s2_sl_rtts = realm->num_s2_sl_rtts;
+    params->rtt_level_start = realm->s2_starting_level;
+    params->rtt_num_start = realm->num_s2_sl_rtts;
     params->vmid = realm->vmid;
+    val_memcpy(&params->rpv, &realm->rpv, sizeof(realm->rpv));
 
     /* Create realm */
     if (val_host_rmi_realm_create(realm->rd, (uint64_t)params))
@@ -553,51 +586,51 @@ free_par:
 /**
  *   @brief    Set the RIPAS of a target IPA range to RAM
  *   @param    realm            - Realm strucrure
- *   @param    ipa              - IPA Address
+ *   @param    base             - Base of target IPA region
+ *   @param    top              - Top of target IPA region
  *   @param    rtt_level        - RTT level
  *   @param    rtt_alignment    - RTT Address Alignment
  *   @return   SUCCESS/FAILURE
 **/
-int val_host_ripas_init(val_host_realm_ts *realm, uint64_t ipa,
-                uint32_t rtt_level, uint64_t rtt_alignment)
+int val_host_ripas_init(val_host_realm_ts *realm, uint64_t base,
+                uint64_t top, uint64_t rtt_level, uint64_t rtt_alignment)
 {
-    uint64_t rtt_map_size = val_host_rtt_level_mapsize(rtt_level);
-    unsigned long ipa_end = ipa + rtt_map_size;
-    uint64_t ret = 0;
+    uint64_t ret = 0, out_top, rtt_level1;
     val_host_rtt_entry_ts rtte;
 
-    for (; ipa < ipa_end;)
+    do
     {
-        ret = val_host_rmi_rtt_init_ripas(realm->rd, ipa, rtt_level);
+        ret = val_host_rmi_rtt_init_ripas(realm->rd, base, top, &out_top);
+        rtt_level1 = RMI_INDEX(ret);
 
-        if (RMI_STATUS(ret) == RMI_ERROR_RTT)
+        if (RMI_STATUS(ret) == RMI_ERROR_RTT && rtt_level1 < VAL_RTT_MAX_LEVEL)
         {
-            ret = val_host_rmi_rtt_read_entry(realm->rd, ipa, rtt_level, &rtte);
+            ret = val_host_rmi_rtt_read_entry(realm->rd,
+                        val_host_addr_align_to_level(base, rtt_level1), rtt_level1, &rtte);
+            if (ret)
+            {
+                LOG(ERROR, "\tval_host_rmi_rtt_read_entry, ret=0x%x\n", ret, 0);
+                return VAL_ERROR;
+            }
+
             if (rtte.state == RMI_UNASSIGNED)
             {
-                ret = val_host_create_rtt_levels(realm, ipa, (uint32_t)rtte.walk_level,
+                ret = val_host_create_rtt_levels(realm, base, rtte.walk_level,
                                                 rtt_level, rtt_alignment);
                 if (ret)
                 {
                     return VAL_ERROR;
                 }
-                /* Try now with the RTT levels in place */
                 continue;
-            } else if (rtte.state == RMI_TABLE) {
-                if (rtt_level < VAL_RTT_MAX_LEVEL)
-                {
-                    rtt_level++;
-                    rtt_map_size = val_host_rtt_level_mapsize(rtt_level);
-                    continue;
-                }
-                /* We don't expect to get an error at the lowest rtt_level */
-                return VAL_ERROR;
             }
-        } else if (ret) {
             return VAL_ERROR;
         }
-        ipa += rtt_map_size;
-    }
+        else if (ret)
+        {
+            return VAL_ERROR;
+        }
+    } while (out_top != top);
+
     return VAL_SUCCESS;
 }
 
@@ -611,17 +644,18 @@ static uint32_t val_host_image_map(val_host_realm_ts *realm)
     uint64_t src_pa = PLATFORM_REALM_IMAGE_BASE;
     uint32_t i = 0;
 
+    if (val_host_ripas_init(realm,
+            VAL_REALM_IMAGE_BASE_IPA,
+            VAL_REALM_IMAGE_BASE_IPA + realm->image_pa_size,
+            VAL_RTT_MAX_LEVEL, PAGE_SIZE))
+    {
+        LOG(ERROR, "\trealm_init_ipa_state failed, ipa=0x%x\n",
+                realm->image_pa_base + i * PAGE_SIZE, 0);
+        return VAL_ERROR;
+    }
     /* MAP image regions */
     while (i < (realm->image_pa_size/PAGE_SIZE))
     {
-        if (val_host_ripas_init(realm,
-                VAL_REALM_IMAGE_BASE_IPA + i * PAGE_SIZE,
-                VAL_RTT_MAX_LEVEL, PAGE_SIZE))
-        {
-            LOG(ERROR, "\trealm_init_ipa_state failed, ipa=0x%x\n",
-                    realm->image_pa_base + i * PAGE_SIZE, 0);
-            return VAL_ERROR;
-        }
         if (val_host_map_protected_data(realm,
                 realm->image_pa_base + i * PAGE_SIZE,
                 VAL_REALM_IMAGE_BASE_IPA + i * PAGE_SIZE,
@@ -642,7 +676,6 @@ static uint32_t val_host_image_map(val_host_realm_ts *realm)
     realm->granules_mapped_count++;
     return VAL_SUCCESS;
 }
-
 /**
  *   @brief    Maps protected memory into the realm
  *   @param    realm            - Realm strucrure
@@ -654,17 +687,18 @@ uint32_t val_host_map_protected_data_to_realm(val_host_realm_ts *realm,
 {
     uint32_t i = 0;
 
+    if (val_host_ripas_init(realm,
+            data_create->ipa,
+            data_create->ipa + data_create->size,
+            VAL_RTT_MAX_LEVEL, data_create->rtt_alignment))
+    {
+        LOG(ERROR, "\tval_host_ripas_init failed, ipa=0x%x\n",
+                data_create->ipa + i * PAGE_SIZE, 0);
+        return VAL_ERROR;
+    }
     /* MAP image regions */
     while (i < (data_create->size/PAGE_SIZE))
     {
-        if (val_host_ripas_init(realm,
-                data_create->ipa + i * PAGE_SIZE,
-                VAL_RTT_MAX_LEVEL, data_create->rtt_alignment))
-        {
-            LOG(ERROR, "\tval_host_ripas_init failed, ipa=0x%x\n",
-                    data_create->ipa + i * PAGE_SIZE, 0);
-            return VAL_ERROR;
-        }
         if (val_host_map_protected_data(realm,
                 data_create->target_pa + i * PAGE_SIZE,
                 data_create->ipa + i * PAGE_SIZE,
@@ -697,7 +731,7 @@ static uint32_t val_host_map_shared_region(val_host_realm_ts *realm)
     uint32_t i = 0;
     uint64_t ns_shared_base_pa = (uint64_t)val_get_shared_region_base_pa();
     uint64_t ns_shared_base_ipa =
-                            (uint64_t)val_get_shared_region_base_ipa(realm->realm_feat_0 & 0xff);
+                            (uint64_t)val_get_shared_region_base_ipa(realm->s2sz & 0xff);
 
     /* MAP SHARED_NS region */
     while (i < PLATFORM_SHARED_REGION_SIZE/PAGE_SIZE)
@@ -743,7 +777,7 @@ uint32_t val_host_map_ns_shared_region(val_host_realm_ts *realm, uint64_t size, 
     }
 
     ns_shared_base_ipa =
-        (uint64_t)val_get_ns_shared_region_base_ipa(realm->realm_feat_0 & 0xff, pa);
+        (uint64_t)val_get_ns_shared_region_base_ipa(realm->s2sz & 0xff, pa);
     /* MAP SHARED_NS region */
     while (i < size/PAGE_SIZE)
     {
@@ -754,7 +788,6 @@ uint32_t val_host_map_ns_shared_region(val_host_realm_ts *realm, uint64_t size, 
                 mem_attr
                 ))
         {
-            LOG(ERROR, "\tval_realm_map_unprotected_data failed\n", 0, 0);
             return 0;
         }
         i++;
@@ -808,9 +841,10 @@ uint32_t val_host_rec_create(val_host_realm_ts *realm)
         return VAL_ERROR;
     }
     val_memset(rec_params, 0x0, PAGE_SIZE);
+    val_memset(&rec_create_flags, 0, sizeof(rec_create_flags));
 
     /* Populate rec_params */
-    rec_params->num_rec_aux = aux_count;
+    rec_params->num_aux = aux_count;
     realm->aux_count = aux_count;
 
     for (i = 0; i < (sizeof(rec_params->gprs)/sizeof(rec_params->gprs[0])); i++)
@@ -851,25 +885,25 @@ uint32_t val_host_rec_create(val_host_realm_ts *realm)
 
         for (j = 0; j < aux_count; j++)
         {
-            rec_params->rec_aux_granules[j] = (uint64_t)val_host_mem_alloc(PAGE_SIZE, PAGE_SIZE);
-            if (!rec_params->rec_aux_granules[j])
+            rec_params->aux[j] = (uint64_t)val_host_mem_alloc(PAGE_SIZE, PAGE_SIZE);
+            if (!rec_params->aux[j])
             {
                 LOG(ERROR, "\tFailed to allocate memory for aux rec\n", 0, 0);
                 goto free_rec_params;
             } else {
-                ret = val_host_rmi_granule_delegate(rec_params->rec_aux_granules[j]);
+                ret = val_host_rmi_granule_delegate(rec_params->aux[j]);
                 if (ret)
                 {
                     LOG(ERROR, "\trec delegation failed, rec=0x%x, ret=0x%x\n",
-                                         rec_params->rec_aux_granules[j], ret);
+                                         rec_params->aux[j], ret);
                     goto free_rec_params;
                 }
             }
-            realm->rec_aux_granules[j + (i * aux_count)] = rec_params->rec_aux_granules[j];
+            realm->rec_aux_granules[j + (i * aux_count)] = rec_params->aux[j];
         }
 
         /* Create REC  */
-        ret = val_host_rmi_rec_create(realm->rec[i], realm->rd, (uint64_t)rec_params);
+        ret = val_host_rmi_rec_create(realm->rd, realm->rec[i], (uint64_t)rec_params);
         if (ret)
         {
             LOG(ERROR, "\tREC create failed, ret=0x%x\n", ret, 0);
@@ -984,6 +1018,21 @@ uint32_t val_host_realm_setup(val_host_realm_ts *realm, bool activate)
 }
 
 /**
+ *   @brief    Set the default realm params
+ *   @param    realm      - Realm structure
+ *   @return   void
+**/
+void val_host_realm_params(val_host_realm_ts *realm)
+{
+    realm->s2sz = IPA_WIDTH_DEFAULT;
+    realm->hash_algo = RMI_HASH_SHA_256;
+    realm->s2_starting_level = 1;
+    realm->num_s2_sl_rtts = 1;
+    realm->vmid = 0;
+    realm->rec_count = 1;
+}
+
+/**
  *   @brief    Checks the realm exit state is ripas change
  *   @param    run      - Rec run structure pointer
  *   @return   SUCCESS/FAILURE
@@ -1023,48 +1072,6 @@ uint32_t val_host_check_realm_exit_psci(val_host_rec_run_ts *run, uint32_t psci_
         return VAL_SUCCESS;
 
     return VAL_ERROR;
-}
-
-/**
- *   @brief    Get supported PA range
- *   @param    void
- *   @return   PA Range
-**/
-uint64_t val_get_pa_range_supported(void)
-{
-    uint64_t pa = val_id_aa64mmfr0_el1_read();
-    uint64_t pa_range = 0;
-
-    pa = pa & 0x000F;
-
-    switch (pa)
-    {
-    case 0:
-        pa_range = 32;
-        break;
-    case 1:
-        pa_range = 36;
-        break;
-    case 2:
-        pa_range = 40;
-        break;
-    case 3:
-        pa_range = 42;
-        break;
-    case 4:
-        pa_range = 44;
-        break;
-    case 5:
-        pa_range = 48;
-        break;
-    case 6:
-        pa_range = 52;
-        break;
-    default:
-        LOG(ERROR, "\tinvalid ipa_width\n", 0, 0);
-        break;
-    }
-    return pa_range;
 }
 
 /**
@@ -1397,11 +1404,14 @@ val_host_granule_ts *val_host_remove_granule(val_host_granule_ts **gran_list_hea
  *   @brief    Rollback mem_track state update
  *   @param    rd                - Realm RD
  *   @param    PA                - Physical address of granule
+ *   @param    ipa               - IPA Address
+ *   @param    level             - RTT level
  *   @param    state             - state of granule
  *   @param    gran_list_state   - granule list state
  *   @return   void
 **/
 void val_host_update_destroy_granule_state(uint64_t rd, uint64_t PA,
+                                       uint64_t ipa, uint64_t level,
                            uint32_t state, uint32_t gran_list_state)
 {
     val_host_granule_ts *node = NULL;
@@ -1433,14 +1443,14 @@ void val_host_update_destroy_granule_state(uint64_t rd, uint64_t PA,
     switch (gran_list_state)
     {
         case GRANULE_RTT:
-            node = val_host_remove_granule(&mem_track[current_realm].gran_type.rtt, PA);
+            node = val_host_remove_rtt_granule(&mem_track[current_realm].gran_type.rtt, ipa, level);
             node->state = state;
-            val_host_add_granule(state, PA, node);
+            val_host_add_granule(state, node->PA, node);
             break;
         case GRANULE_DATA:
-            node = val_host_remove_data_granule(&mem_track[current_realm].gran_type.data, PA);
+            node = val_host_remove_data_granule(&mem_track[current_realm].gran_type.data, ipa);
             node->state = state;
-            val_host_add_granule(state, PA, node);
+            val_host_add_granule(state, node->PA, node);
             break;
 
         case GRANULE_REC:
@@ -1532,6 +1542,66 @@ val_host_granule_ts *val_host_remove_data_granule(val_host_granule_ts **gran_lis
 }
 
 /**
+ *   @brief    Remove data granule from data list and add to the NS mem_track
+ *   @param    gran_list_head      - Data granule which needs to remove from data list
+ *                                   and add to NS mem track
+ *   @param    ipa                 - IPA which needs to remove from data list
+ *   @return   Returns the node from data list
+**/
+val_host_granule_ts *val_host_remove_rtt_granule(val_host_granule_ts **gran_list_head,
+                                                         uint64_t ipa, uint64_t level)
+{
+    val_host_granule_ts *current = *gran_list_head, *prev = NULL, *temp = NULL;
+
+    temp = mem_track[0].gran_type.ns;
+    if ((current != NULL) && (current->level == level) && (current->ipa == ipa))
+    {
+        if (temp == *gran_list_head)
+        {
+            head = current->next;
+            mem_track[0].gran_type.ns = head;
+            current->next = NULL;
+            return current;
+        } else {
+            prev = current;
+            current = current->next;
+            *gran_list_head = current;
+            prev->next = NULL;
+            return prev;
+        }
+    }
+
+    while (NULL != current)
+    {
+        if ((current->level != level) || (current->ipa != ipa))
+        {
+            prev = current;
+            current = current->next;
+        } else {
+            break;
+        }
+    }
+
+    if (current == NULL)
+        return NULL;
+    else if ((current->level == level) && (current->ipa == ipa))
+    {
+        prev->next = current->next;
+        if (mem_track[0].gran_type.ns == *gran_list_head)
+        {
+            if (current->next == NULL)
+                tail = prev;
+        }
+        current->next = NULL;
+        return current;
+    } else {
+        return NULL;
+    }
+
+    return NULL;
+}
+
+/**
  *   @brief    Destroy rtt levels
  *   @param    rtt_level      - RTT level to destroy
  *   @param    current_realm  - current realm index in mem track
@@ -1541,6 +1611,7 @@ uint64_t val_host_destroy_rtt_levels(uint64_t rtt_level, int current_realm)
 {
     val_host_granule_ts *curr_gran = NULL, *next_gran = NULL;
     uint64_t ret;
+    val_host_rtt_destroy_ts rtt_destroy;
 
     curr_gran = mem_track[current_realm].gran_type.rtt;
     while (curr_gran != NULL)
@@ -1549,14 +1620,13 @@ uint64_t val_host_destroy_rtt_levels(uint64_t rtt_level, int current_realm)
         if (curr_gran->level == rtt_level)
         {
 
-            ret = val_host_rmi_rtt_destroy(curr_gran->PA, curr_gran->rd,
-                                           curr_gran->ipa, curr_gran->level);
+            ret = val_host_rmi_rtt_destroy(curr_gran->rd,
+                                           curr_gran->ipa, curr_gran->level, &rtt_destroy);
             if (ret)
             {
-                LOG(ERROR, "\trealm_rtt_destroy failed, rtt=0x%x, ret=0x%x\n", curr_gran->PA, ret);
+                LOG(ERROR, "\trealm_rtt_destroy failed, rtt=0x%x, ret=0x%x\n", curr_gran->ipa, ret);
                 return VAL_ERROR;
             }
-
             ret = val_host_rmi_granule_undelegate(curr_gran->PA);
             if (ret)
             {
@@ -1653,8 +1723,9 @@ uint32_t val_host_realm_destroy(uint64_t rd)
 {
     uint64_t ret;
     val_host_granule_ts *curr_gran = NULL, *next_gran = NULL;
-
+    val_host_data_destroy_ts data_destroy;
     current_realm = val_host_get_curr_realm(rd);
+    uint64_t top;
 
     /* For each REC - Destroy, undelegate */
     curr_gran = mem_track[current_realm].gran_type.rec;
@@ -1684,7 +1755,7 @@ uint32_t val_host_realm_destroy(uint64_t rd)
         next_gran = curr_gran->next;
         if (curr_gran->is_granule_sliced == 1)
         {
-            ret = val_host_rmi_data_destroy(curr_gran->rd, curr_gran->ipa);
+            ret = val_host_rmi_data_destroy(curr_gran->rd, curr_gran->ipa, &data_destroy);
             if (ret)
             {
                 LOG(ERROR, "\tData destroy failed, data=0x%x, ret=0x%x\n", curr_gran->PA, ret);
@@ -1707,7 +1778,7 @@ uint32_t val_host_realm_destroy(uint64_t rd)
         next_gran = curr_gran->next;
         if (curr_gran->is_granule_sliced == 0)
         {
-            ret = val_host_rmi_data_destroy(curr_gran->rd, curr_gran->ipa);
+            ret = val_host_rmi_data_destroy(curr_gran->rd, curr_gran->ipa, &data_destroy);
             if (ret)
             {
                 LOG(ERROR, "\tData destroy failed, data=0x%x, ret=0x%x\n", curr_gran->PA, ret);
@@ -1731,7 +1802,8 @@ uint32_t val_host_realm_destroy(uint64_t rd)
     while (curr_gran != NULL)
     {
         next_gran = curr_gran->next;
-        ret = val_host_rmi_rtt_unmap_unprotected(curr_gran->rd, curr_gran->ipa, curr_gran->level);
+        ret = val_host_rmi_rtt_unmap_unprotected(curr_gran->rd, curr_gran->ipa,
+                                                       curr_gran->level, &top);
         if (ret)
         {
             LOG(ERROR, "\tval_rmi_rtt_unmap_unprotected failed, ipa=0x%x, ret=0x%x\n",

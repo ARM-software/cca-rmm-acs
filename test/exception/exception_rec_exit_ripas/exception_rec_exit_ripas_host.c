@@ -13,7 +13,6 @@
 void exception_rec_exit_ripas_host(void)
 {
     val_host_realm_ts realm;
-    val_host_rmifeatureregister0_ts features_0;
     uint64_t ret = 0;
     val_host_rec_entry_ts *rec_entry = NULL;
     uint64_t ripas_ipa = 0, ripas_size = 0x3000;
@@ -22,16 +21,8 @@ void exception_rec_exit_ripas_host(void)
     val_data_create_ts data_create;
 
     val_memset(&realm, 0, sizeof(realm));
-    val_memset(&features_0, 0, sizeof(features_0));
 
-    features_0.s2sz = 40;
-    val_memcpy(&realm.realm_feat_0, &features_0, sizeof(features_0));
-
-    realm.hash_algo = RMI_HASH_SHA_256;
-    realm.s2_starting_level = 0;
-    realm.num_s2_sl_rtts = 1;
-    realm.vmid = 0;
-    realm.rec_count = 1;
+    val_host_realm_params(&realm);
 
     /* Populate realm with one REC*/
     if (val_host_realm_setup(&realm, false))
@@ -102,7 +93,7 @@ void exception_rec_exit_ripas_host(void)
         goto destroy_realm;
     }
     exception_rec_exit.ripas_base = ripas_ipa;
-    exception_rec_exit.ripas_size = ripas_size;
+    exception_rec_exit.ripas_top = ripas_ipa + ripas_size;
     exception_rec_exit.ripas_value = RSI_EMPTY;
     exception_rec_exit.exception_ripas_exit_intent = EXCEPTION_RIPAS_EXIT_ACCEPT;
     exception_rec_exit.realm = &realm;
@@ -144,7 +135,7 @@ void exception_rec_exit_ripas_host(void)
         goto destroy_realm;
     }
     exception_rec_exit.ripas_base = ripas_ipa;
-    exception_rec_exit.ripas_size = ripas_size;
+    exception_rec_exit.ripas_top = ripas_ipa + ripas_size;
     exception_rec_exit.ripas_value = RSI_RAM;
     exception_rec_exit.exception_ripas_exit_intent = EXCEPTION_RIPAS_EXIT_ACCEPT;
     exception_rec_exit.realm = &realm;
@@ -169,7 +160,7 @@ void exception_rec_exit_ripas_host(void)
         goto destroy_realm;
     }
 
-    /*Step 3: RAM --> RAM*/
+    /*Step 3: RAM --> EMPTY */
     ripas_ipa = PROTECTED_IPA;
     rec_entry->gprs[1] = ripas_ipa;
     rec_entry->gprs[2] = ripas_size;
@@ -186,8 +177,8 @@ void exception_rec_exit_ripas_host(void)
         goto destroy_realm;
     }
     exception_rec_exit.ripas_base = ripas_ipa;
-    exception_rec_exit.ripas_size = ripas_size;
-    exception_rec_exit.ripas_value = RSI_RAM;
+    exception_rec_exit.ripas_top = ripas_ipa + ripas_size;
+    exception_rec_exit.ripas_value = RSI_EMPTY;
     exception_rec_exit.exception_ripas_exit_intent = EXCEPTION_RIPAS_EXIT_PARTIAL;
     exception_rec_exit.realm = &realm;
     ret = exception_validate_rec_exit_ripas(exception_rec_exit);
@@ -211,10 +202,10 @@ void exception_rec_exit_ripas_host(void)
         goto destroy_realm;
     }
 
-    /*Step 4: RAM --> RAM*/
+    /*Step 4: RAM --> EMPTY */
     ripas_ipa = PROTECTED_IPA;
-    rec_entry->gprs[1] = ripas_ipa;
-    rec_entry->gprs[2] = ripas_size;
+    rec_entry->gprs[1] = ripas_ipa + 0x1000;
+    rec_entry->gprs[2] = 0x1000;
     ret = val_host_rmi_rec_enter(realm.rec[0], realm.run[0]);
     if (ret)
     {
@@ -227,9 +218,9 @@ void exception_rec_exit_ripas_host(void)
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(23)));
         goto destroy_realm;
     }
-    exception_rec_exit.ripas_base = ripas_ipa;
-    exception_rec_exit.ripas_size = ripas_size;
-    exception_rec_exit.ripas_value = RSI_RAM;
+    exception_rec_exit.ripas_base = ripas_ipa + 0x1000;
+    exception_rec_exit.ripas_top = ripas_ipa + 0x2000;
+    exception_rec_exit.ripas_value = RSI_EMPTY;
     exception_rec_exit.exception_ripas_exit_intent = EXCEPTION_RIPAS_EXIT_REJECT;
     exception_rec_exit.realm = &realm;
     ret = exception_validate_rec_exit_ripas(exception_rec_exit);

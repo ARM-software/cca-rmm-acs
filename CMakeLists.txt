@@ -17,6 +17,8 @@ cmake_policy(SET CMP0057 NEW)
 
 ### Tool dependency check - end ###
 
+find_package(Git REQUIRED)
+
 get_filename_component(ROOT_DIR . ABSOLUTE)
 
 # Set internal build directory variable
@@ -26,9 +28,12 @@ file(MAKE_DIRECTORY ${BUILD}/output/)
 # Set global compile list variable
 set(COMPILE_LIST "")
 
+add_definitions(-DQCBOR_DISABLE_FLOAT_HW_USE)
+
 #### Include cmake support module ###
 include(${ROOT_DIR}/tools/cmake/toolchain/utils.cmake)
 include(${ROOT_DIR}/tools/cmake/toolchain/default.cmake)
+include(${ROOT_DIR}/tools/cmake/common/CMakeExternal.cmake)
 ####
 
 
@@ -39,6 +44,7 @@ list(APPEND ENABLE_PIE_LIST ON OFF)
 list(APPEND TEST_COMBINE_LIST ON OFF)
 list(APPEND CMAKE_BUILD_TYPE_LIST Release Debug)
 list(APPEND ARM_ARCH_MAJOR_LIST 8 9)
+list(APPEND SECURE_TEST_ENABLE_LIST 1)
 
 ###
 
@@ -166,7 +172,39 @@ if(DEFINED SUITE_TEST_RANGE)
     add_definitions(-DSUITE_TEST_RANGE_MAX="${SUITE_TEST_RANGE_MAX}")
 endif()
 
+# Check for SECURE_TEST_ENABLE
+if(NOT DEFINED SECURE_TEST_ENABLE)
+    message(STATUS "[ACS] : SECURE_TEST_ENABLE is not define so secure tests will be skipped.")
+else()
+    if(NOT ${SECURE_TEST_ENABLE} IN_LIST SECURE_TEST_ENABLE_LIST)
+        message(FATAL_ERROR "[ACS] : Error: Unspported value for -DSECURE_TEST_ENABLE=, supported values are : ${SECURE_TEST_ENABLE_LIST}")
+    endif()
+    add_definitions(-DSECURE_TEST_ENABLE)
+    message(STATUS "[ACS] : SECURE_TEST_ENABLE is define and secure test will run.")
+endif()
 
+if((${SUITE} STREQUAL "attestation_measurement") OR (${SUITE} STREQUAL "all"))
+    set(RMM_ACS_TARGET_QCBOR		${CMAKE_CURRENT_BINARY_DIR}/rmm_acs_qcbor	CACHE PATH "Location of Q_CBOR sources.")
+    set(RMM_ACS_QCBOR_INCLUDE_PATH      ${RMM_ACS_TARGET_QCBOR}/inc)
+endif()
+
+if(((${SUITE} STREQUAL "attestation_measurement") OR (${SUITE} STREQUAL "all")) AND (NOT EXISTS ${RMM_ACS_TARGET_QCBOR}))
+execute_process(COMMAND ${GIT_EXECUTABLE} clone ${QCBOR_GIT_REPO_LINK} ${RMM_ACS_TARGET_QCBOR}
+	RESULT_VARIABLE qcbor_clone_result
+	WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
+if(qcbor_clone_result)
+	message(FATAL_ERROR "git clone failed for ${QCBOR_GIT_REPO_LINK}")
+endif()
+
+if(NOT qcbor_clone_result)
+execute_process(COMMAND ${GIT_EXECUTABLE} checkout -q "${QCBOR_GIT_REPO_TAG}"
+	RESULT_VARIABLE qcbor_checkout_result
+	WORKING_DIRECTORY ${RMM_ACS_TARGET_QCBOR})
+if(qcbor_checkout_result)
+	message(FATAL_ERROR "git checkout failed for Repo : ${QCBOR_GIT_REPO_LINK}, Tag : ${QCBOR_GIT_REPO_TAG}")
+endif()
+endif()
+endif()
 
 # Setup toolchain parameters for compilation and link
 include(${ROOT_DIR}/tools/cmake/toolchain/common.cmake)
@@ -179,6 +217,7 @@ include(${ROOT_DIR}/tools/cmake/toolchain/common.cmake)
 add_definitions(-DCMAKE_BUILD)
 add_definitions(-DVERBOSITY=${VERBOSE})
 add_definitions(-Dd_${SUITE})
+add_definitions(-DPLAT_XLAT_TABLES_DYNAMIC)
 
 if(${TEST_COMBINE})
 add_definitions(-DTEST_COMBINE)

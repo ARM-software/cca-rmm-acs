@@ -28,6 +28,7 @@ list(APPEND TEST_INCLUDE
     ${ROOT_DIR}/plat/driver/src/
     ${ROOT_DIR}/test/database/
     ${ROOT_DIR}/test/common/
+    ${ROOT_DIR}/val/common/xlat_tables_v2/include/
 )
 
 foreach(SUITE ${TEST_SUITE_LIST})

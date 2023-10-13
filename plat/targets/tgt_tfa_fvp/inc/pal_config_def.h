@@ -8,7 +8,7 @@
 #ifndef _PAL_CONFIG_H_
 #define _PAL_CONFIG_H_
 
-
+/* To enable WFI test */
 #define TEST_WFI_TRAP
 
 
@@ -65,6 +65,15 @@
 #define PLATFORM_TWDOG_INTID         56
 #define ARM_SP805_TWDG_CLK_HZ   32768
 
+/* Interrupts used for GIC testing */
+#define SPI_vINTID 59
+#define PPI_vINTID 27
+#define SGI_vINTID 12
+/* PMU physical interrupt */
+#define PMU_PPI     23UL
+/* PMU virtual interrupt */
+#define PMU_VIRQ    PMU_PPI
+
 /* ACS Memory Usage Layout
  *
  * +--------------+      +-------------+
@@ -88,7 +97,7 @@
 
 #define PLATFORM_NORMAL_WORLD_IMAGE_SIZE  0x200000
 #define PLATFORM_HOST_IMAGE_SIZE          (PLATFORM_NORMAL_WORLD_IMAGE_SIZE / 2)
-#define PLATFORM_REALM_IMAGE_SIZE         (PLATFORM_NORMAL_WORLD_IMAGE_SIZE / 2)
+#define PLATFORM_REALM_IMAGE_SIZE         0xC0000 //768 kb
 #define PLATFORM_MEMORY_POOL_SIZE         (50 * 0x100000)
 #define PLATFORM_SHARED_REGION_SIZE       0x100000
 #define PLATFORM_HEAP_REGION_SIZE         (PLATFORM_MEMORY_POOL_SIZE \
@@ -129,16 +138,6 @@
 #define PLATFORM_SECURE_IMAGE_SIZE         0x100000
 
 /*
- * Disabled the secure test checks, currently it is commented,
- * need to revisit once spec will mention about secure world is optional or not.
- */
-/*
- * #ifndef PLATFORM_SECURE_DISABLED
- * #define PLATFORM_SECURE_DISABLED
- * #endif
- */
-
-/*
  * Invalidate the instr cache and data cache for image regions.
  * This is to prevent re-use of stale data cache entries from
  * prior bootloader stages.
@@ -160,5 +159,26 @@
 #define GICD_SIZE       0x10000
 #define GICR_SIZE       0x100000
 #define GICC_SIZE       0x2000
+
+/* Non-secure EL1 physical timer interrupt */
+#define IRQ_PHY_TIMER_EL1           30
+/* Non-secure EL1 virtual timer interrupt */
+#define IRQ_VIRT_TIMER_EL1          27
+/* Non-secure EL2 physical timer interrupt */
+#define IRQ_PHY_TIMER_EL2           26
+
+#define IPA_WIDTH_DEFAULT   32
+
+#define PGT_IAS     IPA_WIDTH_DEFAULT
+#define PAGT_OAS    IPA_WIDTH_DEFAULT
+
+/* To enable WFE test */
+//#define TEST_WFE_TRAP
+
+/* XLAT related macros */
+#define MAX_MMAP_REGIONS 1UL
+#define MAX_XLAT_TABLES  1UL
+#define PLAT_VIRT_ADDR_SPACE_SIZE (1ULL << PGT_IAS)
+#define PLAT_PHY_ADDR_SPACE_SIZE  (1ULL << PAGT_OAS)
 
 #endif /* _PAL_CONFIG_H_ */

@@ -52,14 +52,9 @@ typedef enum _exception_ripas_exit_intent {
     EXCEPTION_RIPAS_EXIT_PARTIAL
 } exception_ripas_exit_intent_te;
 
-typedef enum _exception_da_abort_type {
-    EMULATABLE_DA,
-    NON_EMULATABLE_DA
-} exception_da_abort_type_te;
-
 typedef struct _exception_validate_ripas_exit {
     uint64_t ripas_base;
-    uint64_t ripas_size;
+    uint64_t ripas_top;
     uint64_t ripas_value;
     exception_ripas_exit_intent_te exception_ripas_exit_intent;
     uint64_t test_fault_addr;
@@ -71,8 +66,4 @@ void exception_copy_exit_to_entry(val_host_rec_entry_ts *rec_entry,
                                           val_host_rec_exit_ts *rec_exit);
 uint64_t exception_validate_rec_exit_ripas(\
             exception_rec_exit_ts ripas_rec_exit);
-uint64_t exception_validate_rec_exit_ia(exception_rec_exit_ts *rec_exit_exception);
-uint64_t check_esr_mbz_feilds(val_host_rec_exit_ts *rec_exit,
-                              exception_da_abort_type_te abort_type);
-
 #endif /* #ifndef __EXCEPTION_COMMON_HOST__ */

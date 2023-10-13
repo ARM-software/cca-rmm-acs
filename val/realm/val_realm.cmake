@@ -6,12 +6,15 @@
 #-------------------------------------------------------------------------------
 
 file(GLOB VAL_SRC
-    "${ROOT_DIR}/val/realm/inc/*.h"
     "${ROOT_DIR}/val/realm/src/*.c"
     "${ROOT_DIR}/val/realm/src/*.S"
-    "${ROOT_DIR}/val/common/inc/*.h"
     "${ROOT_DIR}/val/common/src/*.c"
     "${ROOT_DIR}/val/common/src/*.S"
+    "${ROOT_DIR}/val/common/inc/*.S"
+    "${ROOT_DIR}/val/common/xlat_tables_v2/include/*.S"
+    "${ROOT_DIR}/val/common/xlat_tables_v2/src/*.c"
+    "${ROOT_DIR}/val/common/xlat_tables_v2/src/*.S"
+
 )
 
 #Create compile list files
@@ -23,6 +26,7 @@ add_library(${VAL_LIB} STATIC ${VAL_SRC})
 
 target_include_directories(${VAL_LIB} PRIVATE
     ${CMAKE_CURRENT_BINARY_DIR}
+    ${ROOT_DIR}/val/common/xlat_tables_v2/include/
     ${ROOT_DIR}/val/realm/inc/
     ${ROOT_DIR}/val/common/inc/
     ${ROOT_DIR}/plat/common/inc/

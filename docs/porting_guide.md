@@ -11,7 +11,7 @@ This document provides the porting steps and the list of PAL APIs.
   1. Create new directories in **plat/targets/<platform_name>**. For reference, see the existing platform tgt_tfa_fvp directory.
   2. Execute `cp -rf plat/targets/tgt_tfa_fvp/* plat/targets/<platform_name>/`
   3. Update **plat/targets/<platform_name>/pal_config_def.h** with your target platform details.
-  4. Refer section **List of PAL APIs** file or **plat/common/inc/pal_interfaces.h** to view the list of PAL APIs that must be ported for your target platform. The reference implementation for these APIs are available in **plat/targets/tgt_tfa_fvp/pal_\*\.c** files. You can reuse the code if it works for your platform. Otherwise, port them for your platform-specific peripherals.
+  4. Refer section **List of PAL APIs** file or **plat/common/inc/pal_interfaces.h** to view the list of PAL APIs that must be ported for your target platform. The reference implementation for these APIs are available in **plat/targets/tgt_tfa_fvp/src/pal_\*\.c** files. You can reuse the code if it works for your platform. Otherwise, port them for your platform-specific peripherals.
   5. Update **plat/targets/<platform_name>/pal.cmake** appropriately to select the correct instances of PAL files for compilation.
 
 ## Peripheral requirement
@@ -51,12 +51,7 @@ Since the test suite is agnostic to various system targets, you must port the fo
 | 24 | void pal_send_sgi(int sgi_id, unsigned int core_pos); | Send an SGI to a given core. | Input: sgi_id: SGI interrupt number. <br />core_pos:  CPU core number. <br /> return: void |
 | 25 | uint32_t pal_get_irq_num(void); | Get IRQ number | Input: void <br /> return: irq_num: irq number. |
 | 26 | void pal_gic_end_of_intr(unsigned int irq_num); | End of the interrupt | Input: irq number <br /> return: void. |
-| 27 | void pal_driver_sp805_wdog_start(unsigned long base); | Start the watchdog | Input : watchdog base <br /> Return: void|
-| 28 | void pal_driver_sp805_wdog_stop(unsigned long base); | Stop the watchdog | Input : watchdog base <br /> Return: void|
-| 29 | void pal_driver_sp805_wdog_refresh(unsigned long base); | Refresh the watchdog | Input : watchdog base <br /> Return: void|
-| 30 | void pal_driver_ns_wdog_start(uint32_t ms); | Start the non-secure watchdog | Input: ms: timeout <br /> Return: void|
-| 31 | void pal_driver_ns_wdog_stop(void); | Stop the non-secure watchdog | Input : void <br /> Return: void|
-| 32 | void pal_driver_sp805_twdog_start(unsigned long base, uint32_t ms); | Start the trusted watchdog | Input: base: watchdog base <br /> ms: timeout <br /> Return: void|
+| 27 | uint32_t pal_verify_signature(uint8_t *token); | function interface for verifying the signature of the provided token | Input: token recived from the platform <br /> return: true/false. |
 
 ## License
 

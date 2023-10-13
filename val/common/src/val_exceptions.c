@@ -30,17 +30,19 @@ bool val_irq_current(void)
 
 static bool default_sync_current_exception(void)
 {
-    uint64_t esr = 0, elr = 0, ec;
+    uint64_t esr = 0, elr = 0, far = 0, ec;
     uint64_t current_el = val_read_current_el();
 
     if (current_el == EL2)
     {
         esr = val_esr_el2_read();
         elr = val_elr_el2_read();
+        far = val_far_el2_read();
     } else if (current_el == EL1)
     {
         esr = val_esr_el1_read();
         elr = val_elr_el1_read();
+        far = val_far_el1_read();
     }
 
     ec = esr >> 26;
@@ -53,7 +55,7 @@ static bool default_sync_current_exception(void)
 
             if (!(esr & (1U << 10)))
             { /* Check FnV bit. */
-                LOG(ERROR, ", far=%x\n", val_far_el1_read(), 0);
+                LOG(ERROR, ", far=%x\n", far, 0);
             } else
             {
                 LOG(ERROR, ", far=invalid\n", 0, 0);
@@ -67,7 +69,7 @@ static bool default_sync_current_exception(void)
 
             if (!(esr & (1U << 10)))
             { /* Check FnV bit. */
-                LOG(ERROR, ", far=%x\n", val_far_el1_read(), 0);
+                LOG(ERROR, ", far=%x\n", far, 0);
             } else
             {
                 LOG(ERROR, ", far=invalid\n", 0, 0);
@@ -76,9 +78,17 @@ static bool default_sync_current_exception(void)
             break;
 
         default:
-            LOG(ERROR, "Unknown sync exception pc=%x, esr=%x",
+            LOG(ERROR, "Unknown sync exception elr=%x, esr=%x",
                  elr, esr);
             LOG(ERROR, ", ec=%x\n", ec, 0);
+
+            if (!(esr & (1U << 10)))
+            { /* Check FnV bit. */
+                LOG(ERROR, ", far=%x\n", far, 0);
+            } else
+            {
+                LOG(ERROR, ", far=invalid\n", 0, 0);
+            }
     }
 
     for (;;)

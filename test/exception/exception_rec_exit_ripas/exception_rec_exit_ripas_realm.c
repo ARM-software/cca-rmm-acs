@@ -15,6 +15,7 @@ void exception_rec_exit_ripas_realm(void)
     val_realm_rsi_host_call_t *realm_host_call = NULL;
     val_smc_param_ts args = {0,};
     uint32_t status = VAL_SUCCESS;
+    uint64_t flags = RSI_NO_CHANGE_DESTROYED;
 
     /* scenario 1: RAM --> EMPTY */
     realm_host_call = val_realm_rsi_host_call_ripas(VAL_SWITCH_TO_HOST);
@@ -22,7 +23,7 @@ void exception_rec_exit_ripas_realm(void)
     size = realm_host_call->gprs[2];
     ripas_val = RSI_EMPTY;
     val_memset(&args, 0x0, sizeof(val_smc_param_ts));
-    args = val_realm_rsi_ipa_state_set(ipa_base, size, ripas_val);
+    args = val_realm_rsi_ipa_state_set(ipa_base, ipa_base + size, ripas_val, flags);
     if (args.x0 || (args.x1 != (ipa_base + size)))
     {
         LOG(ERROR, "\trsi_ipa_state_set failed x0 %lx x1 %lx\n", args.x0, args.x1);
@@ -36,42 +37,42 @@ void exception_rec_exit_ripas_realm(void)
     size = realm_host_call->gprs[2];
     ripas_val = RSI_RAM;
     val_memset(&args, 0x0, sizeof(val_smc_param_ts));
-    args = val_realm_rsi_ipa_state_set(ipa_base, size, ripas_val);
+    args = val_realm_rsi_ipa_state_set(ipa_base, ipa_base + size, ripas_val, flags);
     if (args.x0 || (args.x1 != (ipa_base + size)))
     {
         LOG(ERROR, "\trsi_ipa_state_set failed x0 %lx x1 %lx\n", args.x0, args.x1);
         status = VAL_ERROR_POINT(2);
     }
-    LOG(TEST, "\tRIPAS RAM --> EMPTY verified with ACCEPT SET\n", 0, 0);
+    LOG(TEST, "\tRIPAS RAM --> EMPTY verified\n", 0, 0);
 
-    /* scenario 3: RAM --> RAM */
+    /* scenario 3: RAM --> EMPTY */
     realm_host_call = val_realm_rsi_host_call_ripas(VAL_SWITCH_TO_HOST);
     ipa_base = realm_host_call->gprs[1];
     size = realm_host_call->gprs[2];
-    ripas_val = RSI_RAM;
+    ripas_val = RSI_EMPTY;
     val_memset(&args, 0x0, sizeof(val_smc_param_ts));
-    args = val_realm_rsi_ipa_state_set(ipa_base, size, ripas_val);
-    if (args.x0 || (args.x1 >= (ipa_base + size)))
+    args = val_realm_rsi_ipa_state_set(ipa_base, ipa_base + size, ripas_val, flags);
+    if (args.x0 || (args.x1 != (ipa_base + 0x1000)))
     {
         LOG(ERROR, "\trsi_ipa_state_set failed x0 %lx x1 %lx\n", args.x0, args.x1);
         status = VAL_ERROR_POINT(3);
     }
-    LOG(TEST, "\tRIPAS Value RAM --> RAM verified with the "
+    LOG(TEST, "\tRIPAS Value RAM --> EMPTY verified with the "
                        "PARTIAL RIPAS SET\n", 0, 0);
 
-    /* scenario 4: RAM --> RAM */
+    /* scenario 4: RAM --> EMPTY */
     realm_host_call = val_realm_rsi_host_call_ripas(VAL_SWITCH_TO_HOST);
     ipa_base = realm_host_call->gprs[1];
     size = realm_host_call->gprs[2];
-    ripas_val = RSI_RAM;
+    ripas_val = RSI_EMPTY;
     val_memset(&args, 0x0, sizeof(val_smc_param_ts));
-    args = val_realm_rsi_ipa_state_set(ipa_base, size, ripas_val);
+    args = val_realm_rsi_ipa_state_set(ipa_base, ipa_base + size, ripas_val, flags);
     if (args.x0 || (args.x1 != ipa_base))
     {
         LOG(ERROR, "\trsi_ipa_state_set failed x0 %lx x1 %lx\n", args.x0, args.x1);
         status = VAL_ERROR_POINT(3);
     }
-    LOG(TEST, "\tRIPAS Value RAM --> RAM verified with REJECT\n", 0, 0);
+    LOG(TEST, "\tRIPAS Value RAM --> EMPTY verified with REJECT\n", 0, 0);
     if (status)
     {
         val_set_status(RESULT_FAIL(status));
