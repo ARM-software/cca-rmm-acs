@@ -37,9 +37,9 @@
 #define RMI_RTT_SET_RIPAS            0xC4000169
 #define RMI_VERSION                  0xC4000150
 
-/* RmiFeature types */
-#define RMI_NOT_SUPPORTED  0
-#define RMI_SUPPORTED      1
+/* RmiFeature type */
+#define RMI_FEATURE_FALSE  0
+#define RMI_FEATURE_TRUE      1
 
 #define RMI_FEATURE_REGISTER_0_INDEX 0
 
@@ -61,6 +61,10 @@
 #define RMI_NOT_EMULATED_MMIO 0
 #define RMI_EMULATED_MMIO     1
 
+/* RmiPmuOverflowStatus types */
+#define RMI_PMU_OVERFLOW_NOT_ACTIVE  0
+#define RMI_PMU_OVERFLOW_ACTIVE      1
+
 /* RmiRecExitReason types */
 #define RMI_EXIT_SYNC          0
 #define RMI_EXIT_IRQ           1
@@ -70,21 +74,21 @@
 #define RMI_EXIT_HOST_CALL     5
 #define RMI_EXIT_SERROR        6
 
+#define RMI_VALIDN_NS 1
 
 /* RmiRecRunnable types */
 #define RMI_NOT_RUNNABLE 0
 #define RMI_RUNNABLE     1
 
-/* RmiStatusCode types */
+/* RmiRipas types */
 #define RMI_EMPTY        0
-#define RMI_RAM        1
+#define RMI_RAM          1
+#define RMI_DESTROYED    2
 
 /* RmiRttEntryState types */
 #define RMI_UNASSIGNED        0
-#define RMI_DESTROYED         1
-#define RMI_ASSIGNED          2
-#define RMI_TABLE             3
-#define RMI_VALIDN_NS         4
+#define RMI_ASSIGNED          1
+#define RMI_TABLE             2
 
 /* RmiStatusCode types */
 #define RMI_SUCCESS                0
@@ -92,16 +96,6 @@
 #define RMI_ERROR_REALM            2
 #define RMI_ERROR_REC              3
 #define RMI_ERROR_RTT              4
-#define RMI_ERROR_IN_USE           5
-
-// #define RMI_SUCCESS                0
-// #define RMI_ERROR_INPUT            1
-// #define RMI_ERROR_IN_USE           4
-// #define RMI_ERROR_REALM_STATE      5
-// #define RMI_ERROR_OWNER            6
-// #define RMI_ERROR_REC              7
-// #define RMI_ERROR_RTT_WALK         8
-// #define RMI_ERROR_RTT_ENTRY        9
 
 /* RmiDataMeasureContent types */
 #define RMI_NO_MEASURE_CONTENT      0
@@ -123,8 +117,7 @@
 /* Get the index field from the return code */
 #define RMI_INDEX(ret)        (((ret) >> 8) & 0xFF)
 
-/* RSI SMC FID - TBD -rework the FID number */
-#define RSI_REALM_MEASUREMENT    (0xC4000192)
+/* RSI SMC FID */
 #define RSI_VERSION              (0xC4000190)
 #define RSI_REALM_CONFIG         (0xC4000196)
 #define RSI_MEASUREMENT_READ     (0xC4000192)
@@ -145,9 +138,32 @@
 #define RSI_ERROR_STATE            2
 #define RSI_ERROR_INCOMPLETE       3
 
+/* RsiHashAlgorithm type */
+#define RSI_HASH_SHA_256 0
+#define RSI_HASH_SHA_512 1
+
 /* RsiRipas type */
 #define RSI_EMPTY        0
 #define RSI_RAM          1
+#define RSI_DESTROYED    2
+
+/* RsiRipasChangeDestroyed type */
+#define RSI_NO_CHANGE_DESTROYED 0
+#define RSI_CHANGE_DESTROYED 1
+
+/* RsiRipasChangeDestroyed type */
+#define RSI_NO_CHANGE_DESTROYED    0
+#define RSI_CHANGE_DESTROYED       1
+
+/*
+ * Defines member of structure and reserves space
+ * for the next member with specified offset.
+ */
+#define SET_MEMBER(member, start, end)  \
+    union {             \
+        member;         \
+        unsigned char reserved##end[end - start]; \
+    }
 
 /* Data abort ESR fields */
 #define ESR_ISS_SET_UER 0x0      /* SET[12:11] = b'00 Recoverable state (UER) */
@@ -156,6 +172,7 @@
 #define ESR_ISS_DFSC_TTF_L2 0x6  /* DFSC[5:0] = b'000110 Translation fault, level 2 */
 #define ESR_ISS_DFSC_PF_L3 0xF  /* DFSC[5:0] = b'001111 Permission fault, level 3 */
 #define ESR_EC_LOWER_EL 0x24     /* EC[31:26] = b'100100 DA from lower EL */
+#define ESR_IA_EC_LOWER_EL 0x20     /* EC[31:26] = b'100000 IA from lower EL */
 #define ESR_ISV_VALID 0x1        /* ISV[24] = b'1 ISS[23:14] hold a valid instruction syndrome */
 #define ESR_SAS_WORD 0x2         /* SAS[23:22] = b'10 Word */
 #define ESR_FnV      0x0        /* FnV[10] = b'0 Valid only if the DFSC code is 0b010000 */

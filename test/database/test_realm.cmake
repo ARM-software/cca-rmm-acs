@@ -28,6 +28,8 @@ list(APPEND TEST_INCLUDE
     ${ROOT_DIR}/plat/driver/src/
     ${ROOT_DIR}/test/database/
     ${ROOT_DIR}/test/common/
+    ${ROOT_DIR}/val/common/xlat_tables_v2/include/
+    ${RMM_ACS_QCBOR_INCLUDE_PATH}
 )
 
 foreach(SUITE ${TEST_SUITE_LIST})
@@ -47,6 +49,9 @@ file(GLOB TEST_SRC
     "${ROOT_DIR}/test/*/*/*_realm.S"
     "${ROOT_DIR}/test/*/common/*_realm.c"
     "${ROOT_DIR}/test/common/*_realm.c"
+    "${RMM_ACS_TARGET_QCBOR}/src/qcbor_decode.c"
+    "${RMM_ACS_TARGET_QCBOR}/src/UsefulBuf.c"
+    "${RMM_ACS_TARGET_QCBOR}/src/ieee754.c"
 )
 else()
 file(GLOB TEST_SRC
@@ -54,6 +59,9 @@ file(GLOB TEST_SRC
     "${ROOT_DIR}/test/${SUITE}/*/*_realm.S"
     "${ROOT_DIR}/test/${SUITE}/common/*_realm.c"
     "${ROOT_DIR}/test/common/*_realm.c"
+    "${RMM_ACS_TARGET_QCBOR}/src/UsefulBuf.c"
+    "${RMM_ACS_TARGET_QCBOR}/src/ieee754.c"
+    "${RMM_ACS_TARGET_QCBOR}/src/qcbor_decode.c"
 )
 endif()
 
@@ -93,6 +101,13 @@ foreach(SUITE ${SUITE_LIST})
     foreach(TEST ${TEST_LIST})
         #message(STATUS "[ACS] : Compiling sources from ${TEST} Test")
         file(GLOB TEST_SRC "${TEST_SOURCE_DIR}/${SUITE}/${TEST}/${TEST}_realm.c")
+        if(${SUITE} STREQUAL "attestation_measurement")
+            list(APPEND TEST_SRC
+                    "${RMM_ACS_TARGET_QCBOR}/src/qcbor_decode.c"
+                    "${RMM_ACS_TARGET_QCBOR}/src/UsefulBuf.c"
+                    "${RMM_ACS_TARGET_QCBOR}/src/ieee754.c"
+                )
+        endif()
         list(APPEND TEST_SRC ${TEST_SOURCE_DIR}/database/test_database_realm.c)
         file(GLOB TEST_COMMON_FILE ${TEST_SOURCE_DIR}/common/*_realm.c)
         foreach(COMMON_FILE1 ${TEST_COMMON_FILE})

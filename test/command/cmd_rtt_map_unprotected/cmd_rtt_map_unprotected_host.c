@@ -66,13 +66,10 @@ struct arguments {
 static uint64_t g_rd_new_prep_sequence(uint16_t vmid)
 {
     val_host_realm_ts realm_init;
-    val_host_rmifeatureregister0_ts features_0;
 
     val_memset(&realm_init, 0, sizeof(realm_init));
-    val_memset(&features_0, 0, sizeof(features_0));
-    features_0.s2sz = 40;
-    val_memcpy(&realm_init.realm_feat_0, &features_0, sizeof(features_0));
 
+    realm_init.s2sz = 40;
     realm_init.hash_algo = RMI_HASH_SHA_256;
     realm_init.s2_starting_level = 0;
     realm_init.num_s2_sl_rtts = 1;
@@ -99,7 +96,7 @@ static uint64_t ipa_valid_prep_sequence(void)
 
     if (create_mapping(IPA_ADDR_UNPROTECTED_UNASSIGNED, false, c_args.rd_valid))
     {
-        LOG(ERROR, "\tCouldn't create the protected mapping\n", 0, 0);
+        LOG(ERROR, "\tCouldn't create mapping\n", 0, 0);
         return VAL_TEST_PREP_SEQ_FAILED;
     }
     return IPA_ADDR_UNPROTECTED_UNASSIGNED;
@@ -124,9 +121,6 @@ static uint64_t desc_valid_prep_sequence(void)
 
 static uint64_t mem_attr_invalid_prep_sequence(uint64_t attr_valid)
 {
-    /* TODO: assess coverage for invalid attributes
-     * set the contiguous bit (TLB) for now...
-     */
     return (attr_valid | 1L << 52);
 }
 
@@ -138,9 +132,6 @@ static uint64_t level_invalid_starting_prep_sequence(void)
 
 static uint64_t level_invalid_l1_prep_sequence(void)
 {
-    /* TODO: as of Bet0 L1 mappings are not allowed
-     * (coordinate with architects for future developments)
-     */
     return 1;
 }
 
@@ -174,7 +165,7 @@ static uint64_t g_rec_ready_prep_sequence(uint64_t rd)
 
     if (val_host_rec_create_common(&realm, &rec_params))
     {
-        LOG(ERROR, "\tCouldn't destroy the Realm\n", 0, 0);
+        LOG(ERROR, "\tREC create failed\n", 0, 0);
         return VAL_TEST_PREP_SEQ_FAILED;
     }
 
@@ -299,7 +290,6 @@ static uint64_t intent_to_seq(struct stimulus *test_data, struct arguments *args
             break;
 
         case ADDR_UNALIGNED:
-            /* TODO: make OA unaligned to the mapped level (can't be done for L3) */
             args->rd = c_args.rd_valid;
             args->ipa = c_args.ipa_valid;
             args->level = c_args.level_valid;
@@ -315,7 +305,7 @@ static uint64_t intent_to_seq(struct stimulus *test_data, struct arguments *args
 
         case IPA_PROTECTED:
             args->rd = c_args.rd_valid;
-            args->ipa = ipa_protected_unassigned_prep_sequence(c_args.rd_valid);
+            args->ipa = ipa_protected_unassigned_empty_prep_sequence(c_args.rd_valid);
             if (args->ipa == VAL_TEST_PREP_SEQ_FAILED)
                 return VAL_ERROR;
             args->level = c_args.level_valid;
@@ -338,7 +328,7 @@ static uint64_t intent_to_seq(struct stimulus *test_data, struct arguments *args
             args->desc = c_args.desc_valid;
             break;
 
-        case RTTE_STATE_VALID_NS:
+        case RTTE_STATE_ASSIGNED_NS:
             args->rd = c_args.rd_valid;
             args->ipa = ipa_unprotected_assinged_prep_sequence(c_args.rd_valid);
             if (args->ipa == VAL_TEST_PREP_SEQ_FAILED)
@@ -365,7 +355,7 @@ void cmd_rtt_map_unprotected_host(void)
 
     if (valid_input_args_prep_sequence() == VAL_TEST_PREP_SEQ_FAILED) {
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(1)));
-        goto fail;
+        goto exit;
     }
 
     /* Iterate over the input */
@@ -377,7 +367,7 @@ void cmd_rtt_map_unprotected_host(void)
 
         if (intent_to_seq(&test_data[i], &args)) {
             val_set_status(RESULT_FAIL(VAL_ERROR_POINT(2)));
-            goto fail;
+            goto exit;
         }
 
         ret = val_host_rmi_rtt_map_unprotected(args.rd, args.ipa, args.level, args.desc);
@@ -386,7 +376,7 @@ void cmd_rtt_map_unprotected_host(void)
             LOG(ERROR, "\tTest Failure!\n\tThe ABI call returned: %x\n\tExpected: %x\n",
                 ret, PACK_CODE(test_data[i].status, test_data[i].index));
             val_set_status(RESULT_FAIL(VAL_ERROR_POINT(3)));
-            goto fail;
+            goto exit;
         }
     }
 
@@ -394,14 +384,15 @@ void cmd_rtt_map_unprotected_host(void)
     ret = val_host_rmi_rtt_read_entry(c_args.rd_valid, c_args.ipa_valid,
                                       c_args.level_valid, &rtte);
     if (ret) {
-        LOG(ERROR, "\tREAD_ENTRY failed!\n", 0, 0);
+        LOG(ERROR, "\tREAD_ENTRY failed with ret value: %d\n", ret, 0);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(4)));
-        goto fail;
+        goto exit;
     } else {
         if (rtte.state != RMI_UNASSIGNED || rtte.desc == c_args.desc_valid) {
-            LOG(ERROR, "\tState was: %d & desc was: %x\n", rtte.state, rtte.desc);
+            LOG(ERROR, "\tUnexpected RTT entry.\n", 0, 0);
+            LOG(ERROR, "\tState is: %d & desc is: %x\n", rtte.state, rtte.desc);
             val_set_status(RESULT_FAIL(VAL_ERROR_POINT(5)));
-            goto fail;
+            goto exit;
         }
     }
 
@@ -412,21 +403,22 @@ void cmd_rtt_map_unprotected_host(void)
     if (ret != 0) {
         LOG(ERROR, "\n\tPositive Observability Check failed\n", 0, 0);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(6)));
-        goto fail;
+        goto exit;
     }
 
     /* Check that rtte.addr and rtte.state have changed */
     ret = val_host_rmi_rtt_read_entry(c_args.rd_valid, c_args.ipa_valid,
                                       c_args.level_valid, &rtte);
     if (ret) {
-        LOG(ERROR, "\tREAD_ENTRY failed!\n", 0, 0);
+        LOG(ERROR, "\tREAD_ENTRY failed with ret value: %d\n", ret, 0);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(7)));
-        goto fail;
+        goto exit;
     } else {
         if (rtte.state != RMI_VALIDN_NS || rtte.desc != c_args.desc_valid) {
-            LOG(ERROR, "\tState was: %d & desc was: %x\n", rtte.state, rtte.desc);
+            LOG(ERROR, "\tUnexpected RTT entry.\n", 0, 0);
+            LOG(ERROR, "\tState is: %d & desc is: %x\n", rtte.state, rtte.desc);
             val_set_status(RESULT_FAIL(VAL_ERROR_POINT(8)));
-            goto fail;
+            goto exit;
         }
     }
 
@@ -437,12 +429,11 @@ void cmd_rtt_map_unprotected_host(void)
     if (ret == 0) {
         LOG(ERROR, "\n\t Negative Observablity Check failed", 0, 0);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(9)));
-        goto fail;
+        goto exit;
     }
 
     val_set_status(RESULT_PASS(VAL_SUCCESS));
-    return;
 
-fail:
+exit:
     return;
 }

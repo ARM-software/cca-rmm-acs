@@ -6,32 +6,24 @@
  */
 #include "test_database.h"
 #include "val_host_rmi.h"
-#include "exception_common_host.h"
+#include "val_host_helpers.h"
 
 #define PROTECTED_IPA 0x800000
 
 void exception_non_emulatable_da_2_host(void)
 {
     val_host_realm_ts realm;
-    val_host_rmifeatureregister0_ts features_0;
     uint64_t ret;
     val_host_rec_entry_ts *rec_entry = NULL;
     val_host_rec_exit_ts *rec_exit = NULL;
     uint64_t ripas_ipa, ripas_size;
     uint64_t phys;
     val_data_create_ts data_create;
+    val_host_data_destroy_ts data_destroy;
 
     val_memset(&realm, 0, sizeof(realm));
-    val_memset(&features_0, 0, sizeof(features_0));
 
-    features_0.s2sz = 40;
-    val_memcpy(&realm.realm_feat_0, &features_0, sizeof(features_0));
-
-    realm.hash_algo = RMI_HASH_SHA_256;
-    realm.s2_starting_level = 0;
-    realm.num_s2_sl_rtts = 1;
-    realm.vmid = 0;
-    realm.rec_count = 1;
+    val_host_realm_params(&realm);
 
     /* Populate realm with one REC*/
     if (val_host_realm_setup(&realm, false))
@@ -88,7 +80,7 @@ void exception_non_emulatable_da_2_host(void)
 
     ripas_ipa = PROTECTED_IPA;
     ripas_size = PAGE_SIZE;
-    ret = val_host_rmi_data_destroy(realm.rd, ripas_ipa);
+    ret = val_host_rmi_data_destroy(realm.rd, ripas_ipa, &data_destroy);
     if (ret)
     {
         LOG(ERROR, "\tData destroy failed, ipa=0x%lx, ret=0x%x\n", ripas_ipa, ret);
@@ -110,24 +102,12 @@ void exception_non_emulatable_da_2_host(void)
         goto destroy_realm;
     }
 
-    if (!((rec_exit->exit_reason == RMI_EXIT_SYNC) &&
-        (VAL_EXTRACT_BITS(rec_exit->esr, 11, 12) == ESR_ISS_SET_UER) &&
-        (VAL_EXTRACT_BITS(rec_exit->esr, 9, 9) == ESR_ISS_EA) &&
-        (VAL_EXTRACT_BITS(rec_exit->esr, 0, 5) == ESR_ISS_DFSC_TTF_L3) &&
-        (VAL_EXTRACT_BITS(rec_exit->esr, 26, 31) == ESR_EC_LOWER_EL) &&
-        (VAL_EXTRACT_BITS(rec_exit->esr, 10, 10) == ESR_FnV) &&
-        (VAL_EXTRACT_BITS(ripas_ipa, 8, 63) == rec_exit->hpfar)))
-    {
-        LOG(ERROR, "\tREC exit params mismatch\n", 0, 0);
-        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(9)));
-        goto destroy_realm;
-    }
-
-    /* On REC exit due to Non-Emulatable Data Abort, All other exit.esr fields are zero. */
-    if (check_esr_mbz_feilds(rec_exit, NON_EMULATABLE_DA))
+    /* validates the Rec Exit due to DA */
+    if (validate_rec_exit_da(rec_exit, ripas_ipa,
+                                ESR_ISS_DFSC_TTF_L3, NON_EMULATABLE_DA, 0))
     {
         LOG(ERROR, "\tREC exit ESR params mismatch\n", 0, 0);
-        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(10)));
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(9)));
         goto destroy_realm;
     }
 
@@ -139,28 +119,16 @@ void exception_non_emulatable_da_2_host(void)
     if (ret)
     {
         LOG(ERROR, "\tRec enter failed, ret=%x\n", ret, 0);
-        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(11)));
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(10)));
         goto destroy_realm;
     }
 
-    if (!((rec_exit->exit_reason == RMI_EXIT_SYNC) &&
-        (VAL_EXTRACT_BITS(rec_exit->esr, 11, 12) == ESR_ISS_SET_UER) &&
-        (VAL_EXTRACT_BITS(rec_exit->esr, 9, 9) == ESR_ISS_EA) &&
-        (VAL_EXTRACT_BITS(rec_exit->esr, 0, 5) == ESR_ISS_DFSC_TTF_L3) &&
-        (VAL_EXTRACT_BITS(rec_exit->esr, 26, 31) == ESR_EC_LOWER_EL) &&
-        (VAL_EXTRACT_BITS(rec_exit->esr, 10, 10) == ESR_FnV) &&
-        (VAL_EXTRACT_BITS(ripas_ipa, 8, 63) == rec_exit->hpfar)))
-    {
-        LOG(ERROR, "\tREC exit params mismatch\n", 0, 0);
-        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(12)));
-        goto destroy_realm;
-    }
-
-    /* On REC exit due to Non-Emulatable Data Abort, All other exit.esr fields are zero. */
-    if (check_esr_mbz_feilds(rec_exit, NON_EMULATABLE_DA))
+    /* validates the Rec Exit due to DA */
+    if (validate_rec_exit_da(rec_exit, ripas_ipa,
+                                ESR_ISS_DFSC_TTF_L3, NON_EMULATABLE_DA, 0))
     {
         LOG(ERROR, "\tREC exit ESR params mismatch\n", 0, 0);
-        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(13)));
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(11)));
         goto destroy_realm;
     }
 

@@ -98,12 +98,12 @@ void *val_host_mem_alloc(size_t alignment, size_t size)
 
   return addr;
 }
+
 /**
- * TODO: Free the memory for given memory address
+ * Free the memory for given memory address
  * Currently acs code is initialisazing from base for every test,
  * the regions data structure is internal and below code only setting to zero
  * not actually freeing memory.
- * If require can revisit in future.
  **/
 void val_host_mem_free(void *ptr)
 {

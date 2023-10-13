@@ -6,27 +6,21 @@
  */
 #include "test_database.h"
 #include "val_host_rmi.h"
-#include "exception_common_host.h"
+#include "val_host_realm.h"
+#include "val_host_helpers.h"
 
 void exception_emulatable_da_host(void)
 {
     val_host_realm_ts realm;
-    val_host_rmifeatureregister0_ts features_0;
     val_host_rec_entry_ts *rec_entry = NULL;
     val_host_rec_exit_ts *rec_exit = NULL;
     uint32_t index;
     uint64_t ret, mem_attr;
+    uint64_t top;
 
     val_memset(&realm, 0, sizeof(realm));
-    val_memset(&features_0, 0, sizeof(features_0));
-    features_0.s2sz = 40;
-    val_memcpy(&realm.realm_feat_0, &features_0, sizeof(features_0));
 
-    realm.hash_algo = RMI_HASH_SHA_256;
-    realm.s2_starting_level = 0;
-    realm.num_s2_sl_rtts = 1;
-    realm.vmid = 0;
-    realm.rec_count = 1;
+    val_host_realm_params(&realm);
 
     /* Populate realm with one REC*/
     if (val_host_realm_setup(&realm, 1))
@@ -60,7 +54,7 @@ void exception_emulatable_da_host(void)
     }
 
     ret = val_host_rmi_rtt_unmap_unprotected(realm.rd, realm.granules[index].ipa,
-                                            realm.granules[index].level);
+                                            realm.granules[index].level, &top);
     if (ret)
     {
         LOG(ERROR, "\tval_rmi_rtt_unmap_unprotected failed, ipa=0x%x, ret=0x%x\n",
@@ -84,27 +78,12 @@ void exception_emulatable_da_host(void)
         goto destroy_realm;
     }
 
-    if (!((rec_exit->exit_reason == RMI_EXIT_SYNC) &&
-        (VAL_EXTRACT_BITS(rec_exit->esr, 11, 12) == ESR_ISS_SET_UER) &&
-        (VAL_EXTRACT_BITS(rec_exit->esr, 9, 9) == ESR_ISS_EA) &&
-        (VAL_EXTRACT_BITS(rec_exit->esr, 0, 5) == ESR_ISS_DFSC_TTF_L3) &&
-        (VAL_EXTRACT_BITS(rec_exit->esr, 26, 31) == ESR_EC_LOWER_EL) &&
-        (VAL_EXTRACT_BITS(rec_exit->esr, 24, 24) == ESR_ISV_VALID) &&
-        (VAL_EXTRACT_BITS(rec_exit->esr, 22, 23) == ESR_SAS_WORD) &&
-        (VAL_EXTRACT_BITS(rec_exit->esr, 6, 6) == ESR_WnR_WRITE) &&
-        (VAL_EXTRACT_BITS(rec_exit->esr, 10, 10) == ESR_FnV) &&
-        (VAL_EXTRACT_BITS(realm.granules[index].ipa, 8, 63) == rec_exit->hpfar)))
-    {
-        LOG(ERROR, "\tREC exit params mismatch\n", 0, 0);
-        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(7)));
-        goto destroy_realm;
-    }
-
-    /* On REC exit due to Emulatable Data Abort, All other exit.esr fields are zero. */
-    if (check_esr_mbz_feilds(rec_exit, EMULATABLE_DA))
+    /* validates the Rec Exit due to DA*/
+    if (validate_rec_exit_da(rec_exit, realm.granules[index].ipa,
+                            ESR_ISS_DFSC_TTF_L3, EMULATABLE_DA, ESR_WnR_WRITE))
     {
         LOG(ERROR, "\tREC exit ESR params mismatch\n", 0, 0);
-        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(8)));
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(7)));
         goto destroy_realm;
     }
 
@@ -115,31 +94,16 @@ void exception_emulatable_da_host(void)
     if (ret)
     {
         LOG(ERROR, "\tRec enter failed, ret=%x\n", ret, 0);
-        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(9)));
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(8)));
         goto destroy_realm;
     }
 
-    if (!((rec_exit->exit_reason == RMI_EXIT_SYNC) &&
-        (VAL_EXTRACT_BITS(rec_exit->esr, 11, 12) == ESR_ISS_SET_UER) &&
-        (VAL_EXTRACT_BITS(rec_exit->esr, 9, 9) == ESR_ISS_EA) &&
-        (VAL_EXTRACT_BITS(rec_exit->esr, 0, 5) == ESR_ISS_DFSC_TTF_L3) &&
-        (VAL_EXTRACT_BITS(rec_exit->esr, 26, 31) == ESR_EC_LOWER_EL) &&
-        (VAL_EXTRACT_BITS(rec_exit->esr, 24, 24) == ESR_ISV_VALID) &&
-        (VAL_EXTRACT_BITS(rec_exit->esr, 22, 23) == ESR_SAS_WORD) &&
-        (VAL_EXTRACT_BITS(rec_exit->esr, 6, 6) == ESR_WnR_READ) &&
-        (VAL_EXTRACT_BITS(rec_exit->esr, 10, 10) == ESR_FnV) &&
-        (VAL_EXTRACT_BITS(realm.granules[index].ipa, 8, 63) == rec_exit->hpfar)))
-    {
-        LOG(ERROR, "\tREC exit params mismatch esr %lx\n", rec_exit->esr, 0);
-        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(10)));
-        goto destroy_realm;
-    }
-
-    /* On REC exit due to Emulatable Data Abort, All other exit.esr fields are zero. */
-    if (check_esr_mbz_feilds(rec_exit, EMULATABLE_DA))
+    /* validates the Rec Exit due to DA */
+    if (validate_rec_exit_da(rec_exit, realm.granules[index].ipa,
+                            ESR_ISS_DFSC_TTF_L3, EMULATABLE_DA, ESR_WnR_READ))
     {
         LOG(ERROR, "\tREC exit ESR MBZ params mismatch\n", 0, 0);
-        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(11)));
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(9)));
         goto destroy_realm;
     }
 

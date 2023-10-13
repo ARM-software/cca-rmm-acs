@@ -29,6 +29,21 @@ uint32_t val_secure_return_to_host(void)
 }
 
 /**
+ *   @brief    Send control back to normal world during test execution phase
+ *             and waits for message from normal world
+ *   @param    void
+ *   @return   SUCCESS(0)/FAILURE
+**/
+uint32_t val_secure_return_to_preempted_host(void)
+{
+    if (pal_sync_resp_call_to_preempted_host())
+    {
+        VAL_PANIC("\tpal_sync_resp_call_to_host failed\n");
+    }
+    return VAL_SUCCESS;
+}
+
+/**
  *   @brief    Finds current test index
  *   @param    void
  *   @return   0
@@ -96,6 +111,8 @@ void val_secure_main(bool primary_cpu_boot)
 {
     val_set_security_state_flag(3);
 
+    xlat_ctx_t  *secure_xlat_ctx = val_secure_get_xlat_ctx();
+
     if (primary_cpu_boot == true)
     {
         /* Add secure region into TT data structure */
@@ -103,10 +120,7 @@ void val_secure_main(bool primary_cpu_boot)
         val_secure_add_mmap();
 
         /* Write page tables */
-        if (val_setup_mmu())
-        {
-            goto exit;
-        }
+        val_setup_mmu(secure_xlat_ctx);
 
         val_irq_setup();
 
@@ -115,15 +129,11 @@ void val_secure_main(bool primary_cpu_boot)
     }
 
     /* Enable Stage-1 MMU */
-    if (val_enable_mmu())
-    {
-        goto exit;
-    }
+    val_enable_mmu(secure_xlat_ctx);
 
     /* Ready to run test regression */
     val_secure_test_dispatch();
 
-exit:
     LOG(ALWAYS, "SECURE : Entering standby.. \n", 0, 0);
     pal_terminate_simulation();
 }

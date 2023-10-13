@@ -29,7 +29,6 @@ enum test_intent {
     IPA_OUTSIDE_OF_PERMITTED_IPA = 0X12,
     IPA_NOT_MAPPED = 0X13,
     RTTE_STATE_ASSIGNED = 0X14,
-    RTTE_STATE_DESTROYED = 0X15,
     IPA_UNPROTECTED_NOT_MAPPED = 0X16,
     IPA_UNPROTECTED_RTTE_ASSIGNED = 0X17
 };
@@ -146,11 +145,6 @@ static struct stimulus test_data[] = {
     {.msg = "rtte_state",
     .abi = RMI_DATA_CREATE_UNKNOWN,
     .label = RTTE_STATE_ASSIGNED,
-    .status = RMI_ERROR_RTT,
-    .index = 3},
-    {.msg = "rtte_state",
-    .abi = RMI_DATA_CREATE_UNKNOWN,
-    .label = RTTE_STATE_DESTROYED,
     .status = RMI_ERROR_RTT,
     .index = 3},
     {.msg = "ipa_bound_compare_rtt_walk",

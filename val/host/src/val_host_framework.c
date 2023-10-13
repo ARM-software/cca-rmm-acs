@@ -11,6 +11,7 @@
 #include "val_irq.h"
 #include "pal_interfaces.h"
 #include "val.h"
+#include "val_host_memory.h"
 
 extern const uint32_t  total_tests;
 extern const test_db_t test_list[];
@@ -324,7 +325,7 @@ static void val_host_test_dispatch(bool primary_cpu_boot)
 
             test_num = test_info.test_num;
 
-            for (; test_num < total_tests; test_num++)
+            for (; test_num < total_tests - 1; test_num++)
             {
                 if (val_strcmp((char *)test_list[test_num].test_name, start_test_name) == 0)
                 {
@@ -333,7 +334,7 @@ static void val_host_test_dispatch(bool primary_cpu_boot)
             }
 
             test_num = test_info.test_num;
-            for (; test_num < total_tests; test_num++)
+            for (; test_num < total_tests - 1; test_num++)
             {
                 if (val_strcmp((char *)test_list[test_num].test_name, end_test_name) == 0)
                 {
@@ -375,10 +376,11 @@ static void val_host_test_dispatch(bool primary_cpu_boot)
         /* Iterate over test_list[] to run test one by one */
         for (i = test_num_start ; i <= test_num_end; i++)
         {
+
             fn_ptr = (test_fptr_t)(test_list[i].host_fn);
 
             if (fn_ptr == NULL)
-                continue;
+                break;
 
             if (reboot_run)
             {
@@ -402,7 +404,6 @@ static void val_host_test_dispatch(bool primary_cpu_boot)
                 }
 
                 val_host_test_init(i);
-
 
                 *(uint64_t *)(val_get_shared_region_base() + PRINT_OFFSET) = 0xffffffffffffffff;
 	            /* Execute host test */
@@ -496,16 +497,15 @@ void val_host_main(bool primary_cpu_boot)
 {
     val_set_security_state_flag(1);
 
+    xlat_ctx_t  *host_xlat_ctx = val_host_get_xlat_ctx();
+
     if (primary_cpu_boot == true)
     {
         /* Add host region into TT data structure */
-         val_host_add_mmap();
+        val_host_add_mmap();
 
         /* Write page tables */
-        if (val_setup_mmu())
-        {
-            goto exit;
-        }
+        val_setup_mmu(host_xlat_ctx);
 
         val_irq_setup();
 
@@ -514,15 +514,12 @@ void val_host_main(bool primary_cpu_boot)
     }
 
     /* Enable Stage-1 MMU */
-    if (val_enable_mmu())
-    {
-        goto exit;
-    }
+    val_enable_mmu(host_xlat_ctx);
 
     /* Ready to run test regression */
     val_host_test_dispatch(primary_cpu_boot);
 
-exit:
     LOG(ALWAYS, "HOST : Entering standby.. \n", 0, 0);
     pal_terminate_simulation();
 }
+

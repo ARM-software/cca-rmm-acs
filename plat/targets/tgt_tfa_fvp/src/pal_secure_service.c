@@ -12,6 +12,9 @@
 #define FFA_MSG_WAIT_32              0x8400006B
 #define FFA_MSG_SEND_DIRECT_REQ_32   0x8400006F
 #define FFA_MSG_SEND_DIRECT_RESP_32  0x84000070
+#define FFA_INTERRUPT                0x84000062
+#define FFA_RUN                      0x8400006D
+#define FFA_ERROR_32                 0x84000060
 
 #define SENDER_ID(x)    (x >> 16) & 0xffff
 #define RECEIVER_ID(x)  (x & 0xffff)
@@ -45,7 +48,7 @@ static uint32_t pal_ffa_msg_send_direct_resp_32(void)
     args = pal_smc_call(FFA_MSG_SEND_DIRECT_RESP_32,
                         ((uint32_t)my_id << 16) | target_id, 0, 0, 0, 0, 0, 0);
 
-     if (args.x0 != FFA_MSG_SEND_DIRECT_REQ_32)
+     if ((args.x0 != FFA_MSG_SEND_DIRECT_REQ_32) && (args.x0 != FFA_INTERRUPT))
      {
           pal_printf("\tInvalid fid received, fid=0x%x, error=0x%x\n", args.x0, args.x2);
           return PAL_ERROR;
@@ -53,6 +56,20 @@ static uint32_t pal_ffa_msg_send_direct_resp_32(void)
      return PAL_SUCCESS;
 }
 
+static uint32_t pal_ffa_run(void)
+{
+    pal_smc_param_t args;
+
+    args = pal_smc_call(FFA_RUN,
+                        ((uint32_t)NS_HYP_ID << 16), 0, 0, 0, 0, 0, 0);
+    if (args.x0 == FFA_ERROR_32)
+    {
+        pal_printf("\tFFA_RUN failed, error %lx\n", args.x2, 0);
+        return PAL_ERROR;
+     }
+
+     return PAL_SUCCESS;
+}
 
 static uint32_t pal_ffa_msg_send_direct_req_32(void)
 {
@@ -102,6 +119,18 @@ uint32_t pal_sync_resp_call_to_host(void)
      * Firmware Framework for A Specification.
      * */
     return pal_ffa_msg_send_direct_resp_32();
+}
+
+uint32_t pal_sync_resp_call_to_preempted_host(void)
+{
+    /* In FF-A, giving control to preempted normal world happens through
+     * FFA_RUN interface and normal world can send message
+     * to secure world(SPMC/SP) through FFA_MSG_SEND_DIRECT_REQ_32 interface.
+     * Port this function if communication between
+     * normal world and secure world is not based
+     * Firmware Framework for A Specification.
+     * */
+    return pal_ffa_run();
 }
 
 uint32_t pal_sync_req_call_to_secure(void)

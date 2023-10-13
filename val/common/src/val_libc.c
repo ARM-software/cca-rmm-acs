@@ -117,11 +117,5 @@ int val_strcmp(char *str1, char *str2)
 **/
 size_t val_strlen(char *str)
 {
-  size_t length = 0;
-
-  while (str[length] != '\0')
-  {
-    ++length;
-  }
-  return length;
+  return pal_strlen(str);
 }

@@ -19,28 +19,23 @@ struct stimulus {
     uint64_t abi;
     enum test_intent label;
     uint64_t status;
-    uint64_t index;
 };
 
 static struct stimulus test_data[] = {
     {.msg = "addr_align",
     .abi = RSI_IPA_STATE_SET,
     .label = ADDR_UNALIGNED,
-    .status = RMI_ERROR_INPUT,
-    .index = 0},
+    .status = RSI_ERROR_INPUT},
     {.msg = "size_bound",
     .abi = RSI_IPA_STATE_SET,
     .label = SIZE_UNALLIGNED,
-    .status = RMI_ERROR_INPUT,
-    .index = 0},
+    .status = RSI_ERROR_INPUT},
     {.msg = "rgn_bound",
     .abi = RSI_IPA_STATE_SET,
     .label = REGION_UNPROTECTED,
-    .status = RMI_ERROR_INPUT,
-    .index = 0},
+    .status = RSI_ERROR_INPUT},
     {.msg = "ripas_valid",
     .abi = RSI_IPA_STATE_SET,
     .label = RIPAS_INVALID,
-    .status = RMI_ERROR_INPUT,
-    .index = 0}
+    .status = RSI_ERROR_INPUT}
 };

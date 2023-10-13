@@ -27,6 +27,8 @@ static ppi_desc ppi_desc_table[PLATFORM_CPU_COUNT][
 static sgi_desc sgi_desc_table[PLATFORM_CPU_COUNT][MAX_SGI_ID + 1];
 static spurious_desc spurious_desc_handler;
 
+extern uint64_t security_state;
+
 /*
  * For a given SPI, the associated IRQ handler is common to all CPUs.
  * Therefore, we need a lock to prevent simultaneous updates.
@@ -166,12 +168,22 @@ uint32_t pal_get_irq_num(void)
 {
     unsigned int raw_iar;
 
-    return arm_gic_intr_ack(&raw_iar);
+    if (security_state == 2)
+    {
+        return (uint32_t)read_icv_iar1_el1();
+    } else {
+        return arm_gic_intr_ack(&raw_iar);
+    }
 }
 
 void pal_gic_end_of_intr(unsigned int irq_num)
 {
-    arm_gic_end_of_intr(irq_num);
+     if (security_state == 2)
+    {
+        write_icv_eoir1_el1(irq_num);
+    } else {
+        arm_gic_end_of_intr(irq_num);
+    }
 }
 
 int pal_irq_handler_dispatcher(void)
@@ -183,7 +195,12 @@ int pal_irq_handler_dispatcher(void)
     /* Acknowledge the interrupt */
     unsigned int raw_iar;
 
-    irq_num = arm_gic_intr_ack(&raw_iar);
+    if (security_state == 2)
+    {
+        irq_num = (uint32_t)read_icv_iar1_el1();
+    } else {
+        irq_num = arm_gic_intr_ack(&raw_iar);
+    }
 
     handler = get_irq_handler(irq_num);
     if (IS_PLAT_SPI(irq_num)) {
@@ -195,26 +212,38 @@ int pal_irq_handler_dispatcher(void)
         irq_data = &sgi_data;
     }
 
-    if (*handler != NULL)
+    if (*handler != NULL) {
         (*handler)(irq_data);
-    else
+    } else {
         return PAL_ERROR;
+    }
 
-    /* Mark the processing of the interrupt as complete */
-    if (irq_num != GIC_SPURIOUS_INTERRUPT)
-        arm_gic_end_of_intr(raw_iar);
+    if (security_state != 2)
+    {
+        /* Mark the processing of the interrupt as complete */
+        if (irq_num != GIC_SPURIOUS_INTERRUPT)
+            arm_gic_end_of_intr(raw_iar);
+    }
 
     return PAL_SUCCESS;
 }
 
 void pal_irq_setup(void)
 {
-    pal_printf("GIC Initialisation started \n", 0, 0);
-    arm_gic_init(GICD_BASE, GICR_BASE);
-    pal_memset(spi_desc_table, 0, sizeof(spi_desc_table));
-    pal_memset(ppi_desc_table, 0, sizeof(ppi_desc_table));
-    pal_memset(sgi_desc_table, 0, sizeof(sgi_desc_table));
-    pal_memset(&spurious_desc_handler, 0, sizeof(spurious_desc_handler));
-    pal_init_spinlock(&spi_lock);
-    pal_printf("GIC Initialisation completed \n", 0, 0);
+    if (security_state == 2)
+    {
+        enable_irq();
+        enable_fiq();
+        write_icc_pmr_el1(0xff);
+        write_icc_igrpen1_el1(read_icc_igrpen1_el1() | 0x1);
+    } else {
+        pal_printf("GIC Initialisation started \n", 0, 0);
+        arm_gic_init(GICD_BASE, GICR_BASE);
+        pal_memset(spi_desc_table, 0, sizeof(spi_desc_table));
+        pal_memset(ppi_desc_table, 0, sizeof(ppi_desc_table));
+        pal_memset(sgi_desc_table, 0, sizeof(sgi_desc_table));
+        pal_memset(&spurious_desc_handler, 0, sizeof(spurious_desc_handler));
+        pal_init_spinlock(&spi_lock);
+        pal_printf("GIC Initialisation completed \n", 0, 0);
+    }
 }

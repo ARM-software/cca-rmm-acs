@@ -13,7 +13,7 @@
 
 /* ACS Version Info */
 #define ACS_MAJOR_VERSION   0
-#define ACS_MINOR_VERSION   7
+#define ACS_MINOR_VERSION   8
 
 #define IMAGE_SIZE        0x100000
 #define INVALID_MPIDR     0xffffffff
@@ -87,6 +87,9 @@
 
 //MSB=0
 #define VAL_REALM_IMAGE_BASE_IPA 0x400000
+
+/* Use this macro for test use IPA */
+#define VAL_TEST_USE_IPA 0x0
 
 //MSB is set at runtime based on ipa_width selected
 #define VAL_NS_SHARED_REGION_IPA_OFFSET 0x600000

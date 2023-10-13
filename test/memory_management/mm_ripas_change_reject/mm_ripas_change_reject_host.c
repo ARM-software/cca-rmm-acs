@@ -12,26 +12,17 @@
 void mm_ripas_change_reject_host(void)
 {
     val_host_realm_ts realm;
-    val_host_rmifeatureregister0_ts features_0;
     uint64_t ret;
     val_host_rec_entry_ts *rec_entry = NULL;
     val_host_rec_exit_ts *rec_exit = NULL;
     uint64_t ripas_ipa, ripas_size = 0x3000;
     uint64_t phys;
+    uint64_t out_top;
     val_data_create_ts data_create;
 
     val_memset(&realm, 0, sizeof(realm));
-    val_memset(&features_0, 0, sizeof(features_0));
 
-    features_0.s2sz = 40;
-    val_memcpy(&realm.realm_feat_0, &features_0, sizeof(features_0));
-
-    realm.hash_algo = RMI_HASH_SHA_256;
-    realm.s2_starting_level = 0;
-    realm.num_s2_sl_rtts = 1;
-    realm.vmid = 0;
-    realm.rec_count = 1;
-
+    val_host_realm_params(&realm);
 
     /* Populate realm with one REC*/
     if (val_host_realm_setup(&realm, false))
@@ -102,10 +93,31 @@ void mm_ripas_change_reject_host(void)
         goto destroy_realm;
     }
     rec_exit = &(((val_host_rec_run_ts *)realm.run[0])->exit);
-    if (!(rec_exit->base == ripas_ipa) || !(rec_exit->size == ripas_size))
+    if (!(rec_exit->ripas_base == ripas_ipa) || !(rec_exit->ripas_top == (ripas_ipa + ripas_size)))
     {
         LOG(ERROR, "\tRipas return params mismatch\n", 0, 0);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(9)));
+        goto destroy_realm;
+    }
+
+    /* Without performing RIPAS change resume back rec execution.
+     * Check the new_base from realm side and must equal to base.
+     */
+    ret = val_host_rmi_rec_enter(realm.rec[0], realm.run[0]);
+    if (ret)
+    {
+        LOG(ERROR, "\tRec enter failed, ret=%x\n", ret, 0);
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(10)));
+        goto destroy_realm;
+    }
+
+    /* Perform partial ripas change and resume back */
+    ret = val_host_rmi_rtt_set_ripas(realm.rd, realm.rec[0], rec_exit->ripas_base,
+                                    rec_exit->ripas_top, &out_top);
+    if (ret)
+    {
+        LOG(ERROR, "\tRMI_RTT_SET_RIPAS failed, ret=%x\n", ret, 0);
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(11)));
         goto destroy_realm;
     }
 
@@ -113,12 +125,32 @@ void mm_ripas_change_reject_host(void)
     if (ret)
     {
         LOG(ERROR, "\tRec enter failed, ret=%x\n", ret, 0);
-        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(10)));
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(12)));
         goto destroy_realm;
-    } else if (val_host_check_realm_exit_host_call((val_host_rec_run_ts *)realm.run[0]))
+    } else if (val_host_check_realm_exit_ripas_change((val_host_rec_run_ts *)realm.run[0]))
     {
-        LOG(ERROR, "\tREC_EXIT: HOST_CALL params mismatch\n", 0, 0);
-        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(11)));
+        LOG(ERROR, "\tRipas change req failed\n", 0, 0);
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(13)));
+        goto destroy_realm;
+    }
+
+    /* Perform partial ripas change and remaining entries are same as ripas change
+     * Check the new_base from realm side
+     */
+    ret = val_host_rmi_rtt_set_ripas(realm.rd, realm.rec[0], rec_exit->ripas_base,
+                                    (rec_exit->ripas_base + 0x2000), &out_top);
+    if (ret)
+    {
+        LOG(ERROR, "\tRMI_RTT_SET_RIPAS failed, ret=%x\n", ret, 0);
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(14)));
+        goto destroy_realm;
+    }
+
+    ret = val_host_rmi_rec_enter(realm.rec[0], realm.run[0]);
+    if (ret)
+    {
+        LOG(ERROR, "\tRec enter failed, ret=%x\n", ret, 0);
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(15)));
         goto destroy_realm;
     }
 

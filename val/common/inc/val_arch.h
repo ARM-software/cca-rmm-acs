@@ -14,15 +14,6 @@
 #define SCTLR_I_BIT         (1 << 12)
 #define SCTLR_M_BIT         (1 << 0)
 
-#define INPLACE(regfield, val) \
-    (((val) + 0ul) << (regfield##_SHIFT))
-
-#define MASK(regfield) \
-    ((~0UL >> (64UL - (regfield##_WIDTH))) << (regfield##_SHIFT))
-
-#define EXTRACT(regfield, reg) \
-    (((reg) & MASK(regfield)) >> (regfield##_SHIFT))
-
 #define EXTRACT_BIT(regfield, reg) \
     (((reg) >> (regfield##_SHIFT)) & 1ul)
 

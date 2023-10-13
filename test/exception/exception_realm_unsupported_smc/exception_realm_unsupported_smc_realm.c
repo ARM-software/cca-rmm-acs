@@ -13,7 +13,9 @@ void exception_realm_unsupported_smc_realm(void)
     val_set_status(RESULT_PASS(VAL_SUCCESS));
 
     /* smc call with invalid RSI/PSCI call */
-    retVal = (int64_t)(val_smc_call(RMI_REALM_CREATE, (uint64_t)buff, 0, 0, 0, 0, 0, 0)).x0;
+    retVal = (int64_t)(val_smc_call(RMI_REALM_CREATE, (uint64_t)buff,
+                                      0, 0, 0, 0, 0, 0, 0, 0, 0)).x0;
+
     if (retVal == VAL_SMC_NOT_SUPPORTED)
     {
         LOG(TEST, "\tVerified : SMCCC_NOT_SUPPORTED by "

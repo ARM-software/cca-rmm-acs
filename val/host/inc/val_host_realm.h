@@ -27,21 +27,18 @@
 #define VAL_REC_HVC_NUM_GPRS                 31
 #define VAL_REC_GIC_NUM_LRS                  16
 
+#define VAL_REC_EXIT_GPRS                   31
+#define RPV_SIZE                             64
+#define REC_CREATE_NR_GPRS                  8
+
 #define VAL_MAX_REC_AUX_GRANULES 16
 #define VAL_MAX_RTT_GRANULES 25
 #define VAL_MAX_GRANULES_MAP 25
 
 #define VAL_HOST_MAX_REALMS 10
+#define SET_MEMBER_RMI	SET_MEMBER
 
-/*
- * Defines member of structure and reserves space
- * for the next member with specified offset.
- */
-#define SET_MEMBER(member, start, end)  \
-    union {             \
-        member;         \
-        unsigned char reserved##end[end - start]; \
-    }
+#define REALM_FLAG_PMU_ENABLE (1UL << 2)
 
 typedef enum {
     REALM_STATE_NULL,
@@ -74,7 +71,12 @@ typedef struct {
 
 typedef struct {
     /* Test Input start */
-    uint64_t realm_feat_0;
+    uint64_t flags;
+    uint8_t s2sz;
+    uint8_t sve_vl;
+    uint8_t num_bps;
+    uint8_t num_wps;
+    uint8_t pmu_num_ctrs;
     uint8_t hash_algo;
     uint8_t rpv[64];
     uint16_t vmid;
@@ -102,20 +104,41 @@ typedef struct {
     val_host_realm_state_te state;
 } val_host_realm_ts;
 
-typedef struct __attribute__((packed)) {
-    uint64_t realm_feat_0; /* Realm feature register 0 */
-    uint8_t unused[248];
-    uint8_t hash_algo; /* Hash algorithm */
-    uint8_t unused1[767];
-    uint8_t rpv[64];
-    uint8_t unused2[960];
-    uint16_t vmid;
-    uint8_t unused3[6];
-    uint64_t rtt_addr; /* RTT Base Granule address */
-    uint64_t s2_starting_level; /* stage 2 starting level */
-    uint32_t num_s2_sl_rtts; /* number of concatenated RTTs */
-    uint8_t unused4[2020];
+typedef struct {
+    /* Flags */
+    SET_MEMBER_RMI(unsigned long flags, 0, 0x8);		/* Offset 0 */
+    /* Requested IPA width */
+    SET_MEMBER_RMI(unsigned int s2sz, 0x8, 0x10);		/* 0x8 */
+    /* Requested SVE vector length */
+    SET_MEMBER_RMI(unsigned int sve_vl, 0x10, 0x18);	/* 0x10 */
+    /* Requested number of breakpoints */
+    SET_MEMBER_RMI(unsigned int num_bps, 0x18, 0x20);	/* 0x18 */
+    /* Requested number of watchpoints */
+    SET_MEMBER_RMI(unsigned int num_wps, 0x20, 0x28);	/* 0x20 */
+    /* Requested number of PMU counters */
+    SET_MEMBER_RMI(unsigned int pmu_num_ctrs, 0x28, 0x30);	/* 0x28 */
+    /* Measurement algorithm */
+    SET_MEMBER_RMI(unsigned char hash_algo, 0x30, 0x400);	/* 0x30 */
+    /* Realm Personalization Value */
+    SET_MEMBER_RMI(unsigned char rpv[RPV_SIZE], 0x400, 0x800); /* 0x400 */
+    SET_MEMBER_RMI(struct {
+            /* Virtual Machine Identifier */
+            unsigned short vmid;			/* 0x800 */
+            /* Realm Translation Table base */
+            unsigned long rtt_base;			/* 0x808 */
+            /* RTT starting level */
+            unsigned long rtt_level_start;			/* 0x810 */
+            /* Number of starting level RTTs */
+            unsigned int rtt_num_start;		/* 0x818 */
+            }, 0x800, 0x1000);
 } val_host_realm_params_ts;
+
+typedef struct __attribute__((packed)) {
+    uint8_t lpa2:1;
+    uint8_t sve:1;
+    uint8_t pmu:1;
+    uint64_t unused:61;
+} val_host_realm_flags_ts;
 
 typedef struct __attribute__((packed)) {
     uint8_t s2sz;
@@ -132,17 +155,20 @@ typedef struct __attribute__((packed)) {
 } val_host_rmifeatureregister0_ts;
 
 typedef struct {
-  uint64_t flags;
-  uint8_t unused[248];
-  uint64_t mpidr;
-  uint8_t unused1[248];
-  uint64_t pc;
-  uint8_t unused2[248];
-  uint64_t gprs[VAL_REC_NUM_GPRS];
-  uint8_t unused3[1216];
-  uint64_t num_rec_aux;
-  uint64_t rec_aux_granules[VAL_MAX_REC_AUX_GRANULES];
-  uint8_t unused4[1912];
+    /* Flags */
+    SET_MEMBER_RMI(unsigned long flags, 0, 0x100);	/* Offset 0 */
+    /* MPIDR of the REC */
+    SET_MEMBER_RMI(unsigned long mpidr, 0x100, 0x200);	/* 0x100 */
+    /* Program counter */
+    SET_MEMBER_RMI(unsigned long pc, 0x200, 0x300);	/* 0x200 */
+    /* General-purpose registers */
+    SET_MEMBER_RMI(unsigned long gprs[REC_CREATE_NR_GPRS], 0x300, 0x800); /* 0x300 */
+    SET_MEMBER_RMI(struct {
+            /* Number of auxiliary Granules */
+            unsigned long num_aux;			/* 0x800 */
+            /* Addresses of auxiliary Granules */
+            unsigned long aux[VAL_MAX_REC_AUX_GRANULES];/* 0x808 */
+            }, 0x800, 0x1000);
 } val_host_rec_params_ts;
 
 typedef struct __attribute__((packed)) {
@@ -160,15 +186,16 @@ typedef struct __attribute__((packed)) {
 } val_host_rec_mpidr_ts;
 
 typedef struct {
-    uint64_t flags;
-    uint8_t unused[504];
-    uint64_t gprs[VAL_REC_HVC_NUM_GPRS];
-    uint8_t unused1;
-    uint64_t gicv3_hcr;
-    uint64_t gicv3_lrs[VAL_REC_GIC_NUM_LRS];
-    uint8_t unused2[1144];
-    // TODO: allow Host to inject SEA in response to fault at
-    // Unprotected IPA
+    /* Flags */
+    SET_MEMBER_RMI(unsigned long flags, 0, 0x200);	/* Offset 0 */
+    /* General-purpose registers */
+    SET_MEMBER_RMI(unsigned long gprs[VAL_REC_EXIT_GPRS], 0x200, 0x300); /* 0x200 */
+    SET_MEMBER_RMI(struct {
+            /* GICv3 Hypervisor Control Register */
+            unsigned long gicv3_hcr;			/* 0x300 */
+            /* GICv3 List Registers */
+            unsigned long gicv3_lrs[VAL_REC_GIC_NUM_LRS];	/* 0x308 */
+            }, 0x300, 0x800);
 } val_host_rec_entry_ts;
 
 typedef struct __attribute__((packed)) {
@@ -184,53 +211,56 @@ typedef struct __attribute__((packed)) {
  */
 typedef struct {
     /* Exit reason */
-    SET_MEMBER(unsigned long exit_reason, 0, 0x100);/* Offset 0 */
-    SET_MEMBER(struct {
+    SET_MEMBER_RMI(unsigned long exit_reason, 0, 0x100);/* Offset 0 */
+    SET_MEMBER_RMI(struct {
             /* Exception Syndrome Register */
-            unsigned long esr;      /* 0x100 */
+            unsigned long esr;		/* 0x100 */
             /* Fault Address Register */
-            unsigned long far;      /* 0x108 */
+            unsigned long far;		/* 0x108 */
             /* Hypervisor IPA Fault Address register */
-            unsigned long hpfar;        /* 0x110 */
-           }, 0x100, 0x200);
+            unsigned long hpfar;		/* 0x110 */
+            }, 0x100, 0x200);
     /* General-purpose registers */
-    SET_MEMBER(unsigned long gprs[VAL_REC_HVC_NUM_GPRS], 0x200, 0x300); /* 0x200 */
-    SET_MEMBER(struct {
+    SET_MEMBER_RMI(unsigned long gprs[VAL_REC_EXIT_GPRS], 0x200, 0x300); /* 0x200 */
+    SET_MEMBER_RMI(struct {
             /* GICv3 Hypervisor Control Register */
-            unsigned long gicv3_hcr;    /* 0x300 */
+            unsigned long gicv3_hcr;	/* 0x300 */
             /* GICv3 List Registers */
             unsigned long gicv3_lrs[VAL_REC_GIC_NUM_LRS]; /* 0x308 */
             /* GICv3 Maintenance Interrupt State Register */
-            unsigned long gicv3_misr;   /* 0x388 */
+            unsigned long gicv3_misr;	/* 0x388 */
             /* GICv3 Virtual Machine Control Register */
-            unsigned long gicv3_vmcr;   /* 0x390 */
-           }, 0x300, 0x400);
-    SET_MEMBER(struct {
+            unsigned long gicv3_vmcr;	/* 0x390 */
+            }, 0x300, 0x400);
+    SET_MEMBER_RMI(struct {
             /* Counter-timer Physical Timer Control Register */
-            unsigned long cntp_ctl;     /* 0x400 */
+            unsigned long cntp_ctl;		/* 0x400 */
             /* Counter-timer Physical Timer CompareValue Register */
-            unsigned long cntp_cval;    /* 0x408 */
+            unsigned long cntp_cval;	/* 0x408 */
             /* Counter-timer Virtual Timer Control Register */
-            unsigned long cntv_ctl;     /* 0x410 */
+            unsigned long cntv_ctl;		/* 0x410 */
             /* Counter-timer Virtual Timer CompareValue Register */
-            unsigned long cntv_cval;    /* 0x418 */
-           }, 0x400, 0x500);
-    SET_MEMBER(struct {
+            unsigned long cntv_cval;	/* 0x418 */
+            }, 0x400, 0x500);
+    SET_MEMBER_RMI(struct {
             /* Base address of pending RIPAS change */
-            unsigned long base;   /* 0x500 */
+            unsigned long ripas_base;	/* 0x500 */
             /* Size of pending RIPAS change */
-            unsigned long size;   /* 0x508 */
+            unsigned long ripas_top;	/* 0x508 */
             /* RIPAS value of pending RIPAS change */
-            unsigned char ripas_value;  /* 0x510 */
-           }, 0x500, 0x600);
+            unsigned char ripas_value;	/* 0x510 */
+            }, 0x500, 0x600);
     /* Host call immediate value */
-    SET_MEMBER(unsigned int imm, 0x600, 0x800); /* 0x600 */
+    SET_MEMBER_RMI(unsigned int imm, 0x600, 0x700);	/* 0x600 */
+    /* PMU overflow status */
+    SET_MEMBER_RMI(unsigned long pmu_ovf_status, 0x700, 0x800);	/* 0x700 */
 } val_host_rec_exit_ts;
 
 typedef struct {
-    val_host_rec_entry_ts entry;
-    /* TBD: Need to place exit at 2KB offset */
-    val_host_rec_exit_ts exit;
+    /* Entry information */
+    SET_MEMBER_RMI(val_host_rec_entry_ts entry, 0, 0x800);	/* Offset 0 */
+    /* Exit information */
+    SET_MEMBER_RMI(val_host_rec_exit_ts exit, 0x800, 0x1000);/* 0x800 */
 } val_host_rec_run_ts;
 
 typedef struct __attribute__((packed)) {
@@ -319,24 +349,29 @@ void val_host_update_granule_state(uint64_t rd,
 uint64_t val_host_postamble(void);
 val_host_granule_ts *val_host_remove_granule(val_host_granule_ts **current, uint64_t PA);
 val_host_granule_ts *val_host_remove_data_granule(val_host_granule_ts **current, uint64_t ipa);
+val_host_granule_ts *val_host_remove_rtt_granule(val_host_granule_ts **gran_list_head,
+                                                        uint64_t ipa, uint64_t level);
 int val_host_get_curr_realm(uint64_t rd);
 void val_host_update_destroy_granule_state(uint64_t rd,
                         uint64_t PA,
+                        uint64_t ipa,
+                        uint64_t level,
                         uint32_t state,
                         uint32_t gran_list_state);
 uint64_t val_host_destroy_rtt_levels(uint64_t level, int current_realm);
 uint32_t val_host_map_ns_shared_region(val_host_realm_ts *realm, uint64_t size, uint64_t mem_attr);
-int val_host_ripas_init(val_host_realm_ts *realm, uint64_t ipa,\
-                        uint32_t level, uint64_t rtt_alignment);
+int val_host_ripas_init(val_host_realm_ts *realm, uint64_t base,
+                uint64_t top, uint64_t rtt_level, uint64_t rtt_alignment);
 uint32_t val_host_create_rtt_levels(val_host_realm_ts *realm,
                    uint64_t ipa,
-                   uint32_t level,
-                   uint32_t max_level,
+                   uint64_t level,
+                   uint64_t max_level,
                    uint64_t rtt_alignment);
 
 uint32_t val_host_map_protected_data_to_realm(val_host_realm_ts *realm,
                                             val_data_create_ts *data_create);
-uint64_t val_get_pa_range_supported(void);
+
+void val_host_realm_params(val_host_realm_ts *realm);
 
 #endif /* _VAL_HOST_REALM_H_ */
 

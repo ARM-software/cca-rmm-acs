@@ -23,7 +23,7 @@ def compile_check(COMPILED_FILE, ROOT_DIR):
 
 	for val, val_dir, val_files in os.walk(VAL_PATH):
 		for file in val_files:
-			if (file.endswith(".cmake")) or (file.endswith("val_macros.S")):
+			if (file.endswith(".cmake")) or (file.endswith(".h")):
 				continue
 			else:
 				global_filelist.append(os.path.join(val,file))

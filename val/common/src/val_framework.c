@@ -173,7 +173,7 @@ void val_common_printf(const char *msg, uint64_t data1, uint64_t data2)
         /* Print from realm through RSI_HOST_CALL */
 
         realm_print.imm = VAL_REALM_PRINT_MSG;
-        val_smc_call(RSI_HOST_CALL, (uint64_t)&realm_print, 0, 0, 0, 0, 0, 0);
+        val_smc_call(RSI_HOST_CALL, (uint64_t)&realm_print, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 
     }
     else {

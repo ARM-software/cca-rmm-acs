@@ -12,7 +12,7 @@
 
 void cmd_secure_test_secure(void)
 {
-    uint64_t *test_shared_region = (val_get_shared_region_base() + TEST_USE_OFFSET);
+    uint64_t *test_shared_region = (val_get_shared_region_base() + TEST_USE_OFFSET1);
 
     LOG(ALWAYS, "\tIn secure_test_secure\n", 0, 0);
 

@@ -9,6 +9,7 @@
 #include "rtt_level_start.h"
 #include "val_realm_memory.h"
 #include "val_realm_rsi.h"
+#include "val_realm_memory.h"
 
 #define REALM_DATA   0xAABB1122
 
@@ -17,7 +18,6 @@ void mm_rtt_level_start_realm(void)
     uint64_t ipa_width;
     uint32_t i;
     val_memory_region_descriptor_ts mem_desc;
-    val_pgt_descriptor_ts pgt_desc;
     uint64_t *addr;
 
     /* Below code is executed for REC[0] only */
@@ -29,16 +29,11 @@ void mm_rtt_level_start_realm(void)
         if (ipa_width != rtt_sl_start[i][0])
             continue;
 
-        pgt_desc.ttbr = tt_l0_base;
-        pgt_desc.stage = PGT_STAGE1;
-        pgt_desc.ias = (uint32_t)ipa_width;
-        pgt_desc.oas = (uint32_t)ipa_width;
-
         mem_desc.virtual_address = rtt_sl_start[i][1];
         mem_desc.physical_address = rtt_sl_start[i][1];
         mem_desc.length = PAGE_SIZE;
-        mem_desc.attributes = ATTR_RW_DATA | ATTR_NS;
-        if (val_pgt_create(pgt_desc, &mem_desc))
+        mem_desc.attributes = MT_RW_DATA | MT_NS;
+        if (val_realm_pgt_create(&mem_desc))
         {
             LOG(ERROR, "\tVA to PA mapping failed\n", 0, 0);
             val_set_status(RESULT_FAIL(VAL_ERROR_POINT(1)));

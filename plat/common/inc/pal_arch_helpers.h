@@ -376,6 +376,9 @@ DEFINE_SYSREG_RW_FUNCS(cntp_tval_el0)
 DEFINE_SYSREG_RW_FUNCS(cntp_cval_el0)
 DEFINE_SYSREG_READ_FUNC(cntpct_el0)
 DEFINE_SYSREG_READ_FUNC(cntvct_el0)
+DEFINE_SYSREG_RW_FUNCS(cntv_ctl_el0)
+DEFINE_SYSREG_RW_FUNCS(cntv_tval_el0)
+DEFINE_SYSREG_RW_FUNCS(cntv_cval_el0)
 DEFINE_SYSREG_RW_FUNCS(cnthctl_el2)
 
 #define get_cntp_ctl_enable(x)  (((x) >> CNTP_CTL_ENABLE_SHIFT) & \
@@ -403,13 +406,47 @@ DEFINE_SYSREG_READ_FUNC(isr_el1)
 DEFINE_SYSREG_RW_FUNCS(mdcr_el2)
 DEFINE_SYSREG_RW_FUNCS(mdcr_el3)
 DEFINE_SYSREG_RW_FUNCS(hstr_el2)
-DEFINE_SYSREG_RW_FUNCS(pmcr_el0)
-DEFINE_SYSREG_RW_FUNCS(pmcntenset_el0)
-DEFINE_SYSREG_READ_FUNC(pmccntr_el0)
-DEFINE_SYSREG_RW_FUNCS(pmccfiltr_el0)
 
+DEFINE_SYSREG_RW_FUNCS(pmcr_el0)
+DEFINE_SYSREG_RW_FUNCS(pmcntenclr_el0)
+DEFINE_SYSREG_RW_FUNCS(pmcntenset_el0)
+DEFINE_SYSREG_RW_FUNCS(pmccntr_el0)
+DEFINE_SYSREG_RW_FUNCS(pmccfiltr_el0)
 DEFINE_SYSREG_RW_FUNCS(pmevtyper0_el0)
-DEFINE_SYSREG_READ_FUNC(pmevcntr0_el0)
+DEFINE_SYSREG_RW_FUNCS(pmevcntr0_el0)
+DEFINE_SYSREG_RW_FUNCS(pmovsclr_el0)
+DEFINE_SYSREG_RW_FUNCS(pmovsset_el0)
+DEFINE_SYSREG_RW_FUNCS(pmselr_el0)
+DEFINE_SYSREG_RW_FUNCS(pmuserenr_el0);
+DEFINE_SYSREG_RW_FUNCS(pmxevtyper_el0)
+DEFINE_SYSREG_RW_FUNCS(pmxevcntr_el0)
+DEFINE_SYSREG_RW_FUNCS(pmintenclr_el1)
+DEFINE_SYSREG_RW_FUNCS(pmintenset_el1)
+
+/* parameterised event counter accessors */
+static inline u_register_t read_pmevcntrn_el0(uint32_t ctr_num)
+{
+    write_pmselr_el0(ctr_num & PMSELR_EL0_SEL_MASK);
+    return read_pmxevcntr_el0();
+}
+
+static inline void write_pmevcntrn_el0(uint32_t ctr_num, u_register_t val)
+{
+    write_pmselr_el0(ctr_num & PMSELR_EL0_SEL_MASK);
+    write_pmxevcntr_el0(val);
+}
+
+static inline u_register_t read_pmevtypern_el0(uint32_t ctr_num)
+{
+    write_pmselr_el0(ctr_num & PMSELR_EL0_SEL_MASK);
+    return read_pmxevtyper_el0();
+}
+
+static inline void write_pmevtypern_el0(uint32_t ctr_num, u_register_t val)
+{
+    write_pmselr_el0(ctr_num & PMSELR_EL0_SEL_MASK);
+    write_pmxevtyper_el0(val);
+}
 
 /* GICv3 System Registers */
 
@@ -429,6 +466,13 @@ DEFINE_RENAME_SYSREG_WRITE_FUNC(icc_eoir0_el1, ICC_EOIR0_EL1)
 DEFINE_RENAME_SYSREG_WRITE_FUNC(icc_eoir1_el1, ICC_EOIR1_EL1)
 DEFINE_RENAME_SYSREG_WRITE_FUNC(icc_sgi0r_el1, ICC_SGI0R_EL1)
 DEFINE_RENAME_SYSREG_RW_FUNCS(icc_sgi1r, ICC_SGI1R)
+
+DEFINE_RENAME_SYSREG_RW_FUNCS(icv_ctrl_el1, ICV_CTRL_EL1)
+DEFINE_RENAME_SYSREG_READ_FUNC(icv_iar1_el1, ICV_IAR1_EL1)
+DEFINE_RENAME_SYSREG_RW_FUNCS(icv_igrpen1_el1, ICV_IGRPEN1_EL1)
+DEFINE_RENAME_SYSREG_WRITE_FUNC(icv_eoir1_el1, ICV_EOIR1_EL1)
+DEFINE_RENAME_SYSREG_RW_FUNCS(icv_pmr_el1, ICV_PMR_EL1)
+DEFINE_RENAME_SYSREG_RW_FUNCS(icv_bpr0_el1, ICV_BPR0_EL1)
 
 DEFINE_RENAME_SYSREG_RW_FUNCS(amcr_el0, AMCR_EL0)
 DEFINE_RENAME_SYSREG_RW_FUNCS(amcgcr_el0, AMCGCR_EL0)

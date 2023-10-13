@@ -25,27 +25,4 @@
 #define EXCEPTION_AFFINITY_FROM_MPIDR(mpidr)    \
     (((mpidr) & (~MPIDR_AFFLVL3_MASK)) | (((mpidr) & MPIDR_AFFLVL3_MASK) >> 8))
 
-/* abort type enum */
-typedef enum _abort_type {
-    EXCEPTION_ABORT_TYPE_NONE,
-    EXCEPTION_ABORT_TYPE_HVC,
-    EXCEPTION_ABORT_TYPE_IA,
-    EXCEPTION_ABORT_TYPE_DA
-} abort_type_te;
-
-/* common data structure to hold the excetion related values
- * this will grow based on the scenario and need
- */
-typedef struct _sea_parms_ts {
-    uint64_t esr_el1;
-    uint64_t far_el1;
-    uint64_t next_pc;
-    uint64_t ec;
-    uint64_t is_exception_handled;
-    uint64_t status;
-    abort_type_te abort_type;
-} sea_parms_ts;
-
-bool synchronized_exception_handler(void);
-
 #endif /*#ifndef __EXCEPTION_COMMON_REALM__*/

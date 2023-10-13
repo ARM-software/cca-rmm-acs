@@ -59,6 +59,10 @@ SECTIONS
         *(SORT_BY_ALIGNMENT(.bss*))
         *(COMMON)
         . = NEXT(PAGE_SIZE);
-        __BSS_END__ = .;
-    }
+    } >RAM
+
+    pgt_entries ALIGN(PAGE_SIZE) : {
+            *(xlat_static_tables)
+    } >RAM
+    __BSS_END__ = .;
 }
