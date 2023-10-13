@@ -14,10 +14,10 @@
  *   @param    target_cpuid     - Logical cpuid value of the core
  *   @return   SUCCESS/FAILURE
 **/
-uint32_t val_host_power_on_cpu(uint32_t target_cpuid)
+uint64_t val_host_power_on_cpu(uint32_t target_cpuid)
 {
     uint64_t target_cpu = val_get_mpidr(target_cpuid);
-    uint32_t ret;
+    uint64_t ret;
 
     ret = val_psci_cpu_on(target_cpu, val_host_get_secondary_cpu_entry(), CONTEXT_ID_VALUE);
     if (ret == PSCI_E_SUCCESS)
@@ -34,9 +34,9 @@ uint32_t val_host_power_on_cpu(uint32_t target_cpuid)
  *   @param    void
  *   @return   The call does not return when successful. Otherwise, it returns VAL_ERROR.
 **/
-uint32_t val_host_power_off_cpu(void)
+uint64_t val_host_power_off_cpu(void)
 {
-    uint32_t ret =  val_psci_cpu_off();
+    uint64_t ret =  val_psci_cpu_off();
 
     LOG(WARN, "\tPSCI_CPU_OFF failed, ret=0x%x\n", ret, 0);
     return VAL_ERROR;

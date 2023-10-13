@@ -21,6 +21,9 @@
 
 #define assert(e)   ((e) ? (void)0 : __assert(e))
 
+#define CASSERT(cond, msg)	\
+	typedef char msg[(cond) ? 1 : -1] __unused
+
 /**
  * @brief        - Compare the two input buffer content
  * @param        - src: Source buffer to be compared
@@ -48,5 +51,6 @@ void *pal_memset(void *dst, int val, size_t count);
 **/
 void *pal_memcpy(void *dst, const void *src, size_t len);
 
+size_t pal_strlen(char *str);
 
 #endif

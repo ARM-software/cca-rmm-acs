@@ -14,17 +14,11 @@ void exception_rec_exit_psci_host(void)
     val_host_rec_entry_ts *rec_entry = NULL;
     uint64_t ec = 0;
     uint64_t imm = 0;
-    val_host_rmifeatureregister0_ts featureregister0 = {0,};
 
     val_memset(&realm, 0, sizeof(realm));
 
-    featureregister0.s2sz = 40;
-    featureregister0.hash_sha_256 = 1;
-    val_memcpy(&realm.realm_feat_0, &featureregister0, sizeof(val_host_rmifeatureregister0_ts));
-    realm.hash_algo = RMI_SHA256;
-    realm.s2_starting_level = 0;
-    realm.num_s2_sl_rtts = 1;
-    realm.vmid = 0;
+    val_host_realm_params(&realm);
+
     realm.rec_count = 2;
 
     /* Populate realm with one RECs*/
@@ -44,9 +38,9 @@ void exception_rec_exit_psci_host(void)
     exception_get_ec_imm(rec_exit->esr, &ec, &imm);
     /* check for esr_el2 for the rec exit dueto normal hostcall*/
     if (
-            ((rec_exit->exit_reason) != RMI_EXIT_PSCI) &&
+            ((rec_exit->exit_reason) != RMI_EXIT_PSCI) ||
             /* gprs[0] holds the function is of psci call*/
-            ((rec_exit->gprs[0]) != PSCI_AFFINITY_INFO_AARCH64) &&
+            ((rec_exit->gprs[0]) != PSCI_AFFINITY_INFO_AARCH64) ||
              /* gprs[1] holds the mpidr of the target rec*/
             ((rec_exit->gprs[1]) != 1)
     )

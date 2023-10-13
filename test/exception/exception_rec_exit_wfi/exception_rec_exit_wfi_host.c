@@ -19,19 +19,11 @@ void exception_rec_exit_wfi_host(void)
     uint64_t ec = 0;
     uint64_t imm = 0;
     val_host_rec_entry_flags_ts rec_entry_flags;
-    val_host_rmifeatureregister0_ts featureregister0 = {0,};
 
     val_memset(&realm, 0, sizeof(realm));
     val_memset(&rec_entry_flags, 0, sizeof(rec_entry_flags));
 
-    featureregister0.s2sz = 40;
-    featureregister0.hash_sha_256 = 1;
-    val_memcpy(&realm.realm_feat_0, &featureregister0, sizeof(val_host_rmifeatureregister0_ts));
-    realm.hash_algo = RMI_SHA256;
-    realm.s2_starting_level = 0;
-    realm.num_s2_sl_rtts = 1;
-    realm.vmid = 0;
-    realm.rec_count = 1;
+    val_host_realm_params(&realm);
 
     /* Populate realm with one RECs*/
     if (val_host_realm_setup(&realm, 1))

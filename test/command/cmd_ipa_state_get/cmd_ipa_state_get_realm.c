@@ -89,13 +89,22 @@ void cmd_ipa_state_get_realm(void)
         cmd_ret = val_realm_rsi_ipa_state_get(args.addr);
         ret = cmd_ret.x0;
 
-        if (ret != PACK_CODE(test_data[i].status, test_data[i].index))
+        if (ret != test_data[i].status)
         {
-            LOG(ERROR, "\n\tUnexpected Command Return Status\n ret status : 0x%x index : 0x%x \n",
-                          RMI_STATUS(ret), RMI_INDEX(ret));
+            LOG(ERROR, "\n\tUnexpected Command Return Status\n ret status : 0x%x \n", ret, 0);
             val_set_status(RESULT_FAIL(VAL_ERROR_POINT(2)));
             goto exit;
         }
+    }
+
+    LOG(TEST, "\n\tPositive Observability Check\n", 0, 0);
+
+    cmd_ret = val_realm_rsi_ipa_state_get(c_args.addr_valid);
+    if (cmd_ret.x0)
+    {
+        LOG(ERROR, "\n\tPositive Observability failed. Ret = 0x%x\n", cmd_ret.x0, 0);
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(3)));
+        goto exit;
     }
 
 exit:

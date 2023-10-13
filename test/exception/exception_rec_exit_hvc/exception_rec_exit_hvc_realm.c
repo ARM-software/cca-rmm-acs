@@ -4,25 +4,24 @@
  * SPDX-License-Identifier: BSD-3-Clause
  *
  */
+#include "val_realm_exception.h"
 #include "exception_common_realm.h"
 
-extern sea_parms_ts gSea_parms;
+extern sea_params_ts g_sea_params;
 
 void exception_rec_exit_hvc_realm(void)
 {
-    val_set_status(RESULT_PASS(VAL_SUCCESS));
-
     /* setting up the exception handler for synchronized exceptions*/
-    val_exception_setup(NULL, synchronized_exception_handler);
+    val_exception_setup(NULL, synchronous_exception_handler);
 
-    val_memset(&gSea_parms, 0, sizeof(gSea_parms));
+    val_memset(&g_sea_params, 0, sizeof(g_sea_params));
     /* setup the abort type for the handler */
-    gSea_parms.abort_type = EXCEPTION_ABORT_TYPE_HVC;
+    g_sea_params.abort_type = EXCEPTION_ABORT_TYPE_HVC;
 
-    /* testing the rec exit dueto hostcall */
+    /* HVC instruction execution in AArch64 state - Unkonwn exception taken to Realm */
     __asm__("hvc #0");
 
-    if (gSea_parms.is_exception_handled && !gSea_parms.status) {
+    if (g_sea_params.handler_abort) {
         LOG(TEST, "\tREALM handled the SEA(For HVC) successfully \n", 0, 0);
     }
     else {
@@ -33,7 +32,7 @@ void exception_rec_exit_hvc_realm(void)
 
 test_exit:
     /* reset the abort type */
-    gSea_parms.abort_type = EXCEPTION_ABORT_TYPE_NONE;
+    g_sea_params.abort_type = EXCEPTION_ABORT_TYPE_NONE;
     val_exception_setup(NULL, NULL);
     val_realm_return_to_host();
 }

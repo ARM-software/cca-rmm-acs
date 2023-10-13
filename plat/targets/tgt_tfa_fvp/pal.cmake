@@ -7,7 +7,7 @@
 
 set(PAL_SRC
     ${ROOT_DIR}/plat/targets/${TARGET}/src/pal_driver.c
-    ${ROOT_DIR}/plat/targets/${TARGET}/src/pal_misc.c
+    ${ROOT_DIR}/plat/targets/${TARGET}/src/pal_interface.c
     ${ROOT_DIR}/plat/targets/${TARGET}/src/pal_secure_service.c
     ${ROOT_DIR}/plat/targets/${TARGET}/src/pal_cpu_info.c
     ${ROOT_DIR}/plat/targets/${TARGET}/src/pal_mmio.c

@@ -116,6 +116,26 @@ val_id_aa64mmfr1_el1_read:
         mrs x0, ID_AA64MMFR1_EL1
         ret
 
+.global val_id_aa64mmfr2_el1_read
+val_id_aa64mmfr2_el1_read:
+        mrs x0, ID_AA64MMFR2_EL1
+        ret
+
+.global val_id_aa64pfr0_el1_read
+val_id_aa64pfr0_el1_read:
+        mrs x0, ID_AA64PFR0_EL1
+        ret
+
+.global val_id_aa64isar0_el1_read
+val_id_aa64isar0_el1_read:
+        mrs x0, ID_AA64ISAR0_EL1
+        ret
+
+.global val_id_aa64dfr0_el1_read
+val_id_aa64dfr0_el1_read:
+        mrs x0, ID_AA64DFR0_EL1
+        ret
+
     .global val_esr_el2_read
 val_esr_el2_read:
     mrs     x0, esr_el2
@@ -124,6 +144,11 @@ val_esr_el2_read:
     .global val_elr_el2_read
 val_elr_el2_read:
     mrs     x0, elr_el2
+    ret
+
+    .global val_far_el2_read
+val_far_el2_read:
+    mrs     x0, far_el2
     ret
 
     .global val_read_mpidr

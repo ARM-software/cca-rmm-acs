@@ -6,6 +6,13 @@
  */
 #include "val_secure_memory.h"
 
+REGISTER_XLAT_CONTEXT2(acs_secure,
+		       SECURE_MEM_REGIONS,
+		       ACS_SECURE_CTX_MAX_XLAT_TABLES,
+		       PLAT_VIRT_ADDR_SPACE_SIZE, PLAT_PHY_ADDR_SPACE_SIZE,
+		       EL2_REGIME, ACS_SECURE_IMAGE_XLAT_SECTION_NAME,
+		       ACS_SECURE_IMAGE_BASE_XLAT_SECTION_NAME);
+
 /* Linker symbols used to figure out the memory layout of secure partition. */
 extern uintptr_t __TEXT_START__, __TEXT_END__;
 #define TEXT_START    ((uintptr_t)&__TEXT_START__)
@@ -23,6 +30,46 @@ extern uintptr_t __BSS_START__, __BSS_END__;
 #define BSS_START  ((uintptr_t)&__BSS_START__)
 #define BSS_END    ((uintptr_t)&__BSS_END__)
 
+#define SECURE_TEXT MAP_REGION_FLAT(                              \
+                                TEXT_START,                     \
+                                (TEXT_END - TEXT_START),        \
+                                MT_CODE | MT_SECURE)
+#define SECURE_RO MAP_REGION_FLAT(                                \
+                                RODATA_START,                   \
+                                (RODATA_END - RODATA_START),    \
+                                MT_RO_DATA | MT_SECURE)
+#define SECURE_RW MAP_REGION_FLAT(                                \
+                                DATA_START,                     \
+                                (DATA_END - DATA_START),        \
+                                MT_RW_DATA | MT_SECURE)
+#define SECURE_BSS MAP_REGION_FLAT(                               \
+                                BSS_START,                      \
+                                (BSS_END - BSS_START),          \
+                                MT_RW_DATA | MT_SECURE)
+#define MEMORY_POOL MAP_REGION_FLAT(                            \
+                                PLATFORM_MEMORY_POOL_BASE,      \
+                                PLATFORM_MEMORY_POOL_SIZE,      \
+                                MT_RW_DATA | MT_NS)
+#define NS_UART MAP_REGION_FLAT(                                \
+                                PLATFORM_NS_UART_BASE,          \
+                                PLATFORM_NS_UART_SIZE,          \
+                                MT_DEVICE_RW | MT_NS)
+#define GICD    MAP_REGION_FLAT(                               \
+                                GICD_BASE,                      \
+                                GICD_SIZE,                      \
+                                MT_DEVICE_RW | MT_NS)
+#define GICR    MAP_REGION_FLAT(                                \
+                                GICR_BASE,                      \
+                                GICR_SIZE,                      \
+                                MT_DEVICE_RW | MT_NS)
+#define GICC    MAP_REGION_FLAT(                                \
+                                GICC_BASE,                      \
+                                GICC_SIZE,                      \
+                                MT_DEVICE_RW | MT_NS)
+#define TWDOG    MAP_REGION_FLAT(                                \
+                                PLATFORM_SP805_TWDOG_BASE,       \
+                                PLATFORM_TWDOG_SIZE,              \
+                                MT_DEVICE_RW | MT_NS)
 /**
  *   @brief    Add regions assigned to secure into its translation table data structure.
  *   @param    void
@@ -30,39 +77,30 @@ extern uintptr_t __BSS_START__, __BSS_END__;
 **/
 void val_secure_add_mmap(void)
 {
-    /* Secure Image region */
-    val_mmap_add_region(TEXT_START, TEXT_START,
-                        (TEXT_END - TEXT_START),
-                        ATTR_CODE | ATTR_S);
-    val_mmap_add_region(RODATA_START, RODATA_START,
-                        (RODATA_END - RODATA_START),
-                        ATTR_RO_DATA | ATTR_S);
-    val_mmap_add_region(DATA_START, DATA_START,
-                        (DATA_END - DATA_START),
-                        ATTR_RW_DATA | ATTR_S);
-    val_mmap_add_region(BSS_START, BSS_START,
-                        (BSS_END - BSS_START),
-                        ATTR_RW_DATA | ATTR_S);
 
-    /* Memory Pool region */
-    val_mmap_add_region(PLATFORM_MEMORY_POOL_BASE,
-                        PLATFORM_MEMORY_POOL_BASE,
-                        PLATFORM_MEMORY_POOL_SIZE,
-                        ATTR_RW_DATA | ATTR_NS);
+    struct mmap_region secure_regions[SECURE_MEM_REGIONS] = {
+            NS_UART,
+            TWDOG,
+            GICC,
+            GICD,
+            GICR,
+            SECURE_TEXT,
+            SECURE_RO,
+            SECURE_RW,
+            SECURE_BSS,
+            MEMORY_POOL
+    };
 
-    /* Device region */
-    val_mmap_add_region(PLATFORM_NS_UART_BASE,
-                        PLATFORM_NS_UART_BASE,
-                        PLATFORM_NS_UART_SIZE,
-                        ATTR_DEVICE_RW | ATTR_NS);
+    mmap_add_ctx(&acs_secure_xlat_ctx, secure_regions);
+}
 
-    val_mmap_add_region(GICD_BASE, GICD_BASE, GICD_SIZE, ATTR_DEVICE_RW | ATTR_NS);
-    val_mmap_add_region(GICR_BASE, GICR_BASE, GICD_SIZE, ATTR_DEVICE_RW | ATTR_NS);
-    val_mmap_add_region(GICC_BASE, GICC_BASE, GICD_SIZE, ATTR_DEVICE_RW | ATTR_NS);
-
-    val_mmap_add_region(PLATFORM_SP805_TWDOG_BASE,
-                        PLATFORM_SP805_TWDOG_BASE,
-                        PLATFORM_TWDOG_SIZE,
-                        ATTR_DEVICE_RW | ATTR_S);
+/**
+ *   @brief    Return secure XLAT context.
+ *   @param    void
+ *   @return   XLAT context.
+**/
+xlat_ctx_t *val_secure_get_xlat_ctx(void)
+{
+    return &acs_secure_xlat_ctx;
 }
 

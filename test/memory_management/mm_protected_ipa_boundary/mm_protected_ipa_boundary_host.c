@@ -7,29 +7,22 @@
 #include "test_database.h"
 #include "val_host_rmi.h"
 #include "mm_common_host.h"
+#include "val_host_helpers.h"
 
 void mm_protected_ipa_boundary_host(void)
 {
     val_host_realm_ts realm;
-    val_host_rmifeatureregister0_ts features_0;
     uint64_t ret;
     val_host_rec_entry_ts *rec_entry = NULL;
     val_host_rec_exit_ts *rec_exit = NULL;
     uint64_t protected_ipa, unprotected_ipa;
     uint64_t protected_src_pa, protected_target_pa;
     uint64_t unprotected_pa;
+    val_host_data_destroy_ts data_destroy;
 
     val_memset(&realm, 0, sizeof(realm));
-    val_memset(&features_0, 0, sizeof(features_0));
 
-    features_0.s2sz = 40;
-    val_memcpy(&realm.realm_feat_0, &features_0, sizeof(features_0));
-
-    realm.hash_algo = RMI_HASH_SHA_256;
-    realm.s2_starting_level = 0;
-    realm.num_s2_sl_rtts = 1;
-    realm.vmid = 0;
-    realm.rec_count = 1;
+    val_host_realm_params(&realm);
 
     /* Populate realm with one REC*/
     if (val_host_realm_setup(&realm, false))
@@ -39,10 +32,11 @@ void mm_protected_ipa_boundary_host(void)
         goto destroy_realm;
     }
 
-    protected_ipa = (1UL << (features_0.s2sz - 1)) - PAGE_SIZE;
-    unprotected_ipa = (1UL << (features_0.s2sz - 1));
+    protected_ipa = (1UL << (realm.s2sz - 1)) - PAGE_SIZE;
+    unprotected_ipa = (1UL << (realm.s2sz - 1));
 
-    if (val_host_ripas_init(&realm, protected_ipa, VAL_RTT_MAX_LEVEL, PAGE_SIZE))
+    if (val_host_ripas_init(&realm, protected_ipa, protected_ipa + PAGE_SIZE,
+                                               VAL_RTT_MAX_LEVEL, PAGE_SIZE))
     {
         LOG(ERROR, "\trealm_init_ipa_state failed, ipa=0x%lx\n",
                 protected_ipa, 0);
@@ -106,7 +100,7 @@ void mm_protected_ipa_boundary_host(void)
         goto destroy_realm;
     }
 
-    ret = val_host_rmi_data_destroy(realm.rd, protected_ipa);
+    ret = val_host_rmi_data_destroy(realm.rd, protected_ipa, &data_destroy);
     if (ret)
     {
         LOG(ERROR, "\tData destroy failed, ipa=0x%lx, ret=0x%x\n", protected_ipa, ret);
@@ -125,7 +119,8 @@ void mm_protected_ipa_boundary_host(void)
         goto destroy_realm;
     }
 
-    if (validate_rec_exit_da(rec_exit, protected_ipa, ESR_ISS_DFSC_TTF_L3))
+    if (validate_rec_exit_da(rec_exit, protected_ipa, ESR_ISS_DFSC_TTF_L3,
+                                NON_EMULATABLE_DA, 0))
     {
         LOG(ERROR, "\tREC exit params mismatch\n", 0, 0);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(12)));

@@ -33,12 +33,10 @@ struct arguments {
 static uint64_t g_rd_new_prep_sequence(uint16_t vmid)
 {
     val_host_realm_ts realm_init;
-    val_host_rmifeatureregister0_ts features_0;
 
     val_memset(&realm_init, 0, sizeof(realm_init));
-    features_0.s2sz = 40;
-    val_memcpy(&realm_init.realm_feat_0, &features_0, sizeof(features_0));
 
+    realm_init.s2sz = 40;
     realm_init.hash_algo = RMI_HASH_SHA_256;
     realm_init.s2_starting_level = 0;
     realm_init.num_s2_sl_rtts = 1;
@@ -99,17 +97,13 @@ static uint64_t g_rec_ready_prep_sequence(uint64_t rd)
 
 static uint64_t g_rd_system_off_prep_sequence(void)
 {
-    val_host_rmifeatureregister0_ts features_0;
     uint64_t ret;
     val_memset(&realm_test[SYSTEM_OFF_REALM], 0, sizeof(realm_test[SYSTEM_OFF_REALM]));
-    val_memset(&features_0, 0, sizeof(features_0));
-    features_0.s2sz = 40;
-    val_memcpy(&realm_test[SYSTEM_OFF_REALM].realm_feat_0, &features_0, sizeof(features_0));
-    realm_test[SYSTEM_OFF_REALM].hash_algo = RMI_HASH_SHA_256;
-    realm_test[SYSTEM_OFF_REALM].s2_starting_level = 0;
-    realm_test[SYSTEM_OFF_REALM].num_s2_sl_rtts = 1;
+
+    val_host_realm_params(&realm_test[SYSTEM_OFF_REALM]);
+
     realm_test[SYSTEM_OFF_REALM].vmid = SYSTEM_OFF_REALM;
-    realm_test[SYSTEM_OFF_REALM].rec_count = 1;
+
     /* Populate realm with one REC*/
     if (val_host_realm_setup(&realm_test[SYSTEM_OFF_REALM], 1))
         LOG(ERROR, "\tRealm setup failed\n", 0, 0);

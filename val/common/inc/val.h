@@ -44,6 +44,9 @@ extern uint64_t security_state;
                                         ~(uint32_t)(VAL_BIT_MASK(len) << pos)) & data) \
                                          | (val << pos))
 
+#define VAL_BIT_MASK_ULL(_msb, _lsb) \
+    ((~ULL(0) >> (63UL - (_msb))) & (~ULL(0) << (_lsb)))
+
 /* SHARED REGION Index size */
 #define BLOCK_SIZE         8
 #define OFFSET(index)    (index * BLOCK_SIZE)
@@ -73,8 +76,12 @@ typedef enum {
     VAL_PRINTF_DATA1      = 13,
     VAL_PRINTF_DATA2      = 14,
     VAL_CURR_TEST_NAME    = 15,
-    VAL_TEST_USE          = 512,
-    VAL_PRINT_OFFSET      = 520,
+    VAL_TEST_USE1         = 512,
+    VAL_TEST_USE2         = 520,
+    VAL_TEST_USE3         = 528,
+    VAL_TEST_USE4         = 536,
+    VAL_TEST_USE5         = 544,
+    VAL_PRINT_OFFSET      = 552,
 } val_shared_region_map_index_te;
 
 #define TEST_NUM_OFFSET OFFSET(VAL_CURR_TEST_NUM)
@@ -84,7 +91,11 @@ typedef enum {
 #define REALM_PRINTF_DATA1_OFFSET OFFSET(VAL_PRINTF_DATA1)
 #define REALM_PRINTF_DATA2_OFFSET OFFSET(VAL_PRINTF_DATA2)
 #define TEST_NAME_OFFSET OFFSET(VAL_CURR_TEST_NAME)
-#define TEST_USE_OFFSET OFFSET(VAL_TEST_USE)
+#define TEST_USE_OFFSET1 OFFSET(VAL_TEST_USE1)
+#define TEST_USE_OFFSET2 OFFSET(VAL_TEST_USE2)
+#define TEST_USE_OFFSET3 OFFSET(VAL_TEST_USE3)
+#define TEST_USE_OFFSET4 OFFSET(VAL_TEST_USE4)
+#define TEST_USE_OFFSET5 OFFSET(VAL_TEST_USE5)
 #define PRINT_OFFSET OFFSET(VAL_PRINT_OFFSET)
 
 /* Struture to capture test state */

@@ -6,12 +6,14 @@
 #-------------------------------------------------------------------------------
 
 file(GLOB VAL_SRC
-    "${ROOT_DIR}/val/host/inc/*.h"
     "${ROOT_DIR}/val/host/src/*.c"
     "${ROOT_DIR}/val/host/src/*.S"
-    "${ROOT_DIR}/val/common/inc/*.h"
     "${ROOT_DIR}/val/common/src/*.c"
     "${ROOT_DIR}/val/common/src/*.S"
+    "${ROOT_DIR}/val/common/inc/*.S"
+    "${ROOT_DIR}/val/common/xlat_tables_v2/include/*.S"
+    "${ROOT_DIR}/val/common/xlat_tables_v2/src/*.S"
+    "${ROOT_DIR}/val/common/xlat_tables_v2/src/*.c"
 )
 
 #Create compile list files
@@ -25,6 +27,7 @@ target_include_directories(${VAL_LIB} PRIVATE
     ${CMAKE_CURRENT_BINARY_DIR}
     ${ROOT_DIR}/val/host/inc/
     ${ROOT_DIR}/val/common/inc/
+    ${ROOT_DIR}/val/common/xlat_tables_v2/include/
     ${ROOT_DIR}/plat/common/inc/
     ${ROOT_DIR}/plat/targets/${TARGET}/inc/
     ${ROOT_DIR}/plat/driver/inc/

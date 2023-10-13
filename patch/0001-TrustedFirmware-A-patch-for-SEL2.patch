@@ -1,0 +1,68 @@
+From 00e9d7936a7301920005340c664a5b943ab105ad Mon Sep 17 00:00:00 2001
+From: Shyamanth RH <shyamanth.rh@arm.com>
+Date: Fri, 6 Oct 2023 18:57:45 +0800
+Subject: [PATCH] TrustedFirmware-A patch for SEL2
+
+---
+ Makefile                                     | 16 +++++++++++++++-
+ plat/arm/board/fvp/fdts/fvp_tb_fw_config.dts | 10 ++++++++++
+ 2 files changed, 25 insertions(+), 1 deletion(-)
+
+diff --git a/Makefile b/Makefile
+index 464544f6c..5df909a52 100644
+--- a/Makefile
++++ b/Makefile
+@@ -588,6 +588,14 @@ ifneq (${SPD},none)
+ 			DTC_CPPFLAGS	+=	-DOPTEE_SP_FW_CONFIG
+ 		endif
+
++	        ifeq ($(findstring acs_spmc,$(ARM_SPMC_MANIFEST_DTS)),acs_spmc)
++			DTC_CPPFLAGS	+=	-DRMM_ACS_SPMC_FW_CONFIG
++		endif
++
++		ifeq ($(findstring acs_sp,$(ARM_SPMC_MANIFEST_DTS)),acs_sp)
++			DTC_CPPFLAGS	+=	-DRMM_ACS_SP_FW_CONFIG
++		endif
++
+ 		ifeq ($(TS_SP_FW_CONFIG),1)
+ 		DTC_CPPFLAGS	+=	-DTS_SP_FW_CONFIG
+ 		endif
+@@ -1449,7 +1457,13 @@ ifdef SP_LAYOUT_FILE
+ 	NEED_SP_PKG := yes
+ else
+ 	ifeq (${SPMD_SPM_AT_SEL2},1)
+-                $(error "SPMD with SPM at S-EL2 require SP_LAYOUT_FILE")
++	    ifeq ($(findstring acs_spmc,$(ARM_SPMC_MANIFEST_DTS)),acs_spmc)
++             # When loading rmm-acs acs_secure.bin as spmc, no partition requires to get loaded.
++             # hence relaxing this condition as SP_LAYOUT_FILE option isn't passed for this case.
++
++	    else
++                 $(error "SPMD with SPM at S-EL2 require SP_LAYOUT_FILE")
++	    endif
+ 	endif
+ endif #(SP_LAYOUT_FILE)
+ endif #(SPD)
+diff --git a/plat/arm/board/fvp/fdts/fvp_tb_fw_config.dts b/plat/arm/board/fvp/fdts/fvp_tb_fw_config.dts
+index 6ba76db60..68b639dc2 100644
+--- a/plat/arm/board/fvp/fdts/fvp_tb_fw_config.dts
++++ b/plat/arm/board/fvp/fdts/fvp_tb_fw_config.dts
+@@ -75,6 +75,16 @@
+ 			uuid = "486178e0-e7f8-11e3-bc5e-0002a5d5c51b";
+ 			load-address = <0x6280000>;
+ 		};
++#elif  RMM_ACS_SPMC_FW_CONFIG
++		/* When RMM-ACS acs_secure.bin is selected to run as BL32(spmc), there are
++		  no secure partitions require to get loaded. */
++#elif  RMM_ACS_SP_FW_CONFIG
++		/* When RMM-ACS acs_secure.bin is selected to run as secure partition */
++		acs-sp {
++			uuid = "b4b5671e-4a90-4fe1-b81f-fb13dae1dacb";
++			load-address = <0x7000000>;
++			owner = "SiP";
++		};
+ #else
+ 		cactus-primary {
+ 			uuid = "b4b5671e-4a90-4fe1-b81f-fb13dae1dacb";
+--
+2.28.0
+

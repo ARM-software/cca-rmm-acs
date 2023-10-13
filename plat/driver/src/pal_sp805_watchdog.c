@@ -85,7 +85,7 @@ void pal_driver_ns_wdog_stop(void)
 
 void pal_driver_sp805_twdog_start(unsigned long base, uint32_t ms)
 {
-    uint32_t wd_cycles = (ms * ARM_SP805_TWDG_CLK_HZ) / 1000;
+    uint32_t wd_cycles = (ms * ARM_SP805_TWDG_CLK_HZ) / 1000000;
 
     /* Unlock to access the watchdog registers */
     pal_sp805_write_wdog_lock(base, SP805_WDOG_UNLOCK_ACCESS);

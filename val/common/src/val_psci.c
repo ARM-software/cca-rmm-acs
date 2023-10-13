@@ -13,13 +13,13 @@
  *   @param    lower_affinity_level     - Lower affinity level
  *   @return   Returns the smc arg0
 **/
-uint32_t val_psci_affinity_info(uint64_t target_affinity,
+uint64_t val_psci_affinity_info(uint64_t target_affinity,
                         uint64_t lower_affinity_level)
 {
-    return (uint32_t)((val_smc_call(PSCI_AFFINITY_INFO_AARCH64,
+    return (val_smc_call(PSCI_AFFINITY_INFO_AARCH64,
                        target_affinity,
                        lower_affinity_level,
-                       0, 0, 0, 0, 0)).x0);
+                       0, 0, 0, 0, 0, 0, 0, 0)).x0;
 }
 
 /**
@@ -29,15 +29,15 @@ uint32_t val_psci_affinity_info(uint64_t target_affinity,
  *   @param    context_id              - conext id of target cpu
  *   @return   Returns the smc arg0
 **/
-uint32_t val_psci_cpu_on(uint64_t target_cpu,
+uint64_t val_psci_cpu_on(uint64_t target_cpu,
                         uint64_t entry_point_address,
                         uint64_t context_id)
 {
-    return (uint32_t)((val_smc_call(PSCI_CPU_ON_AARCH64,
+    return (val_smc_call(PSCI_CPU_ON_AARCH64,
                        target_cpu,
                        entry_point_address,
                        context_id,
-                       0, 0, 0, 0)).x0);
+                       0, 0, 0, 0, 0, 0, 0)).x0;
 }
 
 /**
@@ -45,10 +45,10 @@ uint32_t val_psci_cpu_on(uint64_t target_cpu,
  *   @param    void
  *   @return   Returns the smc arg0
 **/
-uint32_t val_psci_cpu_off(void)
+uint64_t val_psci_cpu_off(void)
 {
-    return (uint32_t)((val_smc_call(PSCI_CPU_OFF,
-                       0, 0, 0, 0, 0, 0, 0)).x0);
+    return (val_smc_call(PSCI_CPU_OFF,
+                       0, 0, 0, 0, 0, 0, 0, 0, 0, 0)).x0;
 }
 
 /**
@@ -58,15 +58,15 @@ uint32_t val_psci_cpu_off(void)
  *   @param    context_id              - conext id of target cpu
  *   @return   Returns the smc arg0
 **/
-uint32_t val_psci_cpu_suspend(uint64_t power_state,
+uint64_t val_psci_cpu_suspend(uint64_t power_state,
                         uint64_t entry_point_address,
                         uint64_t context_id)
 {
-    return (uint32_t)((val_smc_call(PSCI_CPU_SUSPEND_AARCH64,
+    return (val_smc_call(PSCI_CPU_SUSPEND_AARCH64,
                        power_state,
                        entry_point_address,
                        context_id,
-                       0, 0, 0, 0)).x0);
+                       0, 0, 0, 0, 0, 0, 0)).x0;
 }
 
 /**
@@ -74,11 +74,11 @@ uint32_t val_psci_cpu_suspend(uint64_t power_state,
  *   @param    psci_func_id     - PSCI function id
  *   @return   Returns the smc arg0
 **/
-uint32_t val_psci_features(uint64_t psci_func_id)
+uint64_t val_psci_features(uint64_t psci_func_id)
 {
-    return (uint32_t)((val_smc_call(PSCI_FEATURES,
+    return (val_smc_call(PSCI_FEATURES,
                        psci_func_id,
-                       0, 0, 0, 0, 0, 0)).x0);
+                       0, 0, 0, 0, 0, 0, 0, 0, 0)).x0;
 }
 
 /**
@@ -86,10 +86,10 @@ uint32_t val_psci_features(uint64_t psci_func_id)
  *   @param    void
  *   @return   Returns the smc arg0
 **/
-uint32_t val_psci_system_off(void)
+uint64_t val_psci_system_off(void)
 {
-    return (uint32_t)((val_smc_call(PSCI_SYSTEM_OFF,
-                       0, 0, 0, 0, 0, 0, 0)).x0);
+    return (val_smc_call(PSCI_SYSTEM_OFF,
+                       0, 0, 0, 0, 0, 0, 0, 0, 0, 0)).x0;
 }
 
 /**
@@ -97,9 +97,19 @@ uint32_t val_psci_system_off(void)
  *   @param    void
  *   @return   Returns the smc arg0
 **/
-uint32_t val_psci_system_reset(void)
+uint64_t val_psci_system_reset(void)
 {
-    return (uint32_t)((val_smc_call(PSCI_SYSTEM_RESET,
-                       0, 0, 0, 0, 0, 0, 0)).x0);
+    return (val_smc_call(PSCI_SYSTEM_RESET,
+                       0, 0, 0, 0, 0, 0, 0, 0, 0, 0)).x0;
 }
 
+/**
+ *   @brief    PSCI version
+ *   @param    void
+ *   @return   Returns the smc arg0
+**/
+uint64_t val_psci_version(void)
+{
+    return (val_smc_call(PSCI_VERSION,
+                       0, 0, 0, 0, 0, 0, 0, 0, 0, 0)).x0;
+}

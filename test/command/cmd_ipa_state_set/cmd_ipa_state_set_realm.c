@@ -109,13 +109,13 @@ void cmd_ipa_state_set_realm(void)
             goto exit;
         }
 
-        cmd_ret = val_realm_rsi_ipa_state_set(args.base, args.size, args.ripas);
+        cmd_ret = val_realm_rsi_ipa_state_set(args.base, args.base + args.size,
+                                          args.ripas, RSI_NO_CHANGE_DESTROYED);
         ret = cmd_ret.x0;
 
-        if (ret != PACK_CODE(test_data[i].status, test_data[i].index))
+        if (ret != test_data[i].status)
         {
-            LOG(ERROR, "\n\tUnexpected Command Return Status\n ret status : 0x%x index : 0x%x \n",
-                          RMI_STATUS(ret), RMI_INDEX(ret));
+            LOG(ERROR, "\n\tUnexpected Command Return Status\n ret status : 0x%x \n", ret, 0);
             val_set_status(RESULT_FAIL(VAL_ERROR_POINT(2)));
             goto exit;
         }

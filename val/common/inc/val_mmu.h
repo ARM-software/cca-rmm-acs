@@ -11,6 +11,7 @@
 #include "val.h"
 #include "val_sysreg.h"
 #include "val_framework.h"
+#include "xlat_tables_v2.h"
 
 #define MAX_REGION_COUNT 15
 #define ATTR_NORMAL_NONCACHEABLE (0x0ull << 2)
@@ -36,6 +37,7 @@
 #define ATTR_STAGE2_AP_RW (0x3ull << 6)
 #define ATTR_STAGE2_MASK  (0x3ull << 6 | 0x1ull << 4)
 #define ATTR_STAGE2_MASK_RO  (0x1ull << 6 | 0x1ull << 4)
+#define ATTR_STAGE2_MASK_WO  (0x2ull << 6 | 0x1ull << 4)
 
 #define ATTR_NON_SHARED     (0x0ull << 8)
 #define ATTR_OUTER_SHARED   (0x2ull << 8)
@@ -43,6 +45,8 @@
 
 #define ATTR_AF   (0x1ull << 10)
 #define ATTR_nG   (0x1ull << 11)
+
+#define ATTR_DBM   (0x1ull << 51)
 
 #define ATTR_UXN    (0x1ull << 54)
 #define ATTR_PXN    (0x1ull << 53)
@@ -60,6 +64,10 @@
 #define ATTR_RW_DATA        (ATTR_S1_WB_WA_RA | \
                               ATTR_USER_RW | ATTR_UXN | ATTR_PXN | ATTR_AF \
                               | ATTR_INNER_SHARED)
+
+#define ATTR_RO_DATA_AF      (ATTR_S1_WB_WA_RA | ATTR_USER_RO | \
+                              ATTR_UXN | ATTR_PXN | ATTR_INNER_SHARED)
+
 #define ATTR_DEVICE_RW      (ATTR_DEVICE | ATTR_USER_RW | ATTR_UXN | \
                               ATTR_PXN | ATTR_AF | ATTR_INNER_SHARED)
 
@@ -70,8 +78,6 @@
 #define PGT_STAGE1 1
 #define PGT_STAGE2 2
 
-#define PGT_IAS     40
-#define PAGT_OAS    40
 #define PGT_IPS     0x2ull
 #define PGT_T0SZ    (64 - PGT_IAS)
 
@@ -89,7 +95,6 @@
 #define PGT_DESC_ATTRIBUTES_MASK \
     (PGT_DESC_ATTR_UPPER_MASK | PGT_DESC_ATTR_LOWER_MASK)
 #define PGT_DESC_ATTRIBUTES(val) (val & PGT_DESC_ATTRIBUTES_MASK)
-
 #define OA(addr) (addr & (((0x1ull << 36) - 1) << PAGE_BITS_4K))
 
 typedef struct val_mem_info {
@@ -128,30 +133,8 @@ typedef struct {
     uint32_t nbits;
 } val_tt_descriptor_ts;
 
-uint32_t val_setup_mmu(void);
-uint32_t val_enable_mmu(void);
-uint32_t val_mem_map_pgt(val_memory_region_descriptor_ts *mem_desc);
-void val_mmap_add_region(uint64_t va_base, uint64_t pa_base,
-                uint64_t length, uint64_t attributes);
-uint32_t val_pgt_create(val_pgt_descriptor_ts pgt_desc,
-                        val_memory_region_descriptor_ts *mem_desc);
-
-extern uint64_t tt_l0_base[];
-extern uint64_t tt_l1_base[];
-extern uint64_t tt_l2_base_1[];
-extern uint64_t tt_l2_base_2[];
-extern uint64_t tt_l2_base_3[];
-extern uint64_t tt_l2_base_4[];
-extern uint64_t tt_l2_base_5[];
-extern uint64_t tt_l2_base_6[];
-extern uint64_t tt_l3_base_1[];
-extern uint64_t tt_l3_base_2[];
-extern uint64_t tt_l3_base_3[];
-extern uint64_t tt_l3_base_4[];
-extern uint64_t tt_l3_base_5[];
-extern uint64_t tt_l3_base_6[];
-extern uint64_t tt_l3_base_7[];
-extern uint64_t tt_l3_base_8[];
-extern uint64_t tt_l3_base_9[];
-extern uint64_t tt_l3_base_10[];
+void val_setup_mmu(xlat_ctx_t *ctx);
+void val_enable_mmu(xlat_ctx_t *ctx);
+uint64_t val_get_pa_range_supported(void);
+int val_xlat_pgt_create(xlat_ctx_t *ctx, val_memory_region_descriptor_ts *mem_desc);
 #endif /* _VAL_MEMORY_H_ */

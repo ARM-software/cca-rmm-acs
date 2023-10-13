@@ -18,7 +18,7 @@ The RMM exposes the following interfaces, which are accessed via SMC instruction
 - The Realm Services Interface (RSI), which provides services used to manage resources allocated to the Realm, and to request an attestation report.
 - The Power State Coordination Interface (PSCI), which provides services used to control power states of VPEs within a Realm.
 
-For more information on RMM refer [RMM Specification](https://developer.arm.com/documentation/den0137/1-0bet1/?lang=en)
+For more information on RMM refer [RMM Specification](https://developer.arm.com/documentation/den0137/1-0eac2/?lang=en)
 
 ## Architecture Compliance Suite
 
@@ -30,10 +30,11 @@ This suite is not a substitute for design verification.
 For more information on Architecture Compliance Suite see [Validation Methodology](<./docs/Arm CCA RMM Architecture Compliance Suite Validation Methodology.pdf>) document.
 
 ## This release
-- Release Version - 0.7
-- Code Quality: Alpha - ACS is being developed, please use this opportunity to ameliorate.
-- The tests are written for Arm RMM Beta1 specification version.
+- Release Version - 0.8
+- Code Quality: Beta - ACS is being developed, please use this opportunity to ameliorate.
+- The tests are written for Arm RMM 1.0-EAC2 specification version.
 - For information about the test coverage scenarios that are implemented in the current release of ACS and the scenarios that are planned for the future releases, see [docs](./docs/).
+- The [Change log](./docs/change-log.rst) has details of the features implemented by this version of CCA-RMM-ACS.
 
 **Note:** The current release has been tested on tgt_tfa_fvp reference platforms with GNUARM Compiler.
 
@@ -50,13 +51,11 @@ For more information on porting steps to run ACS for the target platform, see [A
 
 The following tools are required to build the ACS: <br />
 - Host operating system: Ubuntu 18.04, RHEL 7
-- Git
+- Git 2.17 or later.
 - CMake 3.19 or later version from https://cmake.org/download/.
 - srecord-1.64 : srec_cat utility to concatenate binaries
 - Python 3.7.1 or later version
 - Cross-compiler toolchain supporting AArch64 target: GCC >= 10.2-2020.11 can be downloaded from [Arm Developer website](https://developer.arm.com/tools-and-software/open-source-software/developer-tools/gnu-toolchain/gnu-a/downloads)
-
-**Note** : ACS can also be compiled using Arm Compiler 6 or Clang Cross-compiler toolchain. To compile and assemble sources using these toolchains, set -DCC=<compiler-path> with path pointing to the armclang or clang binary. For linking, ACS needs the GNU linker for generating the test binaries regardless of chosen toolchain.
 
 ### Download source
 
@@ -72,16 +71,17 @@ git clone https://github.com/ARM-software/cca-rmm-acs.git
 To build the ACS for your target platform, perform the following steps:<br />
 
 ```
-cd cca-rmm-acs ;
-mkdir build ; cd build
+cd rmm-acs
+mkdir build
+cd build
 cmake ../ -G"<generator_name>" -DCROSS_COMPILE=<path-to-aarch64-gcc>/bin/aarch64-none-elf- -DTARGET=<platform_name>  -DTEST_COMBINE=ON -DSREC_CAT=<path-to-srec_cat>/bin/srec_cat
 make
 ```
 
 <br />Options information:<br />
 - -G"<generator_name>" : "Unix Makefiles" to generate Makefiles for Linux and Cygwin. "MinGW Makefiles" to generate Makefiles for cmd.exe on Windows. Currently supported only Unix Makefiles target.
-- -DTARGET=<platform_name> is the same as the name of the target-specific directory created in the plat/targets/ directory. The default value is -DTARGET=tgt_tfa_fvp.
 - -DCROSS_COMPILE=<path_to_aarch64_gcc> Set the cross-compiler toolchain supporting AArch64 target. For example, -DCROSS_COMPILE=/bin/aarch64-none-elf-
+- -DTARGET=<platform_name> is the same as the name of the target-specific directory created in the plat/targets/ directory. The default value is -DTARGET=tgt_tfa_fvp.
 - -DCC=<path_to_armclang_or_clang_binary> To compile ACS using clang or armclang cross compiler toolchain. The default compilation is with aarch64-gcc.
 - -DSUITE=<suite_name> is the sub test suite name specified in test/ directory. The default value is -DSUITE=all
 - -DTEST_COMBINE=<ON/OFF> To generate single binary for all tests.
@@ -89,11 +89,14 @@ make
 - -DVERBOSE=<verbose_level>. Print verbosity level. Supported print levels are 1(INFO & above), 2(DEBUG & above), 3(TEST & above), 4(WARN & ERROR) and 5(ERROR). Default value is 3.
 - -DCMAKE_BUILD_TYPE=<build_type>: Chooses between a debug and release build. It can take either release or debug as values. The default value is release.
 - -DSUITE_TEST_RANGE="<test_start_name>;<test_end_name>" is to select range of tests for build. All tests under -DSUITE are considered by default if not specified.
+- -RMM_ACS_TARGET_QCBOR=<path_for_pre_fetched_cbor_folder> this is option used where no network  connectivity is possible during the build.
+- -DSECURE_TEST_ENABLE=<value_to_enable_secure_test> Enable secure test macro defination and it will run secure test in regression. Valid value is 1. By default this macro will not define and secure test will not run in regression.
 
 *To compile tests for tgt_tfa_fvp platform*:<br />
 ```
-cd cca-rmm-acs ;
-mkdir build ; cd build
+cd rmm-acs
+mkdir build
+cd build
 cmake ../ -G"Unix Makefiles" -DCROSS_COMPILE=<path-to-aarch64-gcc>/bin/aarch64-none-elf- -DTARGET=tgt_tfa_fvp -DTEST_COMBINE=ON -DSREC_CAT=<path_to_srec_cat>
 make
 ```

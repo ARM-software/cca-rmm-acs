@@ -8,6 +8,7 @@
 #include "val_host_rmi.h"
 #include "pal.h"
 
+#ifndef SECURE_TEST_ENABLE
 static event_t cpu_booted[32];
 static val_host_realm_ts realm;
 
@@ -39,12 +40,17 @@ static void secondary_cpu(void)
 
     val_host_power_off_cpu();
 }
+#endif
 
 void cmd_multithread_realm_mp_host(void)
 {
+#ifdef SECURE_TEST_ENABLE
+    /* Secure infrasturcure does not support MP boot yet, hence skipping the test */
+    val_set_status(RESULT_SKIP(VAL_SKIP_CHECK));
+    goto destroy_realm;
+#else
     uint64_t ret, primary_mpidr, mpidr;
     uint32_t i;
-    val_host_rmifeatureregister0_ts features_0;
 
     if (val_get_primary_mpidr() != val_read_mpidr())
         secondary_cpu();
@@ -52,14 +58,9 @@ void cmd_multithread_realm_mp_host(void)
     /* Below code only be executed by primary cpu */
 
     val_memset(&realm, 0, sizeof(realm));
-    val_memset(&features_0, 0, sizeof(features_0));
-    features_0.s2sz = 40;
-    val_memcpy(&realm.realm_feat_0, &features_0, sizeof(features_0));
 
-    realm.hash_algo = RMI_HASH_SHA_256;
-    realm.s2_starting_level = 0;
-    realm.num_s2_sl_rtts = 1;
-    realm.vmid = 0;
+    val_host_realm_params(&realm);
+
     realm.rec_count = 2;
 
     /* Populate realm with two RECs*/
@@ -142,6 +143,7 @@ void cmd_multithread_realm_mp_host(void)
     val_set_status(RESULT_PASS(VAL_SUCCESS));
 
     /* Free test resources */
+#endif
 destroy_realm:
     return;
 }

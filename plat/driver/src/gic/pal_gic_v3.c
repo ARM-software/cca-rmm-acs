@@ -13,6 +13,7 @@
 #include <pal_mmio.h>
 #include <platform.h>
 #include <pal_config_def.h>
+#include <pal_interfaces.h>
 
 /* Global variables to store the GIC base addresses */
 static uintptr_t gicr_base_addr;

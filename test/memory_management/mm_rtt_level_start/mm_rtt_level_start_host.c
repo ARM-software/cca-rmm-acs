@@ -14,6 +14,7 @@ static uint32_t create_realm(val_host_realm_ts *realm)
     uint64_t ipa_width;
     uint64_t pa, ipa;
     uint32_t i;
+    val_host_rtt_entry_ts rtte;
 
     /* Populate realm with one REC */
     if (val_host_realm_setup(realm, false))
@@ -23,7 +24,7 @@ static uint32_t create_realm(val_host_realm_ts *realm)
         return VAL_ERROR;
     }
 
-    ipa_width = VAL_EXTRACT_BITS(realm->realm_feat_0, 0, 7);
+    ipa_width = VAL_EXTRACT_BITS(realm->s2sz, 0, 7);
     for (i = 0; i < 23; i++)
     {
         if (ipa_width != rtt_sl_start[i][0])
@@ -48,7 +49,7 @@ static uint32_t create_realm(val_host_realm_ts *realm)
         } else {
             pa = (uint64_t)val_host_mem_alloc(PAGE_SIZE, PAGE_SIZE);
             ipa = rtt_sl_start[i][1];
-            if (val_host_ripas_init(realm, ipa, VAL_RTT_MAX_LEVEL, PAGE_SIZE))
+            if (val_host_ripas_init(realm, ipa, ipa + PAGE_SIZE, VAL_RTT_MAX_LEVEL, PAGE_SIZE))
             {
                 LOG(ERROR, "\tval_host_ripas_init failed\n", 0, 0);
                 val_set_status(RESULT_FAIL(VAL_ERROR_POINT(3)));
@@ -63,13 +64,22 @@ static uint32_t create_realm(val_host_realm_ts *realm)
                 return VAL_ERROR;
             }
         }
+
+        ret = val_host_rmi_rtt_read_entry(realm->rd, rtt_sl_start[i][1],
+                                                realm->s2_starting_level, &rtte);
+        if (!RMI_STATUS(ret))
+        {
+            LOG(ERROR, "\tRead entry failed\n", 0, 0);
+            val_set_status(RESULT_FAIL(VAL_ERROR_POINT(5)));
+            return VAL_ERROR;
+        }
     }
 
     /* Activate realm */
     if (val_host_realm_activate(realm))
     {
         LOG(ERROR, "\tRealm activate failed\n", 0, 0);
-        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(5)));
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(6)));
         return VAL_ERROR;
     }
 
@@ -78,14 +88,14 @@ static uint32_t create_realm(val_host_realm_ts *realm)
     if (ret)
     {
         LOG(ERROR, "\tRec enter failed, ret=%x\n", ret, 0);
-        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(6)));
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(7)));
         return VAL_ERROR;
     }
 
     if (val_host_realm_destroy(realm->rd))
     {
         LOG(ERROR, "\tval_host_realm_destroy failed\n", 0, 0);
-        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(7)));
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(8)));
         return VAL_ERROR;
     }
 
@@ -95,7 +105,6 @@ static uint32_t create_realm(val_host_realm_ts *realm)
 void mm_rtt_level_start_host(void)
 {
     val_host_realm_ts realm;
-    val_host_rmifeatureregister0_ts features_0;
     uint64_t ret;
     uint64_t s2sz_supp = 0, i;
     uint8_t arr[5][4] = {{32, 32, 2, 4},
@@ -105,7 +114,6 @@ void mm_rtt_level_start_host(void)
                          {52, 52, 0, 16} };
 
     val_memset(&realm, 0, sizeof(realm));
-    val_memset(&features_0, 0, sizeof(features_0));
 
     realm.hash_algo = RMI_HASH_SHA_256;
     realm.vmid = 0;
@@ -115,7 +123,7 @@ void mm_rtt_level_start_host(void)
     if (ret)
     {
         LOG(ERROR, "\tRMI Features failed, ret=%x\n", ret, 0);
-        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(8)));
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(9)));
         goto destroy_realm;
     }
     s2sz_supp = VAL_EXTRACT_BITS(s2sz_supp, 0, 7);
@@ -126,8 +134,7 @@ void mm_rtt_level_start_host(void)
     {
         if (s2sz_supp < arr[i][0])
             break;
-        features_0.s2sz = arr[i][1];
-        val_memcpy(&realm.realm_feat_0, &features_0, sizeof(features_0));
+        realm.s2sz = arr[i][1];
         realm.s2_starting_level = arr[i][2];
         realm.num_s2_sl_rtts = arr[i][3];
         if (create_realm(&realm))

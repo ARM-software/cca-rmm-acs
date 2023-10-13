@@ -12,23 +12,14 @@
 void mm_rtt_translation_table_host(void)
 {
     val_host_realm_ts realm;
-    val_host_rmifeatureregister0_ts features_0;
     val_host_rtt_entry_ts rtte;
     uint64_t ret;
     uint64_t mmfr0;
-    uint32_t level = 2;
+    uint32_t level = 3;
 
     val_memset(&realm, 0, sizeof(realm));
-    val_memset(&features_0, 0, sizeof(features_0));
-    features_0.s2sz = 40;
-    val_memcpy(&realm.realm_feat_0, &features_0, sizeof(features_0));
 
-    realm.hash_algo = RMI_HASH_SHA_256;
-    realm.s2_starting_level = 0;
-    realm.num_s2_sl_rtts = 1;
-    realm.vmid = 0;
-    realm.rec_count = 1;
-
+    val_host_realm_params(&realm);
 
     /* Populate realm with two RECs*/
     if (val_host_realm_setup(&realm, 1))
@@ -44,7 +35,7 @@ void mm_rtt_translation_table_host(void)
          (VAL_EXTRACT_BITS(mmfr0, 28, 31) == 0x1)))
     {
         LOG(ERROR, "\tPlatform not supported 4KB Granule\n", 0, 0);
-        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(8)));
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(2)));
         goto destroy_realm;
     }
 
@@ -56,16 +47,26 @@ void mm_rtt_translation_table_host(void)
         if (ret)
         {
             LOG(ERROR, "\tval_host_create_rtt_level failed\n", 0, 0);
-            val_set_status(RESULT_FAIL(VAL_ERROR_POINT(8)));
+            val_set_status(RESULT_FAIL(VAL_ERROR_POINT(3)));
             goto destroy_realm;
         }
     }
 
     ret = val_host_rmi_rtt_read_entry(realm.rd, (PROTECTED_IPA + 0x200000), level, &rtte);
-    if (rtte.state != RMI_UNASSIGNED)
+    if (rtte.state != RMI_UNASSIGNED || rtte.walk_level != 2)
     {
-        LOG(ERROR, "\tRTTE state check failed rtte.state %x\n", rtte.state, 0);
-        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(8)));
+        LOG(ERROR, "\tRTTE state check failed rtte.state %x walk_level %x\n",
+                                                        rtte.state, rtte.walk_level);
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(4)));
+        goto destroy_realm;
+    }
+
+    ret = val_host_rmi_rtt_read_entry(realm.rd, (PROTECTED_IPA + 0x1000), level, &rtte);
+    if (rtte.state != RMI_UNASSIGNED || rtte.walk_level != 3)
+    {
+        LOG(ERROR, "\tRTTE state check failed rtte.state %x walk_level %x\n",
+                                                        rtte.state, rtte.walk_level);
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(5)));
         goto destroy_realm;
     }
 
@@ -74,12 +75,12 @@ void mm_rtt_translation_table_host(void)
     if (ret)
     {
         LOG(ERROR, "\tRec enter failed, ret=%x\n", ret, 0);
-        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(7)));
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(6)));
         goto destroy_realm;
     } else if (val_host_check_realm_exit_host_call((val_host_rec_run_ts *)realm.run[0]))
     {
         LOG(ERROR, "\tHost call params mismatch\n", 0, 0);
-        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(8)));
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(7)));
         goto destroy_realm;
     }
 

@@ -38,9 +38,10 @@ enum test_intent {
     REALM_NULL = 0X1B,
     IPA_NOT_MAPPED = 0X1C,
     RTTE_STATE_ASSIGNED = 0X1D,
-    RTTE_STATE_DESTROYED = 0X1E,
-    IPA_UNPROTECTED_NOT_MAPPED = 0X1F,
-    IPA_UNPROTECTED_RTTE_ASSIGNED = 0X20
+    RIPAS_DESTROYED = 0X1E,
+    RIPAS_EMPTY = 0X1F,
+    IPA_UNPROTECTED_NOT_MAPPED = 0X20,
+    IPA_UNPROTECTED_RTTE_ASSIGNED = 0X21
 };
 
 struct stimulus {
@@ -202,9 +203,14 @@ static struct stimulus test_data[] = {
     .label = RTTE_STATE_ASSIGNED,
     .status = RMI_ERROR_RTT,
     .index = 3},
-    {.msg = "rtte_state",
+    {.msg = "rtte_ripas",
     .abi = RMI_DATA_CREATE,
-    .label = RTTE_STATE_DESTROYED,
+    .label = RIPAS_DESTROYED,
+    .status = RMI_ERROR_RTT,
+    .index = 3},
+    {.msg = "rtte_ripas",
+    .abi = RMI_DATA_CREATE,
+    .label = RIPAS_EMPTY,
     .status = RMI_ERROR_RTT,
     .index = 3},
     {.msg = "ipa_bound_compare_rtt_walk",
