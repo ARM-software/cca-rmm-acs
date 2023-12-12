@@ -15,7 +15,7 @@ void exception_rec_exit_hostcall_host(void)
     uint32_t index = 0;
     uint64_t ret = 0;
     val_host_rec_exit_ts *rec_exit = NULL;
-    val_host_rec_entry_ts *rec_entry = NULL;
+    val_host_rec_enter_ts *rec_enter = NULL;
 
     val_memset(&realm, 0, sizeof(realm));
 
@@ -30,7 +30,7 @@ void exception_rec_exit_hostcall_host(void)
     }
 
     rec_exit =  &(((val_host_rec_run_ts *)realm.run[0])->exit);
-    rec_entry = &(((val_host_rec_run_ts *)realm.run[0])->entry);
+    rec_enter = &(((val_host_rec_run_ts *)realm.run[0])->enter);
     ret = val_host_rmi_rec_enter(realm.rec[0], realm.run[0]);
     if (ret)
     {
@@ -72,7 +72,7 @@ void exception_rec_exit_hostcall_host(void)
     /* Before rec enter fill the gprs values and compare the gprs values from realm side */
     for (index = 0; index < VAL_REC_EXIT_GPRS; index++)
     {
-        rec_entry->gprs[index] = HOST_GPRS_DATA;
+        rec_enter->gprs[index] = HOST_GPRS_DATA;
     }
 
     ret = val_host_rmi_rec_enter(realm.rec[0], realm.run[0]);

@@ -186,12 +186,6 @@ void cmd_granule_undelegate_host(void)
         }
     }
 
-    /* granule(addr).PAS=Non-secure, an access to addr from the NS world
-     * should be successful.
-     */
-    uint64_t *addr = (uint64_t *)c_args_invalid.undelegated_gran;
-    *addr = 0x01;       // writing to non-secure addr
-
     LOG(TEST, "\n\tPositive Observability Check\n", 0, 0);
     ret = val_host_rmi_granule_undelegate(c_args.addr_valid);
     if (ret != 0)

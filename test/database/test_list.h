@@ -9,9 +9,11 @@
 #ifndef TEST_FUNC_DATABASE
 
 /*command testcase declaration starts here*/
+DECLARE_TEST_FN(cmd_rmi_version);
 DECLARE_TEST_FN(cmd_granule_delegate);
 DECLARE_TEST_FN(cmd_granule_undelegate);
 DECLARE_TEST_FN(cmd_realm_create);
+DECLARE_TEST_FN(cmd_rsi_version);
 DECLARE_TEST_FN(cmd_realm_activate);
 DECLARE_TEST_FN(cmd_rtt_read_entry);
 DECLARE_TEST_FN(cmd_rtt_init_ripas);
@@ -21,8 +23,6 @@ DECLARE_TEST_FN(cmd_data_create_unknown);
 DECLARE_TEST_FN(cmd_rtt_map_unprotected);
 DECLARE_TEST_FN(cmd_rec_create);
 DECLARE_TEST_FN(cmd_rec_enter);
-DECLARE_TEST_FN(cmd_rmi_version);
-DECLARE_TEST_FN(cmd_rsi_version);
 DECLARE_TEST_FN(cmd_realm_config);
 DECLARE_TEST_FN(cmd_ipa_state_get);
 DECLARE_TEST_FN(cmd_ipa_state_set);
@@ -49,6 +49,7 @@ DECLARE_TEST_FN(cmd_attestation_token_continue);
 DECLARE_TEST_FN(cmd_host_call);
 DECLARE_TEST_FN(cmd_rtt_set_ripas);
 DECLARE_TEST_FN(cmd_rtt_fold);
+DECLARE_TEST_FN(cmd_rsi_features);
 /*command testcase declaration ends here*/
 
 /*val sanity testcase starts here*/
@@ -62,7 +63,6 @@ DECLARE_TEST_FN(measurement_immutable_rim);
 DECLARE_TEST_FN(measurement_initial_rem_is_zero);
 DECLARE_TEST_FN(measurement_rim_order);
 DECLARE_TEST_FN(attestation_token_verify)
-DECLARE_TEST_FN(attestation_token_address);
 DECLARE_TEST_FN(attestation_rpv_value);
 DECLARE_TEST_FN(attestation_challenge_data_verification);
 DECLARE_TEST_FN(attestation_token_init);
@@ -134,6 +134,9 @@ DECLARE_TEST_FN(pmu_overflow);
 #else /* TEST_FUNC_DATABASE */
 /* Add test funcs to the respective host/realm/secure test_list array */
 #if (defined(d_all) || defined(d_command))
+    #if (defined(TEST_COMBINE) || defined(d_cmd_rmi_version))
+    HOST_TEST(command, cmd_rmi_version),
+    #endif
     #if (defined(TEST_COMBINE) || defined(d_cmd_granule_delegate))
     HOST_TEST(command, cmd_granule_delegate),
     #endif
@@ -142,6 +145,9 @@ DECLARE_TEST_FN(pmu_overflow);
     #endif
     #if (defined(TEST_COMBINE) || defined(d_cmd_realm_create))
     HOST_TEST(command, cmd_realm_create),
+    #endif
+    #if (defined(TEST_COMBINE) || defined(d_cmd_rsi_version))
+    HOST_REALM_TEST(command, cmd_rsi_version),
     #endif
     #if (defined(TEST_COMBINE) || defined(d_cmd_realm_activate))
     HOST_REALM_TEST(command, cmd_realm_activate),
@@ -167,17 +173,14 @@ DECLARE_TEST_FN(pmu_overflow);
     #if (defined(TEST_COMBINE) || defined(d_cmd_rec_enter))
     HOST_REALM_TEST(command, cmd_rec_enter),
     #endif
-    #if (defined(TEST_COMBINE) || defined(d_cmd_rmi_version))
-    HOST_TEST(command, cmd_rmi_version),
-    #endif
     #if (defined(TEST_COMBINE) || defined(d_cmd_multithread_realm_up))
     HOST_REALM_TEST(command, cmd_multithread_realm_up),
     #endif
     #if (defined(TEST_COMBINE) || defined(d_cmd_multithread_realm_mp))
     HOST_REALM_TEST(command, cmd_multithread_realm_mp),
     #endif
-    #if (defined(TEST_COMBINE) || defined(d_cmd_rsi_version))
-    HOST_REALM_TEST(command, cmd_rsi_version),
+    #if (defined(TEST_COMBINE) || defined(d_cmd_rsi_features))
+    HOST_REALM_TEST(command, cmd_rsi_features),
     #endif
     #if (defined(TEST_COMBINE) || defined(d_cmd_data_create_unknown))
     HOST_TEST(command, cmd_data_create_unknown),
@@ -354,9 +357,6 @@ DECLARE_TEST_FN(pmu_overflow);
     #endif
     #if (defined(TEST_COMBINE) || defined(d_attestation_token_verify))
     HOST_REALM_TEST(attestation_measurement, attestation_token_verify),
-    #endif
-    #if (defined(TEST_COMBINE) || defined(d_attestation_token_address))
-    HOST_REALM_TEST(attestation_measurement, attestation_token_address),
     #endif
     #if (defined(TEST_COMBINE) || defined(d_attestation_rpv_value))
     HOST_REALM_TEST(attestation_measurement, attestation_rpv_value),

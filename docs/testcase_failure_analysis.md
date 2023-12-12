@@ -1,19 +1,23 @@
 # Test failure analysis document
 
-This file contains list of failures identified when testing the release on tgt_tfa_fvp target with TF-RMM and TF-A.<br />
-TF-RMM Hash: 690c2aade299fd082327ee65c5e5d9da3185bd97 <br />
-TF-A Hash: 56ddb3f0922506d304177274b4c0f15b2069a7e6 <br />
-The reason for each failing test is listed here in this file.<br />
+This file contains list of failures and skips identified when testing the release on tgt_tfa_fvp target with TF-RMM and TF-A.<br />
+TF-RMM Hash: 9aca983c50230cb9fe444fa00babb0d4a534ff47 <br />
+TF-A Hash: b6c0948400594e3cc4dbb5a4ef04b815d2675808 <br />
+The reason for each failing/skipping test is listed here in this file.<br />
 
 ## List of failed tests
 
 | Test | Fail description                                                                |
 |------|---------------------------------------------------------------------------------|
-| cmd_rmi_version | TF-RMM Reference implementation issue |
-| cmd_rsi_version | TF-RMM Reference implementation issue |
-| mm_ripas_destroyed_da_ia | TF-RMM Reference implementation issue |
-| mm_hipas_unassigned_ripas_ram_da_ia | TF-RMM Reference implementation issue |
-| mm_rtt_fold_assigned_ns | Validated with TF-RMM patch https://review.trustedfirmware.org/c/TF-RMM/tf-rmm/+/23708 |
+| cmd_rtt_init_ripas | TF-RMM Reference implementation issue |
+| cmd_rtt_set_ripas | TF-RMM Reference implementation issue |
+
+## List of skipped tests
+
+| Test | Skip description                                                                |
+|------|---------------------------------------------------------------------------------|
+| exception_rec_exit_wfe | Platform limitation |
+| mm_gpf_exception | Platform limitation |
 
 ## License
 

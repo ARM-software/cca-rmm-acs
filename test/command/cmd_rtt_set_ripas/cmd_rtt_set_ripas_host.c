@@ -88,7 +88,29 @@ static uint64_t rd_valid_prep_sequence(void)
         return VAL_TEST_PREP_SEQ_FAILED;
     }
 
-    /* Enter REC[0]  */
+    /* Power on REC 1 for future execution */
+    ret = val_host_rmi_rec_enter(realm[VALID_REALM].rec[0], realm[VALID_REALM].run[0]);
+    if (ret)
+    {
+        LOG(ERROR, "\tREC_ENTER failed with ret value: %d\n", ret, 0);
+        return VAL_TEST_PREP_SEQ_FAILED;
+    } else if (val_host_check_realm_exit_psci((val_host_rec_run_ts *)realm[VALID_REALM].run[0],
+                                PSCI_CPU_ON_AARCH64))
+    {
+        LOG(ERROR, "\tREC exit not due to PSCI_CPU_ON\n", 0, 0);
+        return VAL_TEST_PREP_SEQ_FAILED;
+    }
+
+    /* Complete pending PSCI by returning a RUNNABLE target REC*/
+    ret = val_host_rmi_psci_complete(realm[VALID_REALM].rec[0], realm[VALID_REALM].rec[1],
+                                                                             PSCI_E_SUCCESS);
+    if (ret)
+    {
+        LOG(ERROR, "\t PSCI_COMPLETE Failed, ret=%x\n", ret, 0);
+        return VAL_TEST_PREP_SEQ_FAILED;
+    }
+
+    /* Enter REC[0] to continue execution */
     ret = val_host_rmi_rec_enter(realm[VALID_REALM].rec[0], realm[VALID_REALM].run[0]);
     if (ret)
     {
@@ -134,6 +156,28 @@ static uint64_t base_unaligned_prep_sequence(void)
 
     return rec_exit->ripas_base;
 }
+
+static uint64_t top_rtt_unaligned_prep_sequence(void)
+{
+    uint64_t ret;
+
+    ret = val_host_rmi_rec_enter(realm[VALID_REALM].rec[1], realm[VALID_REALM].run[1]);
+    if (ret)
+    {
+        LOG(ERROR, "\tREC_ENTER failed with ret value: %d\n", ret, 0);
+        return VAL_TEST_PREP_SEQ_FAILED;
+    } else if (val_host_check_realm_exit_ripas_change(
+                                    (val_host_rec_run_ts *)realm[VALID_REALM].run[1]))
+    {
+        LOG(ERROR, "\tRipas change req failed\n", 0, 0);
+        return VAL_TEST_PREP_SEQ_FAILED;
+    }
+
+    rec_exit =  &(((val_host_rec_run_ts *)realm[VALID_REALM].run[1])->exit);
+
+    return rec_exit->ripas_base;
+}
+
 
 static uint64_t valid_input_args_prep_sequence(void)
 {
@@ -312,21 +356,35 @@ static uint64_t intent_to_seq(struct stimulus *test_data, struct arguments *args
             args->base = base_unaligned_prep_sequence();
             if (args->base == VAL_TEST_PREP_SEQ_FAILED)
                 return VAL_ERROR;
-            args->top = c_args.top_valid + L2_SIZE;
+            args->top = 2 * L2_SIZE;
             break;
 
-        case TOP_UNALIGNED:
+        case TOP_GRAN_UNALIGNED:
             args->rd = c_args.rd_valid;
             args->rec = c_args.rec_valid;
             args->base = c_args.base_valid;
             args->top = c_args.top_valid - PAGE_SIZE / 2;
             break;
 
-       case BASE_MISMATCH_BASE_UNALIGNED:
+        case TOP_RTT_UNALIGNED:
+            args->rd = c_args.rd_valid;
+            args->rec = realm[VALID_REALM].rec[1];
+            args->base = top_rtt_unaligned_prep_sequence();
+            args->top = args->base + L2_SIZE + L3_SIZE;
+            break;
+
+        case BASE_MISMATCH_BASE_UNALIGNED:
             args->rd = c_args.rd_valid;
             args->rec = c_args.rec_valid;
             args->base = c_args.base_valid + PAGE_SIZE / 2;
             args->top = c_args.top_valid;
+            break;
+
+        case TOP_GRAN_UNALIGNED_TOP_RTT_UNALIGNED:
+            args->rd = c_args.rd_valid;
+            args->rec = realm[VALID_REALM].rec[1];
+            args->base = top_rtt_unaligned_prep_sequence();
+            args->top = args->base + L2_SIZE + (L3_SIZE / 2);
             break;
 
         default:
@@ -360,6 +418,7 @@ void cmd_rtt_set_ripas_host(void)
         }
 
         ret = val_host_rmi_rtt_set_ripas(args.rd, args.rec, args.base, args.top, &out_top);
+
         if (ret != PACK_CODE(test_data[i].status, test_data[i].index)) {
             LOG(ERROR, "\tTest Failure!\n\tThe ABI call returned: %x\n\tExpected: %x\n",
                 ret, PACK_CODE(test_data[i].status, test_data[i].index));

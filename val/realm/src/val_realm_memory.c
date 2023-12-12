@@ -121,3 +121,16 @@ void val_realm_read_attributes(uint64_t va, uint32_t *attr)
 {
     xlat_get_mem_attributes_ctx(&acs_realm_xlat_ctx, va, attr);
 }
+
+/**
+ *   @brief    Updates Page descriptor attributes from Realm Page tables.
+ *   @param    size Number of pages to update.
+ *   @param    va Virtual address of the page to read.
+ *   @param    attr Desired attributes
+ *   @return   none
+**/
+
+int val_realm_update_attributes(uint64_t size, uint64_t va, uint32_t attr)
+{
+    return xlat_change_mem_attributes_ctx(&acs_realm_xlat_ctx, va, size, attr);
+}

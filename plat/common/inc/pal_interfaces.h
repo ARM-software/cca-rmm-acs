@@ -129,6 +129,6 @@ uint32_t pal_twdog_enable(uint32_t ms);
 **/
 uint32_t pal_twdog_disable(void);
 
-uint32_t pal_verify_signature(uint8_t *token);
+uint32_t pal_verify_signature(uint64_t *token);
 
 #endif /* _PAL_INTERFACES_H_ */

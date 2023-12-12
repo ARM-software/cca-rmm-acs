@@ -14,7 +14,7 @@ void exception_rec_exit_ripas_host(void)
 {
     val_host_realm_ts realm;
     uint64_t ret = 0;
-    val_host_rec_entry_ts *rec_entry = NULL;
+    val_host_rec_enter_ts *rec_enter = NULL;
     uint64_t ripas_ipa = 0, ripas_size = 0x3000;
     exception_rec_exit_ts exception_rec_exit = {0,};
     uint64_t phys;
@@ -61,7 +61,7 @@ void exception_rec_exit_ripas_host(void)
         goto destroy_realm;
     }
 
-    rec_entry = &(((val_host_rec_run_ts *)realm.run[0])->entry);
+    rec_enter = &(((val_host_rec_run_ts *)realm.run[0])->enter);
     /* REC enter REC[0] execution */
     ret = val_host_rmi_rec_enter(realm.rec[0], realm.run[0]);
     if (ret)
@@ -78,8 +78,8 @@ void exception_rec_exit_ripas_host(void)
 
     /*Step 1: RAM --> EMPTY*/
     ripas_ipa = PROTECTED_IPA;
-    rec_entry->gprs[1] = ripas_ipa;
-    rec_entry->gprs[2] = ripas_size;
+    rec_enter->gprs[1] = ripas_ipa;
+    rec_enter->gprs[2] = ripas_size;
     ret = val_host_rmi_rec_enter(realm.rec[0], realm.run[0]);
     if (ret)
     {
@@ -120,8 +120,8 @@ void exception_rec_exit_ripas_host(void)
 
     /*Step 2: EMPTY --> RAM*/
     ripas_ipa = PROTECTED_IPA;
-    rec_entry->gprs[1] = ripas_ipa;
-    rec_entry->gprs[2] = ripas_size;
+    rec_enter->gprs[1] = ripas_ipa;
+    rec_enter->gprs[2] = ripas_size;
     ret = val_host_rmi_rec_enter(realm.rec[0], realm.run[0]);
     if (ret)
     {
@@ -162,8 +162,8 @@ void exception_rec_exit_ripas_host(void)
 
     /*Step 3: RAM --> EMPTY */
     ripas_ipa = PROTECTED_IPA;
-    rec_entry->gprs[1] = ripas_ipa;
-    rec_entry->gprs[2] = ripas_size;
+    rec_enter->gprs[1] = ripas_ipa;
+    rec_enter->gprs[2] = ripas_size;
     ret = val_host_rmi_rec_enter(realm.rec[0], realm.run[0]);
     if (ret)
     {
@@ -204,8 +204,8 @@ void exception_rec_exit_ripas_host(void)
 
     /*Step 4: RAM --> EMPTY */
     ripas_ipa = PROTECTED_IPA;
-    rec_entry->gprs[1] = ripas_ipa + 0x1000;
-    rec_entry->gprs[2] = 0x1000;
+    rec_enter->gprs[1] = ripas_ipa + 0x1000;
+    rec_enter->gprs[2] = 0x1000;
     ret = val_host_rmi_rec_enter(realm.rec[0], realm.run[0]);
     if (ret)
     {

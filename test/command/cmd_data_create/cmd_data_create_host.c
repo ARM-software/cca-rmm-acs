@@ -50,7 +50,7 @@
  *
  */
 
-#define IPA_ADDR_UNASSIGNED_RAM 0x0
+#define IPA_ADDR_UNASSIGNED_EMPTY (3 * PAGE_SIZE)
 #define IPA_ADDR_DATA1  (5 * PAGE_SIZE)
 #define IPA_ADDR_DATA2  (6 * PAGE_SIZE)
 
@@ -118,12 +118,12 @@ static uint64_t rd_valid_prep_sequence(void)
 
 static uint64_t ipa_valid_prep_sequence(void)
 {
-    if (create_mapping(IPA_ADDR_UNASSIGNED_RAM, true, c_args.rd_valid))
+    if (create_mapping(IPA_ADDR_UNASSIGNED_EMPTY, false, c_args.rd_valid))
     {
         LOG(ERROR, "\tCouldn't create the protected mapping\n", 0, 0);
         return VAL_TEST_PREP_SEQ_FAILED;
     }
-    return IPA_ADDR_UNASSIGNED_RAM;
+    return IPA_ADDR_UNASSIGNED_EMPTY;
 }
 
 static uint64_t src_valid_prep_sequence(void)
@@ -495,26 +495,6 @@ static uint64_t intent_to_seq(struct stimulus *test_data, struct arguments *args
             args->rd = c_args.rd_valid;
             args->data = c_args.data_valid;
             args->ipa = ipa_protected_assigned_ram_prep_sequence(c_args.rd_valid);
-            if (args->ipa == VAL_TEST_PREP_SEQ_FAILED)
-                return VAL_ERROR;
-            args->src = c_args.src_valid;
-            args->flags = c_args.flags_valid;
-            break;
-
-        case RIPAS_DESTROYED:
-            args->rd = c_args.rd_valid;
-            args->data = c_args.data_valid;
-            args->ipa = ipa_protected_destroyed_prep_sequence(c_args.rd_valid);
-            if (args->ipa == VAL_TEST_PREP_SEQ_FAILED)
-                return VAL_ERROR;
-            args->src = c_args.src_valid;
-            args->flags = c_args.flags_valid;
-            break;
-
-        case RIPAS_EMPTY:
-            args->rd = c_args.rd_valid;
-            args->data = c_args.data_valid;
-            args->ipa = ipa_protected_unassigned_empty_prep_sequence(c_args.rd_valid);
             if (args->ipa == VAL_TEST_PREP_SEQ_FAILED)
                 return VAL_ERROR;
             args->src = c_args.src_valid;

@@ -235,6 +235,9 @@ static void val_host_test_init(uint32_t test_num)
       VAL_PANIC("\tWatchdog enable failed\n");
    }
 
+   /* Reset mem_track structure incase postamble is skipped */
+   val_host_reset_mem_tack();
+
    /* Reset mem alloc data structure */
    val_host_mem_alloc_init();
 }

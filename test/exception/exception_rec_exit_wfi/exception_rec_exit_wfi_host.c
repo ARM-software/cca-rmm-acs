@@ -14,14 +14,14 @@ void exception_rec_exit_wfi_host(void)
 #else
     val_host_realm_ts realm = {0,};
     uint64_t ret = 0;
-    val_host_rec_entry_ts *rec_entry = NULL;
+    val_host_rec_enter_ts *rec_enter = NULL;
     val_host_rec_exit_ts *rec_exit = NULL;
     uint64_t ec = 0;
     uint64_t imm = 0;
-    val_host_rec_entry_flags_ts rec_entry_flags;
+    val_host_rec_enter_flags_ts rec_enter_flags;
 
     val_memset(&realm, 0, sizeof(realm));
-    val_memset(&rec_entry_flags, 0, sizeof(rec_entry_flags));
+    val_memset(&rec_enter_flags, 0, sizeof(rec_enter_flags));
 
     val_host_realm_params(&realm);
 
@@ -33,13 +33,13 @@ void exception_rec_exit_wfi_host(void)
         goto destroy_realm;
     }
 
-    rec_entry = &(((val_host_rec_run_ts *)realm.run[0])->entry);
+    rec_enter = &(((val_host_rec_run_ts *)realm.run[0])->enter);
     rec_exit =  &(((val_host_rec_run_ts *)realm.run[0])->exit);
 
-    rec_entry_flags.trap_wfe = 1;
-    rec_entry_flags.trap_wfi = 1;
+    rec_enter_flags.trap_wfe = 1;
+    rec_enter_flags.trap_wfi = 1;
 
-    val_memcpy(&rec_entry->flags, &rec_entry_flags, sizeof(rec_entry_flags));
+    val_memcpy(&rec_enter->flags, &rec_enter_flags, sizeof(rec_enter_flags));
 
     ret = val_host_rmi_rec_enter(realm.rec[0], realm.run[0]);
     /* extract the ec and imm values from the esr */
@@ -56,11 +56,11 @@ void exception_rec_exit_wfi_host(void)
     /* populate the rec exit details into the rec enter and corrupt some possible gprs
      * in the range 0-6
      */
-    exception_copy_exit_to_entry(rec_entry, rec_exit);
-    rec_entry->gprs[5] = 0;
-    rec_entry_flags.trap_wfe = 0;
-    rec_entry_flags.trap_wfi = 0;
-    val_memcpy(&rec_entry->flags, &rec_entry_flags, sizeof(rec_entry_flags));
+    exception_copy_exit_to_entry(rec_enter, rec_exit);
+    rec_enter->gprs[5] = 0;
+    rec_enter_flags.trap_wfe = 0;
+    rec_enter_flags.trap_wfi = 0;
+    val_memcpy(&rec_enter->flags, &rec_enter_flags, sizeof(rec_enter_flags));
     /* REC enter after the GPR corruption */
     ret = val_host_rmi_rec_enter(realm.rec[0], realm.run[0]);
     if (ret != 0)

@@ -24,10 +24,8 @@ enum test_intent {
     RTTE_UNASSIGED = 0XD,
     RTTE_ASSIGNED = 0XE,
     RTT_NON_HOMOGENEOUS = 0XF,
-    LEVEL_L1 = 0X10,
-    LEVEL_L2 = 0X11,
-    LEVEL_BOUND_RTT_WALK = 0X12,
-    LEVEL_BOUND_RTTE_STATE = 0X13
+    LEVEL_BOUND_RTT_WALK = 0X10,
+    LEVEL_BOUND_RTTE_STATE = 0X11
 };
 
 struct stimulus {
@@ -119,16 +117,6 @@ static struct stimulus test_data[] = {
     .label = RTT_NON_HOMOGENEOUS,
     .status = RMI_ERROR_RTT,
     .index = 3},
-    {.msg = "rtte_homo_l1",
-    .abi = RMI_RTT_FOLD,
-    .label = LEVEL_L1,
-    .status = RMI_ERROR_RTT,
-    .index = 1},
-    {.msg = "rtte_homo_l2",
-    .abi = RMI_RTT_FOLD,
-    .label = LEVEL_L2,
-    .status = RMI_ERROR_RTT,
-    .index = 2},
     {.msg = "level_bound_compare_rtt_walk",
     .abi = RMI_RTT_FOLD,
     .label = LEVEL_BOUND_RTT_WALK,

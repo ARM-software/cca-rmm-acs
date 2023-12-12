@@ -9,13 +9,6 @@
 #include "val_host_rmi.h"
 #include "val_host_command.h"
 
-#define IPA_ADDR_UNASSIGNED 0x0
-#define IPA_ADDR_UNASSIGNED1 0x1000
-#define L3_SIZE PAGE_SIZE
-#define L2_SIZE (512 * L3_SIZE)
-#define L1_SIZE (512 * L2_SIZE)
-#define MAP_LEVEL 3
-
 void attestation_rpv_value_host(void)
 {
     val_host_realm_ts realm;

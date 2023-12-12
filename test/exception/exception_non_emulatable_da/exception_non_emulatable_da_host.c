@@ -11,7 +11,7 @@
 void exception_non_emulatable_da_host(void)
 {
     val_host_realm_ts realm;
-    val_host_rec_entry_ts *rec_entry = NULL;
+    val_host_rec_enter_ts *rec_enter = NULL;
     val_host_rec_exit_ts *rec_exit = NULL;
     uint32_t index;
     uint64_t ret, mem_attr;
@@ -51,11 +51,11 @@ void exception_non_emulatable_da_host(void)
         goto destroy_realm;
     }
 
-    rec_entry = &(((val_host_rec_run_ts *)realm.run[0])->entry);
+    rec_enter = &(((val_host_rec_run_ts *)realm.run[0])->enter);
     rec_exit = &(((val_host_rec_run_ts *)realm.run[0])->exit);
-    rec_entry->gprs[1] = realm.granules[index].ipa;
-    rec_entry->gprs[2] = realm.granules[index].size;
-    rec_entry->flags = 0x0;
+    rec_enter->gprs[1] = realm.granules[index].ipa;
+    rec_enter->gprs[2] = realm.granules[index].size;
+    rec_enter->flags = 0x0;
     /* Test Intent: UnProtected IPA, access caused a stage 2 permission fault
      * => REC exit due to Data abort.
      */

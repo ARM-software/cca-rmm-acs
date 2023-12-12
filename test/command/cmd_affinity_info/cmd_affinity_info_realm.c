@@ -17,6 +17,8 @@
 #define LOWEST_AFFINITY_LEVEL_VALID   0
 #define LOWEST_AFFINITY_LEVEL_INVALID 1
 
+#define CONTEXT_ID 0x5555
+
 static struct argument_store {
     uint64_t target_affinity_valid;
     uint32_t lowest_affinity_level_valid;
@@ -27,10 +29,29 @@ struct arguments {
     uint32_t lowest_affinity_level;
 };
 
-static void valid_argument_prep_sequence(void)
+static uint64_t mpidr_runnable_prep_sequence(void)
 {
-    c_args.target_affinity_valid = MPIDR_RUNNABLE;
+    uint64_t ret;
+    /* Power on REC[1] for execution */
+    ret = val_psci_cpu_on(MPIDR_RUNNABLE, val_realm_get_secondary_cpu_entry(), CONTEXT_ID);
+    if (ret)
+    {
+        LOG(ERROR, "\n\tPSCI CPU ON failed with ret status : 0x%x \n", ret, 0);
+        return VAL_TEST_PREP_SEQ_FAILED;
+    }
+
+    return MPIDR_RUNNABLE;
+}
+
+static uint64_t valid_argument_prep_sequence(void)
+{
+    c_args.target_affinity_valid = mpidr_runnable_prep_sequence();
+    if (c_args.target_affinity_valid == VAL_TEST_PREP_SEQ_FAILED)
+        return VAL_TEST_PREP_SEQ_FAILED;
+
     c_args.lowest_affinity_level_valid = LOWEST_AFFINITY_LEVEL_VALID;
+
+    return VAL_SUCCESS;
 }
 
 static uint64_t intent_to_seq(struct stimulus *test_data, struct arguments *args)
@@ -64,7 +85,11 @@ void cmd_affinity_info_realm(void)
     uint64_t i;
 
     /* Prepare Valid arguments */
-    valid_argument_prep_sequence();
+    if (valid_argument_prep_sequence() == VAL_TEST_PREP_SEQ_FAILED) {
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(1)));
+        goto exit;
+    }
+
 
     /* Iterate over the input */
     for (i = 0; i < (sizeof(test_data) / sizeof(struct stimulus)); i++)
@@ -75,7 +100,7 @@ void cmd_affinity_info_realm(void)
 
         if (intent_to_seq(&test_data[i], &args)) {
             LOG(ERROR, "\n\tIntent to sequence failed\n", 0, 0);
-            val_set_status(RESULT_FAIL(VAL_ERROR_POINT(1)));
+            val_set_status(RESULT_FAIL(VAL_ERROR_POINT(2)));
             goto exit;
         }
 
@@ -84,7 +109,7 @@ void cmd_affinity_info_realm(void)
         if (ret != test_data[i].status)
         {
             LOG(ERROR, "\n\tUnexpected Command Return Status\n ret status : 0x%x \n", ret, 0);
-            val_set_status(RESULT_FAIL(VAL_ERROR_POINT(2)));
+            val_set_status(RESULT_FAIL(VAL_ERROR_POINT(3)));
             goto exit;
         }
     }
@@ -96,7 +121,7 @@ void cmd_affinity_info_realm(void)
     if (ret != PSCI_E_SUCCESS)
     {
         LOG(ERROR, "\n\tUnexpected Command Return Status\n ret status : 0x%x \n", ret, 0);
-        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(3)));
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(4)));
         goto exit;
     }
 
@@ -105,7 +130,7 @@ void cmd_affinity_info_realm(void)
     if (ret != PSCI_E_OFF)
     {
         LOG(ERROR, "\n\tUnexpected Command Return Status\n ret status : 0x%x \n", ret, 0);
-        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(4)));
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(5)));
         goto exit;
     }
 

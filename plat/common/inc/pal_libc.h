@@ -16,6 +16,7 @@
                   pal_printf(" ,line:%d) ", __LINE__, 0); \
                   pal_printf(#e, 0, 0); \
                   pal_printf("\n", 0, 0); \
+                  pal_watchdog_disable(); \
                   pal_terminate_simulation(); \
                 })
 

@@ -23,7 +23,9 @@ enum test_intent {
     REALM_NULL = 0XC,
     BASE_LEVEL_UNALIGNED = 0XD,
     RTTE_STATE_ASSIGNED = 0XE,
-    TOP_UNALIGNED = 0XF
+    TOP_GRAN_UNALIGNED = 0XF,
+    TOP_RTT_UNALIGNED = 0X10,
+    TOP_GRAN_UNALIGNED_TOP_RTT_UNALIGNED = 0X11
 };
 
 struct stimulus {
@@ -110,9 +112,19 @@ static struct stimulus test_data[] = {
     .label = RTTE_STATE_ASSIGNED,
     .status = RMI_ERROR_RTT,
     .index = 3},
-    {.msg = "top_align",
+    {.msg = "top_gran_align",
     .abi = RMI_RTT_INIT_RIPAS,
-    .label = TOP_UNALIGNED,
+    .label = TOP_GRAN_UNALIGNED,
+    .status = RMI_ERROR_INPUT,
+    .index = 0},
+    {.msg = "top_rtt_align",
+    .abi = RMI_RTT_INIT_RIPAS,
+    .label = TOP_RTT_UNALIGNED,
     .status = RMI_ERROR_RTT,
-    .index = 2}
+    .index = 2},
+    {.msg = "top_gran_align_compare_top_rtt_align",
+    .abi = RMI_RTT_INIT_RIPAS,
+    .label = TOP_GRAN_UNALIGNED_TOP_RTT_UNALIGNED,
+    .status = RMI_ERROR_INPUT,
+    .index = 0}
 };

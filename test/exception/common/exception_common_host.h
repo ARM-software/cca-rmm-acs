@@ -62,7 +62,7 @@ typedef struct _exception_validate_ripas_exit {
 } exception_rec_exit_ts;
 
 void exception_get_ec_imm(uint64_t esr, uint64_t *ec, uint64_t *imm);
-void exception_copy_exit_to_entry(val_host_rec_entry_ts *rec_entry,
+void exception_copy_exit_to_entry(val_host_rec_enter_ts *rec_enter,
                                           val_host_rec_exit_ts *rec_exit);
 uint64_t exception_validate_rec_exit_ripas(\
             exception_rec_exit_ts ripas_rec_exit);

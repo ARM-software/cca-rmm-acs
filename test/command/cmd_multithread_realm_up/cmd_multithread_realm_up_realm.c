@@ -20,6 +20,8 @@ static void secondary_cpu(void)
 
 void cmd_multithread_realm_up_realm(void)
 {
+    uint64_t ret;
+
     if (val_get_primary_mpidr() != val_read_mpidr())
         secondary_cpu();
 
@@ -27,12 +29,19 @@ void cmd_multithread_realm_up_realm(void)
     LOG(TEST, "\tIn realm_create_realm REC[0], mpdir=%x\n", val_read_mpidr(), 0);
 
     /* Power on REC[1] execution */
-    val_psci_cpu_on(REC_NUM(1), val_realm_get_secondary_cpu_entry(), CONTEXT_ID);
+    ret = val_psci_cpu_on(REC_NUM(1), val_realm_get_secondary_cpu_entry(), CONTEXT_ID);
+    if (ret)
+    {
+        LOG(ERROR, "\n\tPSCI CPU ON failed with ret status : 0x%x \n", ret, 0);
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(1)));
+        goto exit;
+    }
 
     if (is_secondary_cpu_booted == 0x1)
         val_set_status(RESULT_PASS(VAL_SUCCESS));
     else
-        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(101)));
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(2)));
 
+exit:
     val_realm_return_to_host();
 }

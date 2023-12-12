@@ -11,7 +11,7 @@ void gic_hcr_invalid_host(void)
 {
     val_host_realm_ts realm;
     uint64_t ret;
-    val_host_rec_entry_ts *rec_entry = NULL;
+    val_host_rec_enter_ts *rec_enter = NULL;
 
     val_memset(&realm, 0, sizeof(realm));
 
@@ -25,9 +25,9 @@ void gic_hcr_invalid_host(void)
         goto destroy_realm;
     }
 
-    rec_entry = &(((val_host_rec_run_ts *)realm.run[0])->entry);
+    rec_enter = &(((val_host_rec_run_ts *)realm.run[0])->enter);
     /* Set HCR reserve feild vSGIEOICount[8] bit */
-    rec_entry->gicv3_hcr = 1 << 8;
+    rec_enter->gicv3_hcr = 1 << 8;
     /* Enter REC[0]  */
     ret = val_host_rmi_rec_enter(realm.rec[0], realm.run[0]);
     if (!ret)
@@ -38,7 +38,7 @@ void gic_hcr_invalid_host(void)
     }
 
     /* Set HCR reserve feild TALL0[11] bit */
-    rec_entry->gicv3_hcr = 1 << 11;
+    rec_enter->gicv3_hcr = 1 << 11;
     /* Enter REC[0]  */
     ret = val_host_rmi_rec_enter(realm.rec[0], realm.run[0]);
     if (!ret)

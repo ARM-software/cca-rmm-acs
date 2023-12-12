@@ -27,7 +27,8 @@ enum test_intent {
     TARGET_GRAN_STATE_DATA = 0x10,
     NO_PSCI_REQUEST = 0x11,
     TARGET_OTHER_OWNER = 0x12,
-    TARGET_OTHER_MPIDR = 0x13
+    TARGET_OTHER_MPIDR = 0x13,
+    STATUS_NOT_PERMITTED = 0x14
 };
 
 struct stimulus {
@@ -137,6 +138,11 @@ static struct stimulus test_data[] = {
     {.msg = "target",
     .abi = RMI_PSCI_COMPLETE,
     .label = TARGET_OTHER_MPIDR,
+    .status = RMI_ERROR_INPUT,
+    .index = 0},
+    {.msg = "status",
+    .abi = RMI_PSCI_COMPLETE,
+    .label = STATUS_NOT_PERMITTED,
     .status = RMI_ERROR_INPUT,
     .index = 0}
 };

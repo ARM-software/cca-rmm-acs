@@ -47,7 +47,7 @@ void gic_timer_nsel2_trig_host(void)
     }
     rec_exit = &(((val_host_rec_run_ts *)realm.run[0])->exit);
     /* Program and enable the EL2 timer */
-    val_timer_set_phy_el2(60);
+    val_timer_set_phy_el2(5000);
 
     ret = val_host_rmi_rec_enter(realm.rec[0], realm.run[0]);
     if (ret)
@@ -61,16 +61,11 @@ void gic_timer_nsel2_trig_host(void)
     {
         LOG(ERROR, "\tRec exit params mismatch, exit_reason=%x esr %lx\n",
                         rec_exit->exit_reason, rec_exit->esr);
+        if (!handler_flag)
+        {
+	    LOG(ERROR, "\ttimer interrupt not triggered\n", 0, 0);
+        }
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(4)));
-        goto free_irq;
-    }
-
-    if (handler_flag == 1)
-    {
-        LOG(ALWAYS, "\ttimer Interrupt triggered\n", 0, 0);
-    } else {
-        LOG(ERROR, "\ttimer interrupt not triggered\n", 0, 0);
-        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(5)));
         goto free_irq;
     }
 

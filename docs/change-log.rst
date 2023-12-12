@@ -6,6 +6,18 @@ Change-log
 ##########
 
 ******************
+v1.0_EAC1.0_12.23
+******************
+
+-  This release is aligned to `RMM Eac5 specification`_ . Details are given below.
+
+New Features / Tests Added
+==========================
+
+- One new test added in command suite
+- Enhancements and bug fixes to existing tests and infrastructure.
+
+******************
 v1.0_BETA0.8_10.23
 ******************
 
@@ -34,6 +46,13 @@ New Features / Tests Added
 
 - Initial tests and infrastructure for Interface, Exception, GIC and Memory management tests.
 
+*****
+Note:
+*****
+
+- Tag format for latest version: v{SPEC-VERSION}_{ACS-CODE-QUALITY}{ACS-VERSION}_{MONTH.YEAR}
+
+.. _RMM Eac5 specification: https://developer.arm.com/documentation/den0137/1-0eac5/?lang=en
 .. _RMM Eac2 specification: https://developer.arm.com/documentation/den0137/1-0eac2/?lang=en
 .. _RMM Beta1 specification: https://developer.arm.com/documentation/den0137/1-0bet1/?lang=en
 .. _PMU and Debug Scenarios: ./pmu_debug.md

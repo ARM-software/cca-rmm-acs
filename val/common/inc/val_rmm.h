@@ -109,6 +109,10 @@
 #define RMI_NO_TRAP                 0
 #define RMI_TRAP                    1
 
+/* RmiResponse types */
+#define RMI_ACCEPT                  0
+#define RMI_REJECT                  1
+
 /* Create the return code of an ABI command from status & index */
 #define PACK_CODE(status, index) (index << 8 | status)
 
@@ -118,15 +122,16 @@
 #define RMI_INDEX(ret)        (((ret) >> 8) & 0xFF)
 
 /* RSI SMC FID */
-#define RSI_VERSION              (0xC4000190)
-#define RSI_REALM_CONFIG         (0xC4000196)
-#define RSI_MEASUREMENT_READ     (0xC4000192)
-#define RSI_MEASUREMENT_EXTEND   (0xC4000193)
-#define RSI_IPA_STATE_GET        (0xC4000198)
-#define RSI_IPA_STATE_SET        (0xC4000197)
-#define RSI_HOST_CALL            (0xC4000199)
-#define RSI_ATTESTATION_TOKEN_INIT        (0xC4000194)
+#define RSI_VERSION                           (0xC4000190)
+#define RSI_REALM_CONFIG                      (0xC4000196)
+#define RSI_MEASUREMENT_READ                  (0xC4000192)
+#define RSI_MEASUREMENT_EXTEND                (0xC4000193)
+#define RSI_IPA_STATE_GET                     (0xC4000198)
+#define RSI_IPA_STATE_SET                     (0xC4000197)
+#define RSI_HOST_CALL                         (0xC4000199)
+#define RSI_ATTESTATION_TOKEN_INIT            (0xC4000194)
 #define RSI_ATTESTATION_TOKEN_CONTINUE        (0xC4000195)
+#define RSI_FEATURES                          (0xC4000191)
 
 /* RsiInterfaceVersion type */
 #define RSI_MAJOR_VERSION    0
@@ -154,6 +159,10 @@
 /* RsiRipasChangeDestroyed type */
 #define RSI_NO_CHANGE_DESTROYED    0
 #define RSI_CHANGE_DESTROYED       1
+
+/* RsiResponse types */
+#define RSI_ACCEPT                 0
+#define RSI_REJECT                 1
 
 /*
  * Defines member of structure and reserves space

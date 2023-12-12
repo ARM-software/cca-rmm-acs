@@ -13,12 +13,23 @@ __attribute__((aligned (PAGE_SIZE))) val_realm_rsi_host_call_t gv_realm_host_cal
 
 /**
  *   @brief    Returns RSI version
- *   @param    void
- *   @return   Returns RSI Interface version
+ *   @param    req    - Requested interface version.
+ *   @param    output - Pointer to store lower/higher implemented interface version.
+ *   @return   Returns command return status
 **/
-uint64_t val_realm_rsi_version(void)
+
+uint64_t val_realm_rsi_version(uint64_t req, val_realm_rsi_version_ts *output)
+
 {
-    return (val_smc_call(RSI_VERSION, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)).x0;
+    val_smc_param_ts args;
+
+    args = (val_smc_call(RSI_VERSION, req, 0, 0, 0, 0, 0, 0, 0, 0, 0));
+
+    output->lower = args.x1;
+    output->higher = args.x2;
+
+    return args.x0;
+
 }
 
 /**
@@ -63,6 +74,7 @@ uint64_t val_realm_rsi_host_params(val_realm_rsi_host_call_t *realm_host_params)
  *   @param    flags    - Flags
  *   @return   Returns args, X0: Returns command return status,
  *                           X1: Base of IPA region which was notmodified by the command
+ *                           X2: response - whether the host accepted or rejected the request
 **/
 val_smc_param_ts val_realm_rsi_ipa_state_set(uint64_t base, uint64_t top,
                                            uint8_t ripas, uint64_t flags)
@@ -118,21 +130,23 @@ uint64_t val_realm_rsi_host_call_struct(uint64_t gv_realm_host_call1)
 /**
  *   @brief    Continue the operation to retrieve an attestation token.
  *   @param    addr     - IPA of the Granule to which the token will be written
- *   @return   Returns  args, X0: Returns command return status,
-                              X1: Token size in bytes
+ *   @param    offset   - Offset within Granule to start of buffer in bytes
+ *   @param    size     - Size of buffer in bytes
+ *   @param    len      - Pointer to store number of bytes written to buffer
+ *   @return   Returns command return status
 **/
-val_smc_param_ts val_realm_rsi_attestation_token_continue(uint64_t addr)
+val_smc_param_ts val_realm_rsi_attestation_token_continue(uint64_t addr, uint64_t offset,
+                                                            uint64_t size, uint64_t *len)
 {
     val_smc_param_ts args;
 
-    args = val_smc_call(RSI_ATTESTATION_TOKEN_CONTINUE, addr, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    args = val_smc_call(RSI_ATTESTATION_TOKEN_CONTINUE, addr, offset, size, 0, 0, 0, 0, 0, 0, 0);
 
+    *len = args.x1;
     return args;
 }
-
 /**
  *   @brief    Initialize the operation to retrieve an attestation token.
- *   @param    addr          - IPA of the Granule to which the token will be written
  *   @param    challenge_0   - Doubleword 0 of the challenge value
  *   @param    challenge_1   - Doubleword 1 of the challenge value
  *   @param    challenge_2   - Doubleword 2 of the challenge value
@@ -143,13 +157,15 @@ val_smc_param_ts val_realm_rsi_attestation_token_continue(uint64_t addr)
  *   @param    challenge_7   - Doubleword 7 of the challenge value
  *   @return   Returns command return status
 **/
-uint64_t val_realm_rsi_attestation_token_init(uint64_t addr, uint64_t challenge_0,
-                 uint64_t challenge_1, uint64_t challenge_2, uint64_t challenge_3,
-                 uint64_t challenge_4, uint64_t challenge_5, uint64_t challenge_6,
-                                                            uint64_t challenge_7)
+val_smc_param_ts val_realm_rsi_attestation_token_init(uint64_t challenge_0, uint64_t challenge_1,
+                                              uint64_t challenge_2, uint64_t challenge_3,
+                                              uint64_t challenge_4, uint64_t challenge_5,
+                                              uint64_t challenge_6, uint64_t challenge_7)
 {
-    return (val_smc_call(RSI_ATTESTATION_TOKEN_INIT, addr, challenge_0, challenge_1, challenge_2,
-                         challenge_3, challenge_4, challenge_5, challenge_6, challenge_7, 0)).x0;
+    val_smc_param_ts args;
+    args = val_smc_call(RSI_ATTESTATION_TOKEN_INIT, challenge_0, challenge_1, challenge_2,
+                challenge_3, challenge_4, challenge_5, challenge_6, challenge_7, 0, 0);
+    return args;
 }
 
 /**
@@ -206,4 +222,20 @@ uint64_t val_realm_get_ipa_width(void)
 {
     val_realm_rsi_realm_config((uint64_t)realm_config_buff);
     return (uint64_t)*realm_config_buff;
+}
+
+/**
+ *   @brief    Read feature register
+ *   @param    index    -  Feature register index
+ *   @param    value    -  Pointer to store Feature register value
+ *   @return   Returns command return status
+**/
+uint64_t val_realm_rsi_features(uint64_t index, uint64_t *value)
+{
+    val_smc_param_ts args;
+
+    args = val_smc_call(RSI_FEATURES, index, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+
+    *value = args.x1;
+    return args.x0;
 }

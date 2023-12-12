@@ -19,6 +19,7 @@ void mm_hipas_unassigned_ripas_ram_da_ia_realm(void)
     val_memory_region_descriptor_ts mem_desc;
     uint64_t ipa_base, size;
     void (*fun_ptr)(void);
+    uint32_t Attr;
 
     /* Below code is executed for REC[0] only */
     LOG(DBG, "\tIn realm_create_realm REC[0], mpdir=%x\n", val_read_mpidr(), 0);
@@ -50,6 +51,15 @@ void mm_hipas_unassigned_ripas_ram_da_ia_realm(void)
     {
         LOG(ERROR, "\tError: Data abort triggered to realm\n", 0, 0);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(2)));
+    }
+
+    /* Map Realm memory as Code */
+    Attr = MT_CODE | MT_REALM ;
+
+    if (val_realm_update_attributes(PAGE_SIZE, ipa_base, Attr)) {
+        LOG(ERROR, "\tPage attributes update failed\n", 0, 0);
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(3)));
+        goto exit;
     }
 
     val_memset(&g_sea_params, 0, sizeof(g_sea_params));

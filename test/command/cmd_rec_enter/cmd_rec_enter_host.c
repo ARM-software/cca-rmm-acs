@@ -20,7 +20,7 @@
 #define NEW_REALM 1
 #define NEW_REALM_2 2
 #define NOT_RUNNABLE_REALM 3
-#define SYSTEM_OFF_REALM 4
+#define RUNNABLE_REALM 4
 
 #define IPA_ADDR_DATA 0
 
@@ -191,7 +191,7 @@ static uint64_t g_rec_ready_not_runnable_prep_sequence(void)
 
 static uint64_t emulated_mmio_prep_sequence(void)
 {
-    val_host_rec_entry_ts *run_ptr = val_host_mem_alloc(PAGE_SIZE, PAGE_SIZE);
+    val_host_rec_enter_ts *run_ptr = val_host_mem_alloc(PAGE_SIZE, PAGE_SIZE);
 
     /* Clear the structure entirely */
     val_memset(run_ptr, 0x0, PAGE_SIZE);
@@ -203,7 +203,7 @@ static uint64_t emulated_mmio_prep_sequence(void)
 
 static uint64_t gicv3_invalid_prep_sequence(void)
 {
-    val_host_rec_entry_ts *run_ptr = val_host_mem_alloc(PAGE_SIZE, PAGE_SIZE);
+    val_host_rec_enter_ts *run_ptr = val_host_mem_alloc(PAGE_SIZE, PAGE_SIZE);
 
     /* Clear the structure entirely */
     val_memset(run_ptr, 0x0, PAGE_SIZE);
@@ -264,27 +264,54 @@ static uint64_t g_rec_aux_prep_sequence(void)
     return params->aux[0];
 }
 
+static uint64_t g_rec_psci_pending_prep_sequence(void)
+{
+    uint64_t ret;
+
+    val_memset(&realm_test[RUNNABLE_REALM], 0, sizeof(realm_test[RUNNABLE_REALM]));
+
+    val_host_realm_params(&realm_test[RUNNABLE_REALM]);
+
+    realm_test[RUNNABLE_REALM].vmid = RUNNABLE_REALM;
+    realm_test[RUNNABLE_REALM].rec_count = 2;
+
+    /* Populate realm with one REC*/
+    if (val_host_realm_setup(&realm_test[RUNNABLE_REALM], 1))
+        LOG(ERROR, "\tRealm setup failed\n", 0, 0);
+
+    /* Enter REC[0]  */
+    ret = val_host_rmi_rec_enter(realm_test[RUNNABLE_REALM].rec[0],
+                                 realm_test[RUNNABLE_REALM].run[0]);
+    if (ret) {
+        LOG(ERROR, "\tRec enter failed, ret=%x\n", ret, 0);
+        return VAL_TEST_PREP_SEQ_FAILED;
+    }
+
+    return realm_test[RUNNABLE_REALM].rec[0];
+
+}
+
 static uint64_t g_rec_owner_state_system_off_prep_sequence(void)
 {
     uint64_t ret;
 
-    val_memset(&realm_test[SYSTEM_OFF_REALM], 0, sizeof(realm_test[SYSTEM_OFF_REALM]));
+    /* Complete pending PSCI request*/
+    ret = val_host_rmi_psci_complete(realm_test[RUNNABLE_REALM].rec[0],
+                                     realm_test[RUNNABLE_REALM].rec[1], PSCI_E_SUCCESS);
+    if (ret)
+    {
+        LOG(ERROR, "\t PSCI_COMPLETE Failed, ret=%x\n", ret, 0);
+        return VAL_TEST_PREP_SEQ_FAILED;
+    }
 
-    val_host_realm_params(&realm_test[SYSTEM_OFF_REALM]);
 
-    realm_test[SYSTEM_OFF_REALM].vmid = SYSTEM_OFF_REALM;
-
-    /* Populate realm with one REC*/
-    if (val_host_realm_setup(&realm_test[SYSTEM_OFF_REALM], 1))
-        LOG(ERROR, "\tRealm setup failed\n", 0, 0);
-
-    /* Enter REC[0]  */
-    ret = val_host_rmi_rec_enter(realm_test[SYSTEM_OFF_REALM].rec[0],
-                                 realm_test[SYSTEM_OFF_REALM].run[0]);
+    /* Enter REC[1]  */
+    ret = val_host_rmi_rec_enter(realm_test[RUNNABLE_REALM].rec[1],
+                                 realm_test[RUNNABLE_REALM].run[1]);
     if (ret)
         LOG(ERROR, "\tRec enter failed, ret=%x\n", ret, 0);
 
-    return realm_test[SYSTEM_OFF_REALM].rec[0];
+    return realm_test[RUNNABLE_REALM].rec[1];
 
 }
 
@@ -415,6 +442,11 @@ static uint64_t intent_to_seq(struct stimulus *test_data, struct arguments *args
         case REC_EMULATED_MMIO:
             args->rec = c_args.rec_valid;
             args->run_ptr = emulated_mmio_prep_sequence();
+            break;
+
+        case REC_PSCI_PENDING:
+            args->rec = g_rec_psci_pending_prep_sequence();
+            args->run_ptr = c_args.run_ptr_valid;
             break;
 
         case RUN_PTR_INVALID_GIV3_HCR:

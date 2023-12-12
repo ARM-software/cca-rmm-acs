@@ -9,14 +9,15 @@
 #define _VAL_FRAMEWORK_H_
 
 #include "val.h"
+#include "val_rmm.h"
 
 typedef struct _val_print_rsi_host_call {
-        /* imm values passed during the host call */
-        uint16_t imm;
-        uint8_t unused[6];
-        /* gprs values to be saved during the rsi host call */
-        uint64_t gprs[7];
-        uint8_t unused1[4032];
+    SET_MEMBER(struct {
+        /* Immediate value */
+        unsigned int imm;		/* Offset 0 */
+        /* Registers */
+        unsigned long gprs[31];
+        }, 0, 0x100);
 } val_print_rsi_host_call_t;
 
 void val_set_security_state_flag(uint64_t state);
