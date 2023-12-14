@@ -19,7 +19,7 @@ Introduction
 In this document the test scenarios for all RMM ABI commands are detailed.
 First, an overview of the general test strategy is provided, which forms the
 basis of the overall flow and rationale of the various scenarios. Unless otherwise specified,
-this scenario doc is compliant to eac2 of `Realm Management Monitor (RMM) Specification`_.
+this scenario doc is compliant to eac5 of `Realm Management Monitor (RMM) Specification`_ v1.0.
 
 Arm Realm Management Monitor Specification
 ==========================================
@@ -156,9 +156,10 @@ that the command executed successfully.
   |               |                        |                                 |
   |               | (RD)                   |                                 |
   |               +------------------------+---------------------------------+
-  |               | PAS                    |No                               |
+  |               | GPT entry              |No                               |
   |               |                        |                                 |
-  |               | (NS, Root, Realm)      |                                 |
+  |               | (GPT_NS, GPT_ROOT,     |                                 |
+  |               | GPT_REALM, GPT_SECURE) |                                 |
   +---------------+------------------------+---------------------------------+
   |Contents of    | (RD / REC / DATA / RTT |No these are provisioned by the  |
   |a granule      | / NS)                  |host but outside of Realm's TCB  |
@@ -209,9 +210,9 @@ Observing Properties of a granule
   |                   |                                                                |
   |                   |We will follow the same strategy as for granule state.          |
   |                   +----------------------------------------------------------------+
-  |                   |PAS                                                             |
+  |                   |GPT entry                                                       |
   |                   |                                                                |
-  |                   |For PAS checks we will do testing in memory management ACS      |
+  |                   |For GPT entry checks we will do testing in memory management ACS|
   |                   |scenarios to ensure that the GPI encodings in the GPT has not   |
   |                   |changed.                                                        |
   +-------------------+----------------------------------------------------------------+
@@ -240,7 +241,7 @@ Observing Properties of a granule
   |                   |Unless otherwise specified we will follow the same strategy as  |
   |                   |specified for granule state.                                    |
   |                   +----------------------------------------------------------------+
-  |                   |PAS                                                             |
+  |                   |GPT entry                                                       |
   |                   |                                                                |
   |                   |There will be testing in memory management ACS scenarios to     |
   |                   |probe the GPI encodings in the GPT.                             |
@@ -321,7 +322,7 @@ Argument list
       | RTTE(ipa).ripas = RAM
   * - src
     - | granule(src) = 4K_ALIGNED
-      | granule(src).PAS = NS
+      | granule(src).gpt = GPT_NS
   * - flags
     - | flags = RMI_MEASURE_CONTENT
 
@@ -354,7 +355,7 @@ Failure conditon testing
 
       granule(data).state = UNDELEGATED, REC, RD, RTT, DATA
 
-      granule(data).pas = Secure
+      granule(data).gpt = GPT_SECURE
     -
   * - ipa
     - ipa = unaligned_addr, unprotected_ipa, outside_of_permitted_ipa (info)
@@ -363,7 +364,6 @@ Failure conditon testing
 
       RTTE[ipa].state = ASSIGNED (circular)
 
-      RTTE[ipa].ripas = EMPTY, DESTROYED
     - unprotected_ipa := ipa >= 2**(IPA_WIDTH - 1)
 
       IPA_WIDTH = RmiFeatureRegister0.S2SZ
@@ -376,7 +376,7 @@ Failure conditon testing
     - granule(src) = unaligned_addr, mmio_region [A], outside_of_permitted_pa [B],
       not_backed_by_encryption, raz or wi [C]
 
-      granule(src).PAS == Secure, Realm
+      granule(src).gpt == GPT_SECURE, GPT_REALM
     -
 
 Failure Priority ordering
@@ -406,8 +406,7 @@ Observability
       | RTTE.addr
     - Refer Observing Properties of a Granule and Observing Contents of a Granule for details
   * - rim
-    - This needs to be tested outside of ACS command scenarios (Security Model / Attestation
-      scenarios)
+    - This is outside the scope of CCA-RMM-ACS.
   * - | granule(data).state
       | granule(data).content
     - This is outside the scope of CCA-RMM-ACS. Refer Observing Properties of a Granule and
@@ -416,6 +415,7 @@ Observability
     -
   * - | RTTE.state,
       | RTTE.addr
+      | RTTE.ripas
     - Execute RTT_READ_ENTRY and compare the outcome with expected value (as defined by the
       architecture)
 
@@ -424,7 +424,7 @@ Observability
     - This is already tested outside of ACS command scenarios, as part of Realm creation
       with payload.
   * - rim
-    - This needs to be tested outside of ACS command scenarios (Security Model / Attestation
+    - This is already tested outside of ACS command scenarios (Attestation and Measurement
       scenarios)
 
 RMI_DATA_CREATE_UNKNOWN
@@ -688,7 +688,7 @@ Argument list
   * - addr
     - | granule(addr) = 4K_ALIGNED
       | granule(addr).state = Undelegated
-      | granule(addr).PAS = Non secure.
+      | granule(addr).gpt = GPT_NS.
 
 
 Failure conditon testing
@@ -706,10 +706,10 @@ Failure conditon testing
 
       granule(adr).state = DELEGATED,RD, REC, RTT, DATA
 
-      granule(addr).PAS = Secure, Realm
+      granule(addr).gpt = GPT_SECURE, GPT_REALM
     - See RMI_DATA_CREATE for the specifics behind these stimuli.
 
-      granule(addr).PAS = Root is outside the scope of ACS.
+      granule(addr).gpt = GPT_ROOT is outside the scope of ACS.
 
 Failure Priority ordering
 ~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -725,17 +725,17 @@ Observability
     - Verification
   * - Command Failure
     -
-  * - granule(addr).PAS
-    - | For granule(addr).PAS=Non-secure, an access to addr from the NS world should be successful
-      and should be tested in command ACS.
-      | For granule(addr).PAS=Secure and Realm (granule(addr).state = DATA), this needs to be tested
-      outside of ACS command scenarios
+  * - granule(addr).gpt
+    - | For granule(addr).gpt = GPT_NS, an access to addr from the NS world should be successful
+        and should be tested in command ACS.
+      | For granule(addr).gpt = GPT_SECURE and GPT_REALM (granule(addr).state = DATA), this needs
+        to be tested outside of ACS command scenarios
   * - granule(addr).state
     - This is outside the scope of CCA-RMM-ACS. Refer Observing Properties of a Granule and
       Observing Contents of a Granule for details
   * - Command Success
     -
-  * - granule(addr).PAS
+  * - granule(addr).gpt
     - This is tested outside of ACS command scenarios - As part of mm_gpf_exception test:
 
       Note:
@@ -771,8 +771,8 @@ Argument list
     - Valid Values
   * - addr
     - | granule(addr) = 4K_ALIGNED
-      | granule(addr).state = Undelegated
-      | granule(addr).PAS = Realm.
+      | granule(addr).state = Delegated
+      | granule(addr).gpt = GPT_REALM.
 
 
 Failure conditon testing
@@ -791,7 +791,7 @@ Failure conditon testing
       granule(adr).state = UNDELEGATED, RD, REC, RTT, DATA
     - See RMI_DATA_CREATE for the specifics behind these stimuli.
 
-      granule(addr).PAS = Root is outside the scope of ACS.
+      granule(addr).gpt = GPT_ROOT is outside the scope of ACS.
 
 Failure Priority ordering
 ~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -807,18 +807,16 @@ Observability
     - Verification
   * - Command Failure
     -
-  * - granule(addr).PAS
-    - For granule(addr).PAS = Realm && granule(addr).state = REC/DATA/RD/RTT execute the
+  * - | granule(addr).gpt
+      | grnaule(addr).state
+    - For granule(addr).gpt = GPT_RELAM && granule(addr).state = REC/DATA/RD/RTT execute the
       respective destroy command and verify that it is successful
   * - granule(addr).content
-    - For granule(addr).state = REC/DATA/RTT verify that the content is unchanged. This needs
-      to be tested outside of ACS command scenarios.
-  * - granule(addr).state
-    - For granule(addr).state = Undelegated, access this granule from the NS world, and this access
-      should be successful. This is in scope for command ACS
+    - This is outside the scope of CCA-RMM-ACS. Refer Observing Properties of a Granule and
+      Observing Contents of a Granule for details
   * - Command Success
     -
-  * - | granule(addr).PAS
+  * - | granule(addr).gpt
       | granule(addr).content
     - Can be tested through accesses from the NS world (should succeed and content be wiped)
 
@@ -856,6 +854,8 @@ Argument list
       | granule(target_rec).state = REC
       | Rec(target_rec).owner = Rec(calling_rec).owner
       | Rec(target_rec).owner = Rec(calling_rec).gprs[1]
+  * - status
+    - Valid PSCI status code which is permitted.
 
 Failure conditon testing
 ~~~~~~~~~~~~~~~~~~~~~~~~
@@ -886,6 +886,10 @@ Failure conditon testing
       granule(target_rec).state = Undelegated, Delegated, RD, RTT
     - [D] wrong_target implies that calling_rec has a different mpidr value stored in gprs[1] than
       target_rec.mpidr
+  * - status
+    - Return a PSCI status code which is not permitted to return.
+    -
+
 
 Failure Priority ordering
 ~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -960,7 +964,7 @@ Failure Priority ordering
     - Input Values
     - Remarks
   * - rd
-    - granule(rd).state = NULL & Realm(rd).state = DELEGATED
+    - granule(rd).state DELEGATED & Realm(rd).state = NULL
     - This is already coverd with Realm(rd).state = NULL in the failure condition stimulus above
 
 Observability
@@ -996,7 +1000,7 @@ Argument list
       | granule(rd).state = Delegated
   * - params_ptr
     - | granule(params_ptr) = 4K_ALIGNED
-      | granule(params_ptr).PAS = NS
+      | granule(params_ptr).gpt = GPT_NS
       | granule(params_ptr).content(rtt_base) = 4K_ALIGNED
       | granule(params_ptr).content(rtt_base).state = Delegated
       | granule(params_ptr).content(flags, s2sz, sve_vl, num_bps, num_wps, pmu_num_ctrs) = supported
@@ -1037,8 +1041,8 @@ Failure conditon testing
 
       granule(params_ptr).content(vmid) = invalid, in_use
 
-      granule(params_ptr).PAS = Realm, Secure, Root (may be outside the scope of ACS as we may not
-      get to know Root memory from platform memory map)
+      granule(params_ptr).gpt = GPT_REALM, GPT_SECURE, GPT_ROOT (may be outside the scope of ACS
+      as we may not get to know Root memory from platform memory map)
 
       ***rtt size = rtt base<addr<rtt_num_start*RMM granule size so, cover
       RMIRealmparams.rtt_num_start =1 and >1.
@@ -1099,19 +1103,17 @@ Observability
     - Verification
   * - Command Failure
     -
-  * - rd.state
+  * - | rd.state
+      | rd.substate
+      | rd.content
     - This is outside the scope of CCA-RMM-ACS. Refer Observing Properties of a Granule and
       Observing Contents of a Granule for details
-  * - | rd.substate
-      | rd.content
-    - Same as above
   * - Command Success
     -
-  * - rd.state
-    - This is already tested outside of ACS command scenarios(as part of realm creation flow).
-  * - | rd.substate
+  * - | rd.state
+      | rd.substate
       | rd.content
-    - Same as above
+    - This is already tested outside of ACS command scenarios(as part of realm creation flow).
 
 RMI_REALM_DESTROY
 ^^^^^^^^^^^^^^^^^
@@ -1173,16 +1175,9 @@ Observability
     - Verification
   * - Command Failure
     -
-  * - Realm(rd).state
-    - For Realm(rd).state = Active, System_Off: This is outside the scope of CCA-RMM-ACS, as the
-      only sensible thing we can do, is to destroy the Realm, which is the ABI we are currently
-      testing. For System_Off, since the scope of system is imp def, we won't be able to test this
-      in ACS.
-
-      For Realm(rd).state = New: This is outside of the scope of CCA-RMM-ACS and falls into DV space
-  * - granule(rtt).state
-    - This is already tested in other command ACS scenarios (RMI_GRANULE_UNDELEGATE or
-      RMI_REALM_CREATE)
+  * - | granule(rd).state
+      | granule(rtt).state
+    - Refer Observing Properties of a Granule and Observing Contents of a Granule for details.
   * - Command Success
     -
   * - | vmid
@@ -1241,8 +1236,7 @@ Observability
   * - Command Success
     -
   * - X1 (command return value)
-    - This is already tested outside of ACS command scenarios as part of the Realm creation flow
-      (when the various feature: SVE, etc. are implemented)
+    - This is already tested outside of ACS command scenarios as part of the Realm creation flow.
 
 RMI_REC_CREATE
 ^^^^^^^^^^^^^^
@@ -1264,7 +1258,7 @@ Argument list
       | granule(rec).state = Delegated
   * - params_ptr
     - | granule(params_ptr) = 4K_ALIGNED
-      | granule(params_ptr).PAS = NS
+      | granule(params_ptr).gpt = GPT_NS
       | granule(params_ptr).content(mpidr) = in_range (where in_range = 0, 1, 2, ...)
       | granule(params_ptr).content(aux) = 4K_ALIGNED
       | granule(params_ptr).content(num_aux) = RMI_REC_AUX_COUNT(rd)
@@ -1318,9 +1312,9 @@ Failure conditon testing
 
       granule(params_ptr).content(mpidr) = provide mpidr value starting from 2
 
-      granule(params_ptr).pas = Realm, Secure, Root [E]
-    - [E] Root (may be outside the scope of ACS as we may not get to know Root memory from platform
-      memory map)
+      granule(params_ptr).gpt = GPT_REALM, GPT_SECURE, GPT_ROOT [E]
+    - [E] GPT_ROOT (may be outside the scope of ACS as we may not get to know Root memory from
+      platform memory map)
 
       [F] at least one aux_granule must be unaligned
 
@@ -1348,30 +1342,25 @@ Observability
     - Verification
   * - Command Failure
     -
-  * - Realm(rd).rec_index
+  * - | Realm(rd).rec_index
+      | granule(rec).content
+      | granule(rec).attest
+      | granule(rec_aux).state
     - Refer Observing Properties of a Granule and Observing Contents of a Granule for details.
-  * - granule(rec).content
+  * - | rim
     - This is outside the scope of CCA-RMM-ACS
-  * - rim
-    - This needs to be tested outside of command ACS(Attestation Scenarios)
-  * - granule(rec).content
-    - Refer Observing Properties of a Granule and Observing Contents of a Granule for details.
-  * - granule(rec).attest
-    - Refer Observing Properties of a Granule and Observing Contents of a Granule for details.
-  * - granule(rec_aux).state
-    - Refer Observing Properties of a Granule and Observing Contents of a Granule for details.
   * - Command Success
     -
   * - Realm(rd).rec_index
     - This is already tested outside of command ACS (a Realm with multiple RECs)
-  * - granule(rec).conted
+  * - granule(rec).content
     - This is already tested outside of command ACS (a Realm entry)
   * - | granule(rec).ripas_addr
       | granule(rec).ripas_top
       | granule(rec).host_call
-    - This is already tested outside of command ACS in one of the Exception Model scenario
+    - This is already tested outside of command ACS in one of the Exception Model scenarios.
   * - rim
-    - This needs to be tested outside of command ACS (Attestation Scenarios)
+    - This is already tested outside of command ACS (Attestation and Measurement Scenarios)
   * - granule(rec).attest
     - This is outside the scope of CCA-RMM-ACS
 
@@ -1435,16 +1424,12 @@ Observability
   * - | granule(rec).state
       | granule(rec_aux).state
     - Refer Observing Properties of a Granule and Observing Contents of a Granule for details.
-  * - granule(rec).content
-    - This needs to be tested outside of ACS command scenarios
   * - Command Success
     -
   * - | granule(rec).state
       | granule(rec_aux).state
     - This is already tested outside of ACS command scenarios, as part of RMM/Realm state rollback
       that's needed to run ACS as a single ELF.
-  * - granule(rec).content
-    - This needs to be tested outside of ACS command scenarios (in memory management scenarios)
 
 RMI_REC_ENTER
 ^^^^^^^^^^^^
@@ -1466,7 +1451,7 @@ Argument list
       | Realm(Rec(rec).owner).state = Active
   * - run_ptr
     - | granule(run_ptr) = 4K_ALIGNED
-      | granule(run_ptr).PAS = NS
+      | granule(run_ptr).gpt = GPT_NS
       | granule(run_ptr).content(entry.flags.emul_mmio) = NOT_RMI_EMULATED_MMIO
       | granule(run_ptr).content(entry.gicv3_hcr) = valid (RES0)
       | granule(run_ptr).content(entry.gicv3_lrs) = valid (HW = 0)
@@ -1486,7 +1471,7 @@ Failure conditon testing
 
       granule(rec).content(flags.runnable) = NOT_RUNNABLE
 
-      granule(rec).content(psci_pending) = PSCI_REQUEST_PENDING [F]
+      granule(rec).content(psci_pending) = PSCI_REQUEST_PENDING
 
       granule(rec).state = Undelegated, Delegated, RTT, RD, DATA, REC_AUX
 
@@ -1497,13 +1482,11 @@ Failure conditon testing
       while another will attempt to enter into realm using the same REC. This needs to be tested
       outside of command ACS.
 
-      [F] This needs to be tested outside of command ACS as it requires entering into realm and
-      execute a PSCI command.
   * - run_ptr
     - granule(run_ptr) = unaligned_addr, mmio_region [A], outside_of_permitted_pa [B],
       not_backed_by_encryption, raz or wi [C]
 
-      granule(run_ptr).pas = Realm, Secure, Root [H]
+      granule(run_ptr).gpt = GPT_REALM, GPT_SECURE, GPT_ROOT [H]
 
       granule(run_ptr).content(is_emulated_mmio) = RMI_EMULATED_MMIO [F]
 
@@ -1513,8 +1496,8 @@ Failure conditon testing
 
       [G] Exhaustive testing to follow in GIC Scenarios
 
-      [H] Root (may be outside the scope of ACS as we may not get to know Root memory from platform
-      memory map)
+      [H] GPT_ROOT (may be outside the scope of ACS as we may not get to know Root memory
+      from platform memory map)
 
 Failure Priority ordering
 ~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1530,15 +1513,11 @@ Observability
   * - Command Failure
     -
   * - Rec(rec).content
-    - | This needs to be tested outside of ACS command scenarios.
-      | Overlap with scenarios in Exception Model section.
-      | REC Exit Security & Data Abort scenarios.
+    - Refer Observing Properties of a Granule and Observing Contents of a Granule for details.
   * - Command Success
     -
   * - Rec(rec).content
-    - | This needs to be tested outside of ACS command scenarios.
-      | Overlap with scenarios in Exception Model section.
-      | REC Exit Security & Data Abort scenarios.
+    - This is already tested outside of ACS command scenarios. (Exception scenarios)
 
 RMI_RTT_CREATE
 ^^^^^^^^^^^^^^
@@ -1758,8 +1737,8 @@ Failure conditon testing
     - [D] not_homogeneous refers to an RTT that has RTTEs in different states. For example, an RTTE
       is in assigned state and another RTTE in destroyed state.
   * - level
-    - level = SL (-1 when RMIFeatureregister0.LPA2 is supported),4,1(when RMIFeatureregister0.LPA2
-      is not supported)
+    - level = SL (-1 when RMIFeatureregister0.LPA2 is supported, otherwise 0),4,1(when
+      RMIFeatureregister0.LPA2 is not supported)
     -
 
 Failure Priority ordering
@@ -1807,7 +1786,7 @@ Argument list
   * - top
     - | top = protected_ipa
       | top > base
-      | top > next walk.level aligned address after base
+      | top < RttUperbound(walk.ipa) && top = RTT level aligned.
 
 Failure conditon testing
 ~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1837,13 +1816,25 @@ Failure conditon testing
 
       top <= base
 
-      top < next level alligned IPA address after base.
+      top = unaligned_addr (provide addr which is less than 4KB aligned)
+
+      top = 4KB aligned address which falls in next RTT.
     -
 
 Failure Priority ordering
 ~~~~~~~~~~~~~~~~~~~~~~~~~
-All failure priority ordering conditions specified in spec are tested as part of failure condition
-testing (multi-causal stimuli)
+
+.. list-table::
+  :widths: 20 40 40
+
+  * - Input parameters
+    - Input Values
+    - Remarks
+  * - top
+    - top != GRANULE aligned & top != Rtt(walk.ipa) aligned.
+    -
+
+
 
 Observability
 ~~~~~~~~~~~~~
@@ -1857,14 +1848,15 @@ Observability
   * - RTTE.ripas
     - Refer Observing Properties of a Granule and Observing Contents of a Granule for details.
   * - rim
-    - This needs to be tested outside of ACS command scenarios.
+    - This is outside the scope of CCA-RMM-ACS
   * - Command Success
     -
   * - RTTE.ripas
     - | Execute Valid RMI_RTT_INIT_RIPAS --> success
       | Execute RTT_READ_ENTRY and verify the outcome is as expected by the architecture.
   * - rim
-    - This needs to be tested outside of ACS command scenarios.
+    - This is already tested outside of ACS command scenarios (Attestation and Measurement
+      Scenarios).
 
 RMI_RTT_MAP_UNPROTECTED
 ^^^^^^^^^^^^^^^^^^^^^^^
@@ -1953,8 +1945,8 @@ Observability
       -> RTTE.sh = desc.sh
       -> RTTE.addr = desc.addr
 
-RMI_RTT_READ_ENTRTY
-^^^^^^^^^^^^^^^^^^^
+RMI_RTT_READ_ENTRY
+^^^^^^^^^^^^^^^^^^
 
 Argument list
 ~~~~~~~~~~~~~
@@ -2064,7 +2056,7 @@ Argument list
   * - top
     - | top <= Rec(rec).ripas_top
       | top > base
-      | top > next level aligned IPA to base.
+      | top < RttUperbound(walk.ipa) && top = RTT level aligned.
 
 
 Failure conditon testing
@@ -2106,7 +2098,10 @@ Failure conditon testing
 
       top <= base
 
-      top < next level alligned IPA address after base.
+      top = unaligned_addr (provide addr which is less than 4KB aligned)
+
+      top = 4KB aligned address which falls in next RTT.
+
     -
 
 Failure Priority ordering
@@ -2121,7 +2116,9 @@ Failure Priority ordering
   * - base
     - base != Rec.ripas_addr, base_unaligned
     - Both base_align and base_bound can be triggered with same stimuli, The test should expect RMI_ERROR_INPUT
-
+  * - top
+    - top != GRANULE aligned & top != Rtt(walk.ipa) aligned.
+    -
 
 Observability
 ~~~~~~~~~~~~~
@@ -2219,7 +2216,15 @@ RMI_VERSION
 
 Argument list
 ~~~~~~~~~~~~~
-none
+
+.. list-table::
+  :widths: 25 75
+
+  * - Input parameters
+    - Valid Values
+  * - req
+    - Requested interface version by host.
+
 
 Failure conditon testing
 ~~~~~~~~~~~~~~~~~~~~~~~~
@@ -2233,6 +2238,10 @@ This command has no failure priority orderings.
 Observability
 ~~~~~~~~~~~~~
 This command has no footprint.
+
+* Check that outupt.lower[31:63]  & output.higher[31:63] = Zeros()
+* Upon receiving RMI_SUCCESS, check if output.lower = req as per specification, else stop executing
+  tests since ABI versions are not compatible.
 
 RSI Commands
 ------------
@@ -2249,7 +2258,13 @@ Argument list
   * - Input parameters
     - Valid Values
   * - addr
-    - addr = rec.attest_adr
+    - | addr = 4K_ALIGNED
+      | addr = within_permissible_ipa (< 2^(IPA_WIDTH - 1))
+  * - offset
+    - offset < RMM_GRANULE_SIZE
+  * - size
+    - | offset + size >= offset
+    - | offset + size <= RMM_GRANULE_SIZE
 
 
 Failure conditon testing
@@ -2262,9 +2277,16 @@ Failure conditon testing
     - Input Values
     - Remarks
   * - addr
-    - | addr = not_rec_attest_gran
-      | Current.rec(attest_state) = NO_ATTEST_IN_PROGRESS
-    -
+    - | addr = unaligned_addr, >= 2**(IPA_WIDTH - 1)
+      | Current.rec(attest_state) = NO_ATTEST_IN_PROGRESS [A]
+    - | [A] State failure condtion covered in attestation_token_verify test
+  * - offset
+    - | offset = offset >= RMM_GRANULE_SIZE
+    - |
+  * - size
+    - | size < 0
+      | size > RMM_GRANULE_SIZE - offset
+    - |
 
 Failure Priority ordering
 ~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -2296,25 +2318,14 @@ Argument list
   :widths: 25 75
 
   * - Input parameters
-    - Valid VaGlues
-  * - addr
-    - | addr= 4K_ALIGNED
-      | addr = within_permissible_ipa (< 2^(IPA_WIDTH - 1))
+    - Valid Values
   * - challenge_[0:7]
     - Doubleword n of the challenge value (0 <= n <= 7)
 
 Failure conditon testing
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. list-table::
-  :widths: 20 40 40
-
-  * - Input parameters
-    - Input Values
-    - Remarks
-  * - addr
-    - addr = unaligned_addr, >= 2**(IPA_WIDTH - 1)
-    -
+This command has no failure conditions.
 
 Failure Priority ordering
 ~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -2327,18 +2338,44 @@ Observability
 
   * - Footprint
     - Verification
-  * - Command Failure
-    -
-  * - addr.owner.rec(attest_state)
-    - Execute RSI_ATTESTATION_TOKEN_CONTINUE --> Expect RSI_ERROR_INPUT
-      (To check attest_state = NO_ATTEST_IN_PROGRESS)
   * - Command Success
     -
-  * - addr.owner.rec(attest_state)
+  * - rec.attest_state
     - Execute Valid RSI_ATTESTATION_TOKEN_INIT --> SUCCESS
 
       Excecute RSI_ATTESTATION_TOKEN_CONTINUE --> SUCCESS
       (To check attest_state = ATTEST_IN_PROGRESS)
+
+RSI_FEATURES
+^^^^^^^^^^^^
+
+Argument list
+~~~~~~~~~~~~~
+
+.. list-table::
+  :widths: 25 75
+
+  * - Input parameters
+    - Valid Values
+  * - index
+    - index of a valid feature register.
+
+
+Failure conditon testing
+~~~~~~~~~~~~~~~~~~~~~~~~
+This command has no failure conditions.
+
+Failure Priority ordering
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+This command has no failure priority orderings.
+
+Observability
+~~~~~~~~~~~~~
+This command has no footprint.
+
+In the current version of the interface, the command returns zero regardless of the index
+provided. Check if output.value = Zeros().
 
 RSI_HOST_CALL
 ^^^^^^^^^^^^^
@@ -2386,7 +2423,7 @@ Observability
   * - Command Success
     -
   * - host_call
-    - Execute RSI_HOST_CALL --> At host REC_ENTER with rec_entry.gprs[1] = val
+    - Execute RSI_HOST_CALL --> At host REC_ENTER with rec_enter.gprs[1] = val
 
       After succesful REC_ENTER chec host_call_struct.gprs[1] == val
 
@@ -2416,7 +2453,7 @@ Failure conditon testing
     - Remarks
   * - addr
     - | addr = unaligned_addr,
-      | addr >= 2**(IPA_WIDTH - 1)
+      | addr >= 2^(IPA_WIDTH - 1)
     -
 
 Failure Priority ordering
@@ -2438,13 +2475,15 @@ Argument list
 
   * - Input parameters
     - Valid Values
-  * - addr
+  * - base
     - | addr= 4K_ALIGNED
       | addr = Protected
-  * - size
-    - size = 4K_ALIGNED
+  * - top
+    - top = 4K_ALIGNED
   * - ripas
     - 0 (EMPTY) or 1 (RAM)
+  * - flags
+    - 0/1 indicating whether RIPAS change from DESTROYED state should be permitted.
 
 Failure conditon testing
 ~~~~~~~~~~~~~~~~~~~~~~~~
@@ -2458,8 +2497,11 @@ Failure conditon testing
   * - addr
     - addr = unaligned_addr
     -
-  * - size
-    - size = unaligned_size , size >
+  * - base
+    - base = unaligned_addr, base > top
+    -
+  * - top
+    - top = unaligned_addr , top > 2^(IPA_WIDTH -1)
     -
   * - ripas
     - Invalid encoding (ex: 0x2)
@@ -2471,7 +2513,18 @@ This command has no failure priority orderings.
 
 Observability
 ~~~~~~~~~~~~~
-This command has no footprint.
+
+.. list-table::
+  :widths: 25 75
+
+  * - Footprint
+    - Verification
+  * - Command Success
+    -
+  * - new_base & response
+    - | when response = RSI_ACCEPT, check if new_base == top
+      | when response = RSI_REJECT, check if new_base == base
+
 
 RSI_MEASUREMENT_EXTEND
 ^^^^^^^^^^^^^^^^^^^^^^
@@ -2607,7 +2660,16 @@ RSI_VERSION
 
 Argument list
 ~~~~~~~~~~~~~
-none
+
+.. list-table::
+  :widths: 25 75
+
+  * - Input parameters
+    - Valid Values
+  * - req
+    - Requested interface version by host.
+
+
 
 Failure conditon testing
 ~~~~~~~~~~~~~~~~~~~~~~~~
@@ -2622,6 +2684,9 @@ Observability
 ~~~~~~~~~~~~~
 This command has no footprint.
 
+* Check that outupt.lower[31:63]  & output.higher[31:63] = Zeros()
+* Upon receiving RSI_SUCCESS, check if output.lower = req as per specification, else stop executing
+  tests since ABI versions are not compatible.
 
 PSCI Commands
 -------------
@@ -2872,6 +2937,6 @@ Check for PSCI_Version.major == 1, PSCI_Version.minor = 1
 
 .. |Priority orderings| image:: ./diagrams/priority_ordering.png
 .. |Intent to sequence structure| image:: ./diagrams/intent_structure.png
-.. _Realm Management Monitor (RMM) Specification: https://developer.arm.com/documentation/den0137/1-0eac2/?lang=en
+.. _Realm Management Monitor (RMM) Specification: https://developer.arm.com/documentation/den0137/1-0eac5/?lang=en
 .. _Arm CCA: https://www.arm.com/architecture/security-features/arm-confidential-compute-architecture
 

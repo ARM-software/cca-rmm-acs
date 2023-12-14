@@ -4,12 +4,11 @@
  * SPDX-License-Identifier: BSD-3-Clause
  *
  */
-
 #include "test_database.h"
 #include "val_host_rmi.h"
-#include "val_host_command.h"
 
-void attestation_token_address_host(void)
+
+void cmd_rsi_features_host(void)
 {
     val_host_realm_ts realm;
     uint64_t ret;
@@ -26,6 +25,7 @@ void attestation_token_address_host(void)
         goto destroy_realm;
     }
 
+    /* Enter REC[0]  */
     ret = val_host_rmi_rec_enter(realm.rec[0], realm.run[0]);
     if (ret)
     {
@@ -36,6 +36,7 @@ void attestation_token_address_host(void)
 
     val_set_status(RESULT_PASS(VAL_SUCCESS));
 
+    /* Free test resources */
 destroy_realm:
     return;
 }

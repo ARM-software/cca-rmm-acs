@@ -19,7 +19,7 @@ uint32_t pal_terminate_simulation(void)
  * @return : true/false
  */
 
-__attribute__((weak)) uint32_t pal_verify_signature(__attribute__ ((unused)) uint8_t *token)
+__attribute__((weak)) uint32_t pal_verify_signature(__attribute__ ((unused)) uint64_t *token)
 {
     return PAL_SUCCESS;
 }

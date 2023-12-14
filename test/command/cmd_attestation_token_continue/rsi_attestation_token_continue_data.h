@@ -8,8 +8,11 @@
 #include "val_rmm.h"
 
 enum test_intent {
-    ADDR = 0X0,
-    STATE = 0X1
+    ADDR_ALIGN = 0X0,
+    ADDR_BOUND = 0X1,
+    OFFSET_BOUND = 0X2,
+    SIZE_OVERFLOW = 0X3,
+    SIZE_BOUND = 0X4,
 };
 
 struct stimulus {
@@ -20,12 +23,24 @@ struct stimulus {
 };
 
 static struct stimulus test_data[] = {
-    {.msg = "addr",
-    .abi = RSI_MEASUREMENT_EXTEND,
-    .label = ADDR,
+    {.msg = "addr_align",
+    .abi = RSI_ATTESTATION_TOKEN_CONTINUE,
+    .label = ADDR_ALIGN,
     .status = RSI_ERROR_INPUT},
-    {.msg = "state",
-    .abi = RSI_MEASUREMENT_EXTEND,
-    .label = STATE,
-    .status = RSI_ERROR_STATE}
+    {.msg = "addr_bound",
+    .abi = RSI_ATTESTATION_TOKEN_CONTINUE,
+    .label = ADDR_BOUND,
+    .status = RSI_ERROR_INPUT},
+    {.msg = "offset_bound",
+    .abi = RSI_ATTESTATION_TOKEN_CONTINUE,
+    .label = OFFSET_BOUND,
+    .status = RSI_ERROR_INPUT},
+    {.msg = "size_overflow",
+    .abi = RSI_ATTESTATION_TOKEN_CONTINUE,
+    .label = SIZE_OVERFLOW,
+    .status = RSI_ERROR_INPUT},
+    {.msg = "size_bound",
+    .abi = RSI_ATTESTATION_TOKEN_CONTINUE,
+    .label = SIZE_BOUND,
+    .status = RSI_ERROR_INPUT}
 };

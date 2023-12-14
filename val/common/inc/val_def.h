@@ -12,8 +12,8 @@
 #include "val_arch.h"
 
 /* ACS Version Info */
-#define ACS_MAJOR_VERSION   0
-#define ACS_MINOR_VERSION   8
+#define ACS_MAJOR_VERSION   1
+#define ACS_MINOR_VERSION   0
 
 #define IMAGE_SIZE        0x100000
 #define INVALID_MPIDR     0xffffffff

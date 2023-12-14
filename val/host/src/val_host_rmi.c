@@ -11,12 +11,20 @@
 
 /**
  *   @brief    Returns RMI version
- *   @param    void
- *   @return   Returns RMI Interface version
+ *   @param    req    - Requested interface version.
+ *   @param    output - Pointer to store lower/higher implemented interface version.
+ *   @return   Returns command return status
 **/
-uint64_t val_host_rmi_version(void)
+uint64_t val_host_rmi_version(uint64_t req, val_host_rmi_version_ts *output)
 {
-    return (val_smc_call(RMI_VERSION, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)).x0;
+    val_smc_param_ts args;
+
+    args = (val_smc_call(RMI_VERSION, req, 0, 0, 0, 0, 0, 0, 0, 0, 0));
+
+    output->lower = args.x1;
+    output->higher = args.x2;
+
+    return args.x0;
 }
 
 /**
@@ -139,12 +147,14 @@ uint64_t val_host_rmi_granule_undelegate(uint64_t addr)
  *             by providing the corresponding REC
  *   @param    calling_rec         -  PA of the calling REC
  *   @param    target_rec          -  PA of the target REC
+ *   @param    status              -  Status of the PSCI request
  *   @return   Returns command return status
 **/
 uint64_t val_host_rmi_psci_complete(uint64_t calling_rec,
-                 uint64_t target_rec)
+                 uint64_t target_rec, uint64_t status)
 {
-    return (val_smc_call(RMI_PSCI_COMPLETE, calling_rec, target_rec, 0, 0, 0, 0, 0, 0, 0, 0)).x0;
+    return (val_smc_call(RMI_PSCI_COMPLETE, calling_rec, target_rec, status,
+                                                       0, 0, 0, 0, 0, 0, 0)).x0;
 }
 
 /**
@@ -266,7 +276,7 @@ uint64_t val_host_rmi_rec_destroy(uint64_t rec)
 uint64_t val_host_rmi_rec_enter(uint64_t rec, uint64_t run_ptr)
 {
     val_host_rec_run_ts *run = (val_host_rec_run_ts *)run_ptr;
-    val_host_rec_entry_flags_ts rec_entry_flags;
+    val_host_rec_enter_flags_ts rec_enter_flags;
     uint64_t ret;
 
 rec_enter:
@@ -280,9 +290,9 @@ rec_enter:
         (run->exit.exit_reason == RMI_EXIT_HOST_CALL) &&
         (run->exit.imm == VAL_REALM_PRINT_MSG))
     {
-        rec_entry_flags.emul_mmio = 0;
-        rec_entry_flags.inject_sea = 0;
-        val_memcpy(&run->entry.flags, &rec_entry_flags, sizeof(rec_entry_flags));
+        rec_enter_flags.emul_mmio = 0;
+        rec_enter_flags.inject_sea = 0;
+        val_memcpy(&run->enter.flags, &rec_enter_flags, sizeof(rec_enter_flags));
         val_host_realm_printf_msg_service();
         goto rec_enter;
     }

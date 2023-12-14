@@ -6,9 +6,11 @@
  */
 #include "exception_common_realm.h"
 
+#define CONTEXT_ID 0x5555
+
 void exception_rec_exit_psci_realm(void)
 {
-    uint64_t index = 0, affinity = 0, mpidr = 0;
+    uint64_t index = 0, affinity = 0, mpidr = 0, ret;
     int lGPRS[EXCEPTION_TEST_MAX_GPRS];
     int gGPRS[EXCEPTION_TEST_MAX_GPRS];
 
@@ -105,6 +107,17 @@ void exception_rec_exit_psci_realm(void)
             goto test_exit;
         }
     }
+
+    /* Check for host rejecting PSCI request */
+    ret = val_psci_cpu_on(affinity, val_realm_get_secondary_cpu_entry(), CONTEXT_ID);
+    if (ret != PSCI_E_DENIED)
+    {
+        LOG(ERROR, "\n\tInvalid PSCI return code : ret = 0x%x \n", ret, 0);
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(2)));
+        goto test_exit;
+    }
+
+
     LOG(ALWAYS, "\tREALM PSCI Trigger checks are verified \n", 0, 0);
 
 test_exit:

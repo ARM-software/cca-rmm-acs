@@ -23,7 +23,7 @@ void exception_rec_exit_hostcall_realm(void)
     /* testing the rec exit due to hostcall */
     val_realm_rsi_host_params(&realm_host_params);
 
-    /* Compare the rec_entry and hostcall GPRS values[0-30] */
+    /* Compare the rec_enter and hostcall GPRS values[0-30] */
     for (index = 0; index < RSI_HOST_CALL_NR_GPRS; index++)
     {
         if (realm_host_params.gprs[index] != HOST_GPRS_DATA)

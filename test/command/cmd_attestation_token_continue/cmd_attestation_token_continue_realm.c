@@ -10,17 +10,25 @@
 #include "val_realm_framework.h"
 #include "rsi_attestation_token_continue_data.h"
 
+__attribute__((aligned (PAGE_SIZE))) uint64_t token[MAX_REALM_CCA_TOKEN_SIZE/8] = {0,};
+uint64_t max_size;
 static struct argument_store {
     uint64_t addr_valid;
+    uint64_t offset_valid;
+    uint64_t size_valid;
 } c_args;
 
 struct arguments {
     uint64_t addr;
+    uint64_t offset;
+    uint64_t size;
 };
 
 static uint64_t valid_argument_prep_sequence(void)
 {
-    __attribute__((aligned (PAGE_SIZE))) uint8_t token[4096] = {0,};
+    val_smc_param_ts args = {0,};
+    uint64_t offset = 0;
+    uint64_t *granule = token;
     uint64_t challenge[8] = {0xb4ea40d262abaf22,
                              0xe8d966127b6d78e2,
                              0x7ce913f20b954277,
@@ -29,63 +37,52 @@ static uint64_t valid_argument_prep_sequence(void)
                              0xd52c4fca64420f43,
                              0xb75961661d52e8ce,
                              0xc7f17650fe9fca60};
-    uint64_t ret;
 
-    ret = val_realm_rsi_attestation_token_init((uint64_t)token, challenge[0], challenge[1],
-                                                  challenge[2], challenge[3], challenge[4],
-                                                 challenge[5], challenge[6], challenge[7]);
-    if (ret)
+    args = val_realm_rsi_attestation_token_init(challenge[0], challenge[1],
+                                                challenge[2], challenge[3], challenge[4],
+                                                challenge[5], challenge[6], challenge[7]);
+    if (args.x0)
     {
-        LOG(ERROR, "\tToken init failed, ret=%x\n", ret, 0);
+        LOG(ERROR, "\tToken init failed, ret=%x\n", args.x0, 0);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(1)));
         return VAL_TEST_PREP_SEQ_FAILED;
     }
-    c_args.addr_valid = (uint64_t)token;
+
+    max_size = args.x1;
+    c_args.addr_valid = (uint64_t)granule;
+    c_args.offset_valid = offset;
+    c_args.size_valid = PAGE_SIZE - offset;
 
     return VAL_SUCCESS;
 
 }
 
-static uint64_t addr_prep_sequence(uint64_t addr)
+static uint64_t unaligned_addr_prep_sequence(uint64_t addr)
 {
     return addr + 1;
 }
 
-static uint64_t state_prep_sequence(void)
+static uint64_t address_unprotected_prep_sequence(void)
 {
-    val_smc_param_ts args = {0,};
-    __attribute__((aligned (PAGE_SIZE))) uint8_t token[4096] = {0,};
-    uint64_t challenge[8] = {0xb4ea40d262abaf22,
-                             0xe8d966127b6d78e2,
-                             0x7ce913f20b954277,
-                             0x3155ff12580f9e60,
-                             0x8a3843cb95120bf6,
-                             0xd52c4fca64420f43,
-                             0xb75961661d52e8ce,
-                             0xc7f17650fe9fca60};
-    uint64_t ret;
+    uint64_t ipa_width;
 
-    ret = val_realm_rsi_attestation_token_init((uint64_t)token, challenge[0], challenge[1],
-                                                  challenge[2], challenge[3], challenge[4],
-                                                 challenge[5], challenge[6], challenge[7]);
+    ipa_width = val_realm_get_ipa_width();
+    return 1ULL << (ipa_width - 1);
+}
 
-    if (ret)
-    {
-        LOG(ERROR, "\tToken init failed, ret=%x\n", ret, 0);
-        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(1)));
-    }
+static uint64_t offset_bound_prep_sequence(uint64_t offset)
+{
+    return offset + PAGE_SIZE + 1;
+}
 
-    do {
-        args = val_realm_rsi_attestation_token_continue((uint64_t)token);
-    } while (args.x0 == RSI_ERROR_INCOMPLETE);
+static uint64_t size_overflow_prep_sequence(void)
+{
+    return ~0ULL;
+}
 
-    if (args.x0)
-    {
-        LOG(ERROR, "\tToken continue failed, ret=%x\n", args.x0, 0);
-        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(3)));
-    }
-
-    return (uint64_t)token;
+static uint64_t size_bound_prep_sequence(uint64_t size)
+{
+    return size + 1;
 }
 
 static uint64_t intent_to_seq(struct stimulus *test_data, struct arguments *args)
@@ -94,16 +91,37 @@ static uint64_t intent_to_seq(struct stimulus *test_data, struct arguments *args
 
     switch (label)
     {
-        case ADDR:
-            args->addr = addr_prep_sequence(c_args.addr_valid);
+        case ADDR_ALIGN:
+            args->addr = unaligned_addr_prep_sequence(c_args.addr_valid);
+            args->offset = c_args.offset_valid;
+            args->size = c_args.size_valid;
             break;
 
-        case STATE:
-            args->addr = state_prep_sequence();
+        case ADDR_BOUND:
+            args->addr = address_unprotected_prep_sequence();
+            args->offset = c_args.offset_valid;
+            args->size = c_args.size_valid;
+            break;
+
+        case OFFSET_BOUND:
+            args->addr = c_args.addr_valid;
+            args->offset = offset_bound_prep_sequence(c_args.offset_valid);
+            args->size = c_args.size_valid;
+            break;
+
+        case SIZE_OVERFLOW:
+            args->addr = c_args.addr_valid;
+            args->offset = c_args.offset_valid;
+            args->size = size_overflow_prep_sequence();
+            break;
+
+        case SIZE_BOUND:
+            args->addr = c_args.addr_valid;
+            args->offset = c_args.offset_valid;
+            args->size = size_bound_prep_sequence(c_args.size_valid);
             break;
 
         default:
-            // set status to failure
             LOG(ERROR, "\n\tUnknown intent label encountered\n", 0, 0);
             return VAL_ERROR;
     }
@@ -113,9 +131,9 @@ static uint64_t intent_to_seq(struct stimulus *test_data, struct arguments *args
 
 void cmd_attestation_token_continue_realm(void)
 {
-    uint64_t ret;
+    uint64_t ret, size;
     struct arguments args;
-    uint64_t i;
+    uint64_t i, len;
     val_smc_param_ts cmd_ret;
 
     /* Prepare valid arguments */
@@ -132,28 +150,43 @@ void cmd_attestation_token_continue_realm(void)
 
         if (intent_to_seq(&test_data[i], &args)) {
             LOG(ERROR, "\n\tIntent to sequence failed\n", 0, 0);
-            val_set_status(RESULT_FAIL(VAL_ERROR_POINT(1)));
+            val_set_status(RESULT_FAIL(VAL_ERROR_POINT(2)));
             goto exit;
         }
 
-        cmd_ret = val_realm_rsi_attestation_token_continue(args.addr);
+        cmd_ret = val_realm_rsi_attestation_token_continue(args.addr, args.offset, args.size, &len);
         ret = cmd_ret.x0;
         if (ret != test_data[i].status)
         {
             LOG(ERROR, "\n\tUnexpected Command Return Status\n ret status : 0x%x \n", ret, 0);
-            val_set_status(RESULT_FAIL(VAL_ERROR_POINT(2)));
+            val_set_status(RESULT_FAIL(VAL_ERROR_POINT(3)));
             goto exit;
         }
     }
 
     LOG(TEST, "\n\tPositive Observability Check\n", 0, 0);
 
-    cmd_ret = val_realm_rsi_attestation_token_continue(c_args.addr_valid);
-    ret = cmd_ret.x0;
-    if (ret)
+    do {
+        uint64_t offset = c_args.offset_valid;
+        do {
+            size = PAGE_SIZE - offset;
+            cmd_ret = val_realm_rsi_attestation_token_continue(c_args.addr_valid, offset,
+                                                                             size, &len);
+            offset += len;
+        } while (cmd_ret.x0 == RSI_ERROR_INCOMPLETE && offset < PAGE_SIZE);
+
+        if (cmd_ret.x0 == RSI_ERROR_INCOMPLETE)
+        {
+            c_args.addr_valid += PAGE_SIZE;
+        }
+
+    } while ((cmd_ret.x0 == RSI_ERROR_INCOMPLETE) &&
+             (c_args.addr_valid < (uint64_t)token + max_size));
+
+    if (cmd_ret.x0)
     {
-        LOG(ERROR, "\n\tPositive Observability failed. Ret = 0x%x\n", ret, 0);
-        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(3)));
+        LOG(ERROR, "\tPositive Observability Check failed, ret=%x\n", cmd_ret.x0, 0);
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(4)));
         goto exit;
     }
 

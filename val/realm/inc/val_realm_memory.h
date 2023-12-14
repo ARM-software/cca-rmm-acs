@@ -35,5 +35,6 @@ void val_realm_xlat_add_mmap(void);
 int val_realm_pgt_create(val_memory_region_descriptor_ts *mem_desc);
 void val_realm_update_xlat_ctx_ias_oas(uint64_t ias, uint64_t oas);
 void val_realm_read_attributes(uint64_t va, uint32_t *attr);
+int val_realm_update_attributes(uint64_t size, uint64_t va, uint32_t attr);
 
 #endif /* _VAL_REALM_MEMORY_H_ */

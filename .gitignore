@@ -11,4 +11,3 @@ log.*
 #Ignore build directory
 build/
 BUILD/
-autogen/script/*/output/

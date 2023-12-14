@@ -11,7 +11,7 @@ void exception_rec_exit_psci_host(void)
     val_host_realm_ts realm = {0,};
     uint64_t ret = 0;
     val_host_rec_exit_ts *rec_exit = NULL;
-    val_host_rec_entry_ts *rec_entry = NULL;
+    val_host_rec_enter_ts *rec_enter = NULL;
     uint64_t ec = 0;
     uint64_t imm = 0;
 
@@ -30,7 +30,7 @@ void exception_rec_exit_psci_host(void)
     }
 
     rec_exit =  &(((val_host_rec_run_ts *)realm.run[0])->exit);
-    rec_entry = &(((val_host_rec_run_ts *)realm.run[0])->entry);
+    rec_enter = &(((val_host_rec_run_ts *)realm.run[0])->enter);
 
    /* REC enter for the first time*/
     ret = val_host_rmi_rec_enter(realm.rec[0], realm.run[0]);
@@ -52,8 +52,8 @@ void exception_rec_exit_psci_host(void)
     else
     {
         /* corrupting the gpr value*/
-        rec_entry->gprs[5] = 0;
-        exception_copy_exit_to_entry(rec_entry, rec_exit);
+        rec_enter->gprs[5] = 0;
+        exception_copy_exit_to_entry(rec_enter, rec_exit);
         LOG(TEST, "\tRec Exit is dueto  psci, ret=%x\n", ret, 0);
         /* if gprs[1] holds the mpidr value then need to send the psci complete message*/
         if (
@@ -61,7 +61,7 @@ void exception_rec_exit_psci_host(void)
         )
         {
             /* Complete pending PSCI */
-            ret = val_host_rmi_psci_complete(realm.rec[0], realm.rec[1]);
+            ret = val_host_rmi_psci_complete(realm.rec[0], realm.rec[1], PSCI_E_SUCCESS);
             if (ret)
             {
                 LOG(ERROR, "\tRMMI PSCI COMPLETE Failed, ret=%x\n", ret, 0);
@@ -73,18 +73,45 @@ void exception_rec_exit_psci_host(void)
 
         /* Resume back REC[0] execution */
         ret = val_host_rmi_rec_enter(realm.rec[0], realm.run[0]);
-        if (ret || (VAL_SUCCESS !=\
-            val_host_check_realm_exit_host_call((val_host_rec_run_ts *)realm.run[0])))
+        if (ret)
         {
             LOG(ERROR, "\tRec enter(after psci complete) failed, ret=%x\n", ret, 0);
             val_set_status(RESULT_FAIL(VAL_ERROR_POINT(4)));
             goto destroy_realm;
-        } else
-        {
-            LOG(TEST, "\tPSCI_AFFINITY_INFO verified, ret=%x\n", ret, 0);
-            val_set_status(RESULT_PASS(VAL_SUCCESS));
         }
+        LOG(TEST, "\tPSCI_AFFINITY_INFO verified, ret=%x\n", ret, 0);
     }
+
+    /* Check that REC exit was due to PSCI_CPU_ON */
+    if (val_host_check_realm_exit_psci((val_host_rec_run_ts *)realm.run[0],
+                                PSCI_CPU_ON_AARCH64))
+    {
+        LOG(ERROR, "\tREC exit not due to PSCI_CPU_ON\n", 0, 0);
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(5)));
+        goto destroy_realm;
+    }
+
+    /* Deny PSCI Request by returning PSCI_DENIED*/
+    ret = val_host_rmi_psci_complete(realm.rec[0], realm.rec[1], PSCI_E_DENIED);
+    if (ret)
+    {
+        LOG(ERROR, "\t PSCI_COMPLETE Failed, ret=%x\n", ret, 0);
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(6)));
+        goto destroy_realm;
+    }
+
+    /* Enter REC[0]*/
+    ret = val_host_rmi_rec_enter(realm.rec[0], realm.run[0]);
+    if (ret)
+    {
+        LOG(ERROR, "\tRec enter failed, ret=%x\n", ret, 0);
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(7)));
+        goto destroy_realm;
+    }
+
+    LOG(TEST, "\tHost status for PSCI_CPU_ON verified, ret=%x\n", ret, 0);
+
+    val_set_status(RESULT_PASS(VAL_SUCCESS));
 
 destroy_realm:
     return;

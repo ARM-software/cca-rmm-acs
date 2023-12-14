@@ -31,6 +31,20 @@ struct arguments {
     uint32_t context_id;
 };
 
+static uint64_t mpidr_runnable_prep_sequence(void)
+{
+    uint64_t ret;
+    /* Power on REC[1] for execution */
+    ret = val_psci_cpu_on(MPIDR_RUNNABLE, val_realm_get_secondary_cpu_entry(), CONTEXT_ID);
+    if (ret)
+    {
+        LOG(ERROR, "\n\tPSCI CPU ON failed with ret status : 0x%x \n", ret, 0);
+        return VAL_TEST_PREP_SEQ_FAILED;
+    }
+
+    return MPIDR_RUNNABLE;
+}
+
 static void valid_argument_prep_sequence(void)
 {
     c_args.target_cpu_valid = MPIDR_NOT_RUNNABLE;
@@ -57,7 +71,9 @@ static uint64_t intent_to_seq(struct stimulus *test_data, struct arguments *args
             break;
 
         case REC_RUNNABLE:
-            args->target_cpu = MPIDR_RUNNABLE;
+            args->target_cpu = mpidr_runnable_prep_sequence();
+            if (args->target_cpu == VAL_TEST_PREP_SEQ_FAILED)
+                return VAL_ERROR;
             args->entry_point_address =  c_args.entry_point_address_valid;
             args->context_id = c_args.context_id_valid;
             break;
@@ -101,7 +117,6 @@ void cmd_cpu_on_realm(void)
             goto exit;
         }
     }
-
 
     LOG(TEST, "\n\tPositive Observability Check\n", 0, 0);
 

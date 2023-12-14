@@ -784,9 +784,6 @@ void mmap_add_region_ctx(xlat_ctx_t *ctx, const mmap_region_t *mm)
 	if (mm->size == 0U)
 		return;
 
-	/* Static regions must be added before initializing the xlat tables. */
-	assert(!ctx->initialized);
-
 	ret = mmap_add_region_check(ctx, mm);
 	if (ret != 0) {
 		//ERROR("mmap_add_region_check() failed. error %d\n", ret);
@@ -1188,7 +1185,6 @@ void xlat_setup_dynamic_ctx(xlat_ctx_t *ctx, unsigned long long pa_max,
 void init_xlat_tables_ctx(xlat_ctx_t *ctx)
 {
 	assert(ctx != NULL);
-	assert(!ctx->initialized);
 	assert((ctx->xlat_regime == EL3_REGIME) ||
 	       (ctx->xlat_regime == EL2_REGIME) ||
 	       (ctx->xlat_regime == EL1_EL0_REGIME));

@@ -136,13 +136,13 @@ static uint64_t intent_to_seq(struct stimulus *test_data, struct arguments *args
             args->addr = c_args_invalid.rd_gran;
             break;
 
-        case ADDR_PAS_REALM:
+        case GRANULE_GPT_REALM:
             args->addr = g_delegated_prep_sequence();
             if (args->addr == VAL_TEST_PREP_SEQ_FAILED)
                 return VAL_ERROR;
             break;
 
-        case ADDR_PAS_SECURE:
+        case GRANULE_GPT_SECURE:
             args->addr = g_secure_prep_sequence();
             break;
 

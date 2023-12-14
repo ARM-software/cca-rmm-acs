@@ -12,6 +12,7 @@ void cmd_rsi_version_host(void)
 {
     val_host_realm_ts realm;
     uint64_t ret;
+    val_host_rec_exit_ts *rec_exit = NULL;
 
     val_memset(&realm, 0, sizeof(realm));
 
@@ -33,6 +34,12 @@ void cmd_rsi_version_host(void)
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(2)));
         goto destroy_realm;
     }
+
+    rec_exit = &(((val_host_rec_run_ts *)realm.run[0])->exit);
+
+    /* Assert in case of RSI return value is RSI_ERROR input which
+     * indicates RSI ABI Version is incompatible */
+    assert(rec_exit->gprs[0] == 0);
 
     val_set_status(RESULT_PASS(VAL_SUCCESS));
 

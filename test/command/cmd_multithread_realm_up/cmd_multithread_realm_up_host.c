@@ -45,7 +45,7 @@ void cmd_multithread_realm_up_host(void)
     }
 
     /* Complete pending PSCI  */
-    ret = val_host_rmi_psci_complete(realm.rec[0], realm.rec[1]);
+    ret = val_host_rmi_psci_complete(realm.rec[0], realm.rec[1], PSCI_E_SUCCESS);
     if (ret)
     {
         LOG(ERROR, "\tval_rmi_psci_complete, ret=%x\n", ret, 0);

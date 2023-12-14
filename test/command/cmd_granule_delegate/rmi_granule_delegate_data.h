@@ -16,8 +16,8 @@ enum test_intent {
     ADDR_DATA = 0X5,
     ADDR_RTT = 0X6,
     ADDR_RD = 0X7,
-    ADDR_PAS_REALM = 0X8,
-    ADDR_PAS_SECURE = 0X9
+    GRANULE_GPT_REALM = 0X8,
+    GRANULE_GPT_SECURE = 0X9
 };
 
 struct stimulus {
@@ -69,14 +69,14 @@ static struct stimulus test_data[] = {
     .label = ADDR_RD,
     .status = RMI_ERROR_INPUT,
     .index = 0},
-    {.msg = "gran_pas",
+    {.msg = "gran_gpt",
     .abi = RMI_GRANULE_DELEGATE,
-    .label = ADDR_PAS_REALM,
+    .label = GRANULE_GPT_REALM,
     .status = RMI_ERROR_INPUT,
     .index = 0},
-    {.msg = "gran_pas",
+    {.msg = "gran_gpt",
     .abi = RMI_GRANULE_DELEGATE,
-    .label = ADDR_PAS_SECURE,
+    .label = GRANULE_GPT_SECURE,
     .status = RMI_ERROR_INPUT,
     .index = 0}
 };

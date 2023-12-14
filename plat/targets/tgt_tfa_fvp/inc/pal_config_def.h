@@ -181,4 +181,7 @@
 #define PLAT_VIRT_ADDR_SPACE_SIZE (1ULL << PGT_IAS)
 #define PLAT_PHY_ADDR_SPACE_SIZE  (1ULL << PAGT_OAS)
 
+/* Maximum size of Realm CCA token */
+#define MAX_REALM_CCA_TOKEN_SIZE    0x1000
+
 #endif /* _PAL_CONFIG_H_ */

@@ -13,7 +13,7 @@ void mm_protected_ipa_boundary_host(void)
 {
     val_host_realm_ts realm;
     uint64_t ret;
-    val_host_rec_entry_ts *rec_entry = NULL;
+    val_host_rec_enter_ts *rec_enter = NULL;
     val_host_rec_exit_ts *rec_exit = NULL;
     uint64_t protected_ipa, unprotected_ipa;
     uint64_t protected_src_pa, protected_target_pa;
@@ -84,7 +84,7 @@ void mm_protected_ipa_boundary_host(void)
         goto destroy_realm;
     }
 
-    rec_entry = &(((val_host_rec_run_ts *)realm.run[0])->entry);
+    rec_enter = &(((val_host_rec_run_ts *)realm.run[0])->enter);
     rec_exit = &(((val_host_rec_run_ts *)realm.run[0])->exit);
     /* REC enter REC[0] execution */
     ret = val_host_rmi_rec_enter(realm.rec[0], realm.run[0]);
@@ -109,7 +109,7 @@ void mm_protected_ipa_boundary_host(void)
     }
 
     /* Resume back REC[0] execution */
-    rec_entry->gprs[1] = protected_ipa;
+    rec_enter->gprs[1] = protected_ipa;
     /* Test intent: Protected IPA boundary check */
     ret = val_host_rmi_rec_enter(realm.rec[0], realm.run[0]);
     if (ret)

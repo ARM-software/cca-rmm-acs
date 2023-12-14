@@ -18,7 +18,7 @@ The RMM exposes the following interfaces, which are accessed via SMC instruction
 - The Realm Services Interface (RSI), which provides services used to manage resources allocated to the Realm, and to request an attestation report.
 - The Power State Coordination Interface (PSCI), which provides services used to control power states of VPEs within a Realm.
 
-For more information on RMM refer [RMM Specification](https://developer.arm.com/documentation/den0137/1-0eac2/?lang=en)
+For more information on RMM refer [RMM Specification](https://developer.arm.com/documentation/den0137/1-0eac5/?lang=en)
 
 ## Architecture Compliance Suite
 
@@ -29,11 +29,11 @@ This suite is not a substitute for design verification.
 
 For more information on Architecture Compliance Suite see [Validation Methodology](<./docs/Arm CCA RMM Architecture Compliance Suite Validation Methodology.pdf>) document.
 
-## This release
-- Release Version - 0.8
-- Code Quality: Beta - ACS is being developed, please use this opportunity to ameliorate.
-- The tests are written for Arm RMM 1.0-EAC2 specification version.
-- For information about the test coverage scenarios that are implemented in the current release of ACS and the scenarios that are planned for the future releases, see [docs](./docs/).
+## Release details
+- Release Version - 1.0
+- Code Quality: EAC
+- The tests are written for Arm RMM 1.0-EAC5 specification version.
+- For information about the test coverage scenarios that are implemented in ACS, see [docs](./docs/).
 - The [Change log](./docs/change-log.rst) has details of the features implemented by this version of CCA-RMM-ACS.
 
 **Note:** The current release has been tested on tgt_tfa_fvp reference platforms with GNUARM Compiler.
@@ -55,7 +55,7 @@ The following tools are required to build the ACS: <br />
 - CMake 3.19 or later version from https://cmake.org/download/.
 - srecord-1.64 : srec_cat utility to concatenate binaries
 - Python 3.7.1 or later version
-- Cross-compiler toolchain supporting AArch64 target: GCC >= 10.2-2020.11 can be downloaded from [Arm Developer website](https://developer.arm.com/tools-and-software/open-source-software/developer-tools/gnu-toolchain/gnu-a/downloads)
+- Cross-compiler toolchain supporting AArch64 target: GCC >= 12.2 can be downloaded from [Arm Developer website](https://developer.arm.com/downloads/-/arm-gnu-toolchain-downloads)
 
 ### Download source
 

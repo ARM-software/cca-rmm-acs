@@ -38,7 +38,12 @@ typedef struct {
     SET_MEMBER_RSI(unsigned long hash_algo, 8, 0x1000);	/* Offset 8 */
 } val_realm_rsi_realm_config_ts;
 
-uint64_t val_realm_rsi_version(void);
+typedef struct {
+    uint64_t lower;
+    uint64_t higher;
+} val_realm_rsi_version_ts;
+
+uint64_t val_realm_rsi_version(uint64_t req, val_realm_rsi_version_ts *output);
 uint64_t val_realm_rsi_realm_config(uint64_t buff);
 uint64_t val_realm_rsi_host_call(uint16_t imm);
 val_realm_rsi_host_call_t *val_realm_rsi_host_call_ripas(uint16_t imm);
@@ -48,8 +53,9 @@ val_smc_param_ts val_realm_rsi_ipa_state_set(uint64_t base, uint64_t size, uint8
                                                                          uint64_t flags);
 val_smc_param_ts val_realm_rsi_ipa_state_get(uint64_t ipa_base);
 uint64_t val_realm_rsi_host_params(val_realm_rsi_host_call_t *realm_host_params);
-val_smc_param_ts val_realm_rsi_attestation_token_continue(uint64_t addr);
-uint64_t val_realm_rsi_attestation_token_init(uint64_t addr, uint64_t challenge_0,
+val_smc_param_ts val_realm_rsi_attestation_token_continue(uint64_t addr, uint64_t offset,
+                                                           uint64_t size, uint64_t *len);
+val_smc_param_ts val_realm_rsi_attestation_token_init(uint64_t challenge_0,
                  uint64_t challenge_1, uint64_t challenge_2, uint64_t challenge_3,
                  uint64_t challenge_4, uint64_t challenge_5, uint64_t challenge_6,
                                                             uint64_t challenge_7);
@@ -58,4 +64,6 @@ uint64_t val_realm_rsi_measurement_extend(uint64_t index, uint64_t size, uint64_
                                      uint64_t value_4, uint64_t value_5, uint64_t value_6,
                                                                         uint64_t value_7);
 val_smc_param_ts val_realm_rsi_measurement_read(uint64_t index);
+uint64_t val_realm_rsi_features(uint64_t index, uint64_t *value);
+
 #endif /* _VAL_REALM_RMI_H_ */
