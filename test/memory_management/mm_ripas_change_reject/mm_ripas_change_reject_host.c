@@ -13,7 +13,7 @@ void mm_ripas_change_reject_host(void)
 {
     val_host_realm_ts realm;
     uint64_t ret;
-    val_host_rec_entry_ts *rec_entry = NULL;
+    val_host_rec_enter_ts *rec_enter = NULL;
     val_host_rec_exit_ts *rec_exit = NULL;
     uint64_t ripas_ipa, ripas_size = 0x3000;
     uint64_t phys;
@@ -61,7 +61,7 @@ void mm_ripas_change_reject_host(void)
         goto destroy_realm;
     }
 
-    rec_entry = &(((val_host_rec_run_ts *)realm.run[0])->entry);
+    rec_enter = &(((val_host_rec_run_ts *)realm.run[0])->enter);
     /* Enter REC[0] execution */
     ret = val_host_rmi_rec_enter(realm.rec[0], realm.run[0]);
     if (ret)
@@ -78,8 +78,8 @@ void mm_ripas_change_reject_host(void)
 
     /* Resume back REC[0] execution */
     ripas_ipa = PROTECTED_IPA;
-    rec_entry->gprs[1] = ripas_ipa;
-    rec_entry->gprs[2] = ripas_size;
+    rec_enter->gprs[1] = ripas_ipa;
+    rec_enter->gprs[2] = ripas_size;
     ret = val_host_rmi_rec_enter(realm.rec[0], realm.run[0]);
     if (ret)
     {

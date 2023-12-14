@@ -16,7 +16,7 @@ void mm_ha_hd_access_host(void)
     val_host_realm_ts realm;
     uint64_t ret;
     uint64_t index, mem_attr;
-    val_host_rec_entry_ts *rec_entry = NULL;
+    val_host_rec_enter_ts *rec_enter = NULL;
     uint64_t ripas_ipa, ripas_size = 0x1000;
     uint64_t phys;
     val_data_create_ts data_create;
@@ -61,7 +61,7 @@ void mm_ha_hd_access_host(void)
         goto destroy_realm;
     }
 
-    rec_entry = &(((val_host_rec_run_ts *)realm.run[0])->entry);
+    rec_enter = &(((val_host_rec_run_ts *)realm.run[0])->enter);
     /* REC enter REC[0] execution */
     ret = val_host_rmi_rec_enter(realm.rec[0], realm.run[0]);
     if (ret)
@@ -78,7 +78,7 @@ void mm_ha_hd_access_host(void)
 
     /* Resume back REC[0] execution */
     ripas_ipa = PROTECTED_IPA;
-    rec_entry->gprs[1] = ripas_ipa;
+    rec_enter->gprs[1] = ripas_ipa;
     ret = val_host_rmi_rec_enter(realm.rec[0], realm.run[0]);
     if (ret)
     {

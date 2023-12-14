@@ -33,7 +33,12 @@ typedef struct {
     uint64_t top;
 } val_host_data_destroy_ts;
 
-uint64_t val_host_rmi_version(void);
+typedef struct {
+    uint64_t lower;
+    uint64_t higher;
+} val_host_rmi_version_ts;
+
+uint64_t val_host_rmi_version(uint64_t req, val_host_rmi_version_ts *output);
 uint64_t val_host_rmi_features(uint64_t index, uint64_t *value);
 uint64_t val_host_rmi_data_create(uint64_t rd, uint64_t data,
                uint64_t ipa, uint64_t src, uint64_t flags);
@@ -42,7 +47,7 @@ uint64_t val_host_rmi_data_create_unknown(uint64_t rd,
 uint64_t val_host_rmi_granule_delegate(uint64_t addr);
 uint64_t val_host_rmi_granule_undelegate(uint64_t addr);
 uint64_t val_host_rmi_psci_complete(uint64_t calling_rec,
-                 uint64_t target_rec);
+                 uint64_t target_rec, uint64_t status);
 uint64_t val_host_rmi_realm_activate(uint64_t rd);
 uint64_t val_host_rmi_realm_create(uint64_t rd, uint64_t params_ptr);
 uint64_t val_host_rmi_realm_destroy(uint64_t rd);

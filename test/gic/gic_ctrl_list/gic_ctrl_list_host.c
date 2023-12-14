@@ -10,15 +10,15 @@
 
 static bool host_realm_handle_irq(val_host_realm_ts *realm, uint32_t irq, uint32_t state)
 {
-    val_host_rec_entry_ts *rec_entry = NULL;
+    val_host_rec_enter_ts *rec_enter = NULL;
     val_host_rec_exit_ts *rec_exit = NULL;
     uint64_t ret;
 
-    rec_entry = &(((val_host_rec_run_ts *)realm->run[0])->entry);
+    rec_enter = &(((val_host_rec_run_ts *)realm->run[0])->enter);
     rec_exit = &(((val_host_rec_run_ts *)realm->run[0])->exit);
 
     /* Inject interrupt to realm using GIC list registers */
-    rec_entry->gicv3_lrs[0] = ((uint64_t)state << GICV3_LR_STATE) | (0ULL << GICV3_LR_HW) |
+    rec_enter->gicv3_lrs[0] = ((uint64_t)state << GICV3_LR_STATE) | (0ULL << GICV3_LR_HW) |
                                 (1ULL << GICV3_LR_GROUP) | irq;
     /* Enter REC[0]  */
     ret = val_host_rmi_rec_enter(realm->rec[0], realm->run[0]);
@@ -65,7 +65,7 @@ static bool host_realm_handle_irq(val_host_realm_ts *realm, uint32_t irq, uint32
     }
 
     /* Reset the GIC list register */
-    rec_entry->gicv3_lrs[0] = 0x0;
+    rec_enter->gicv3_lrs[0] = 0x0;
     return VAL_SUCCESS;
 }
 

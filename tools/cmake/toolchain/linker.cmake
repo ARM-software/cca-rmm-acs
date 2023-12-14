@@ -15,7 +15,7 @@ set(GNUARM_OBJCOPY "${CROSS_COMPILE}objcopy" CACHE FILEPATH "The GNUARM objcopy"
 set(GNUARM_OBJDUMP "${CROSS_COMPILE}objdump" CACHE FILEPATH "The GNUARM objdump" FORCE)
 
 if(${ENABLE_PIE})
-    set(LINKER_PIE_SWITCH "-pie --no-dynamic-linker")
+    set(LINKER_PIE_SWITCH "-pie" "--no-dynamic-linker")
 else()
     set(LINKER_PIE_SWITCH "")
 endif()
@@ -26,9 +26,24 @@ else()
     set(LINKER_DEBUG_OPTIONS "")
 endif()
 
-set(GNUARM_LINKER_FLAGS "--fatal-warnings  ${LINKER_PIE_SWITCH} ${LINKER_DEBUG_OPTIONS} -O1 --gc-sections --build-id=none")
+set(GNUARM_LINKER_FLAGS "--fatal-warnings" ${LINKER_PIE_SWITCH} ${LINKER_DEBUG_OPTIONS} "-O1" "--gc-sections" "--build-id=none")
 set(GNUARM_OBJDUMP_FLAGS    "-dSx")
 set(GNUARM_OBJCOPY_FLAGS    "-Obinary")
+
+# Get GCC version
+execute_process(
+    COMMAND ${CROSS_COMPILE}gcc --version
+    OUTPUT_VARIABLE GCC_VERSION_OUTPUT
+)
+
+string(REGEX MATCH "[0-9]+\\.[0-9]+\\.[0-9]+" GCC_VERSION ${GCC_VERSION_OUTPUT})
+string(REGEX MATCH "([0-9]+)\\.[0-9]+\\.[0-9]+" _ ${GCC_VERSION})
+set(GCC_MAJOR_VERSION ${CMAKE_MATCH_1})
+
+# Suppress RWX segment warning for GCC>=12
+if(GCC_MAJOR_VERSION GREATER_EQUAL 12)
+    set(GNUARM_LINKER_FLAGS ${GNUARM_LINKER_FLAGS} "--no-warn-rwx-segment")
+endif()
 
 function (create_executable EXE_NAME OUTPUT_DIR TEST)
     set(SCATTER_INPUT_FILE "${ROOT_DIR}/tools/cmake/${EXE_NAME}/image.ld.S")
@@ -42,7 +57,7 @@ function (create_executable EXE_NAME OUTPUT_DIR TEST)
 
     # Link the objects
     add_custom_command(OUTPUT ${EXE_NAME}${TEST}.elf
-                    COMMAND ${GNUARM_LINKER} ${CMAKE_LINKER_FLAGS} -T ${SCATTER_OUTPUT_FILE} -o ${OUTPUT_DIR}/${EXE_NAME}.elf ${VAL_LIB}.a ${PAL_LIB}.a ${TEST_LIB}.a ${VAL_LIB}.a ${PAL_LIB}.a ${PAL_OBJ_LIST}
+                    COMMAND ${GNUARM_LINKER} ${CMAKE_LINKER_FLAGS} ${GNUARM_LINKER_FLAGS} -T ${SCATTER_OUTPUT_FILE} -o ${OUTPUT_DIR}/${EXE_NAME}.elf ${VAL_LIB}.a ${PAL_LIB}.a ${TEST_LIB}.a ${VAL_LIB}.a ${PAL_LIB}.a ${PAL_OBJ_LIST}
                     DEPENDS CPP-LD-${EXE_NAME}${TEST})
     add_custom_target(${EXE_NAME}${TEST}_elf ALL DEPENDS ${EXE_NAME}${TEST}.elf)
 

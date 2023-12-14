@@ -102,8 +102,14 @@ void cmd_ipa_state_get_realm(void)
     cmd_ret = val_realm_rsi_ipa_state_get(c_args.addr_valid);
     if (cmd_ret.x0)
     {
-        LOG(ERROR, "\n\tPositive Observability failed. Ret = 0x%x\n", cmd_ret.x0, 0);
+        LOG(ERROR, "\n\tRSI_IPA_STATE_GET Failed with ret = 0x%x\n", cmd_ret.x0, 0);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(3)));
+        goto exit;
+    }
+
+    if ((cmd_ret.x1 != RSI_RAM) || (VAL_EXTRACT_BITS(cmd_ret.x1, 8, 63) != 0)) {
+        LOG(ERROR, "\n\tPositive Observability failed.", 0, 0);
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(4)));
         goto exit;
     }
 

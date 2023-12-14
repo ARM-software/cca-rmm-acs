@@ -26,7 +26,7 @@ arg_fip=
 arg_acs_build_dir=
 arg_acs_ns_preload_addr=${ACS_NS_PRELOAD_ADDR_DFLT}
 # Run the test with a timeout so they can't loop forever.
-arg_test_timeout=20
+arg_test_timeout=30
 suite_timeout_multiplier=3
 test_report_logfile=
 regression_report_logfile=
@@ -76,7 +76,6 @@ fvp_cmd=" -C bp.refcounter.non_arch_start_at_default=1 \
 -C pctl.startup=0.0.0.0 \
 -C cluster0.ish_is_osh=1 \
 -C cluster1.ish_is_osh=1 \
--C bp.vis.disable_visualisation=1 \
 -C bp.pl011_uart0.uart_enable=1 \
 -C bp.pl011_uart1.uart_enable=1 \
 -C bp.pl011_uart2.uart_enable=1 "

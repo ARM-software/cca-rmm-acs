@@ -1,5 +1,5 @@
 
-# Arm RMM ACS Porting Guide
+# Arm CCA RMM ACS Porting Guide
 -----------------------------
 
 ## Introduction
@@ -51,7 +51,7 @@ Since the test suite is agnostic to various system targets, you must port the fo
 | 24 | void pal_send_sgi(int sgi_id, unsigned int core_pos); | Send an SGI to a given core. | Input: sgi_id: SGI interrupt number. <br />core_pos:  CPU core number. <br /> return: void |
 | 25 | uint32_t pal_get_irq_num(void); | Get IRQ number | Input: void <br /> return: irq_num: irq number. |
 | 26 | void pal_gic_end_of_intr(unsigned int irq_num); | End of the interrupt | Input: irq number <br /> return: void. |
-| 27 | uint32_t pal_verify_signature(uint8_t *token); | function interface for verifying the signature of the provided token | Input: token recived from the platform <br /> return: true/false. |
+| 27 | uint32_t pal_verify_signature(uint64_t *token); | function interface for verifying the signature of the provided token | Input: token recived from the platform <br /> return: true/false. |
 
 ## License
 

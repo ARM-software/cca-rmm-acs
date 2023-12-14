@@ -854,10 +854,15 @@ uint32_t val_host_rec_create(val_host_realm_ts *realm)
 
     rec_params->pc = VAL_REALM_IMAGE_BASE_IPA;
     rec_create_flags.runnable = RMI_RUNNABLE;
-    val_memcpy(&rec_params->flags, &rec_create_flags, sizeof(rec_create_flags));
 
     for (i = 0; i < realm->rec_count; i++, mpidr++)
     {
+        /* Create all RECs except primary REC with NOT_RUNNABLE Flag */
+        if (i != 0)
+            rec_create_flags.runnable = RMI_NOT_RUNNABLE;
+
+        val_memcpy(&rec_params->flags, &rec_create_flags, sizeof(rec_create_flags));
+
         rec_params->mpidr = mpidr;
         /* Allocate memory for run object */
         realm->run[i] = (uint64_t)val_host_mem_alloc(PAGE_SIZE, PAGE_SIZE);
@@ -1830,4 +1835,30 @@ uint32_t val_host_realm_destroy(uint64_t rd)
     }
 
     return VAL_SUCCESS;
+}
+/**
+ * @brief  Resets the mem_track structure to default
+ * @param  none
+ * @return none
+**/
+void val_host_reset_mem_tack(void)
+{
+
+    uint32_t i = 0;
+
+    while (i < VAL_HOST_MAX_REALMS)
+    {
+        /* Reset mem_track.rd to default value */
+        mem_track[i].rd = 0x00000000FFFFFFFF;
+
+        /* Reset mem_track.gran_type.* linked lists */
+        mem_track[i].gran_type.ns = NULL;
+        mem_track[i].gran_type.rd = NULL;
+        mem_track[i].gran_type.rtt = NULL;
+        mem_track[i].gran_type.rec = NULL;
+        mem_track[i].gran_type.data = NULL;
+        mem_track[i].gran_type.valid_ns = NULL;
+
+        i++;
+    }
 }

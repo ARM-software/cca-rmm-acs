@@ -13,8 +13,10 @@
 void attestation_token_verify_realm(void)
 {
     val_smc_param_ts args = {0,};
-    uint64_t token_size, ret;
-    __attribute__((aligned (PAGE_SIZE))) uint8_t token[4096] = {0,};
+    uint64_t token_size = 0, ret, size, max_size, len;
+    __attribute__((aligned (PAGE_SIZE))) uint64_t token[MAX_REALM_CCA_TOKEN_SIZE/8] = {0,};
+    uint64_t *granule = token;
+    uint64_t gran_offset = 0, gran_size;
     uint64_t challenge[8] = {0xb4ea40d262abaf22,
                              0xe8d966127b6d78e2,
                              0x7ce913f20b954277,
@@ -25,32 +27,48 @@ void attestation_token_verify_realm(void)
                              0xc7f17650fe9fca60};
     attestation_token_ts attestation_token;
 
-    ret = val_realm_rsi_attestation_token_init((uint64_t)token, challenge[0], challenge[1],
-                                                  challenge[2], challenge[3], challenge[4],
-                                                 challenge[5], challenge[6], challenge[7]);
-
-    if (ret)
+    /* REC Attest state should be in ATTEST_IN_PROGRESS */
+    gran_size = PAGE_SIZE - gran_offset;
+    args = val_realm_rsi_attestation_token_continue((uint64_t)granule, gran_offset,
+                                                                  gran_size, &len);
+    if (args.x0 != RSI_ERROR_STATE)
     {
-        LOG(ERROR, "\tToken init failed, ret=%x\n", ret, 0);
+            LOG(ERROR, "\n\tUnexpected Command Return Status\n ret status : 0x%x \n", args.x0, 0);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(1)));
         goto exit;
     }
 
-    do {
-        args = val_realm_rsi_attestation_token_continue((uint64_t)token);
-    } while (args.x0 == RSI_ERROR_INCOMPLETE);
-
+    args = val_realm_rsi_attestation_token_init(challenge[0], challenge[1],
+                                                  challenge[2], challenge[3], challenge[4],
+                                                 challenge[5], challenge[6], challenge[7]);
     if (args.x0)
     {
-        LOG(ERROR, "\tToken continuee failed, ret=%x\n", args.x0, 0);
+        LOG(ERROR, "\tToken init failed, ret=%x\n", args.x0, 0);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(2)));
         goto exit;
     }
 
-    token_size = args.x1;
-    if (token_size > ATTEST_MAX_TOKEN_SIZE)
+    max_size = args.x1;
+
+    do {
+        uint64_t offset = 0;
+        do {
+            size = PAGE_SIZE - offset;
+            args = val_realm_rsi_attestation_token_continue((uint64_t)granule, offset, size, &len);
+            offset += len;
+            token_size = token_size + len;
+        } while (args.x0 == RSI_ERROR_INCOMPLETE && offset < PAGE_SIZE);
+
+        if (args.x0 == RSI_ERROR_INCOMPLETE)
+        {
+            granule += PAGE_SIZE;
+        }
+
+    } while ((args.x0 == RSI_ERROR_INCOMPLETE) && (granule < token + max_size));
+
+    if (args.x0)
     {
-        LOG(ERROR, "\tattestation token should not be larger than 4KB\n", 0, 0);
+        LOG(ERROR, "\tToken continue failed, ret=%x\n", args.x0, 0);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(3)));
         goto exit;
     }
@@ -60,7 +78,7 @@ void attestation_token_verify_realm(void)
     if (ret != VAL_SUCCESS)
     {
         LOG(ERROR, "\tattestation token verification failed, ret=%x\n", ret, 0);
-        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(3)));
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(4)));
         goto exit;
     }
 

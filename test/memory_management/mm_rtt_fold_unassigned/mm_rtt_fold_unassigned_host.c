@@ -10,6 +10,9 @@
 
 #define ALIGNED_2MB 0x200000
 #define IPA_ALIGNED_2MB 0x800000
+#define IPA_ALIGNED_1GB 0x40000000
+#define RTT_LEVEL_1 1UL
+#define RTT_LEVEL_2 2UL
 
 void mm_rtt_fold_unassigned_host(void)
 {
@@ -186,6 +189,79 @@ void mm_rtt_fold_unassigned_host(void)
     {
         LOG(ERROR, "\tUNFOLD Rtt params mismatch\n", 0, 0);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(19)));
+        goto destroy_realm;
+    }
+
+    /* Check if RMM supports L2-L1 folding */
+
+    ipa = IPA_ALIGNED_1GB;
+
+    ret = val_host_rmi_rtt_read_entry(realm.rd, ipa, VAL_RTT_MAX_LEVEL, &rtte);
+    if (ret)
+    {
+        LOG(ERROR, "\trtt_read_entry failed ret = %x\n", ret, 0);
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(20)));
+        goto destroy_realm;
+    }
+
+    /* Create RTT till Level 2 for given IPA */
+    ret = val_host_create_rtt_levels(&realm, ipa,
+                                    (uint32_t)rtte.walk_level, RTT_LEVEL_2,
+                                    PAGE_SIZE);
+    if (ret)
+    {
+        LOG(ERROR, "\t val_host_create_rtt_levels failed: %lx\n", ret, 0);
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(21)));
+        goto destroy_realm;
+    }
+
+    ret = val_host_rmi_rtt_read_entry(realm.rd, ipa, RTT_LEVEL_1, &rtte);
+    if (ret)
+    {
+        LOG(ERROR, "\trtt_read_entry failed ret = %x\n", ret, 0);
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(22)));
+        goto destroy_realm;
+    }
+
+    /* Check if intial state of parent RTTE is TABLE */
+    if (rtte.state != RMI_TABLE)
+    {
+        LOG(ERROR, "\tUnexpected RTTE state at parent entry \n", 0, 0);
+        goto destroy_realm;
+    }
+
+    /* Save Parent address for comparision after fold */
+    p_rtte_addr = OA(rtte.desc);
+
+    ret = val_host_rmi_rtt_fold(realm.rd, ipa, RTT_LEVEL_2, &rtt);
+    if (ret)
+    {
+        LOG(ERROR, "\trmi_rtt_fold failed ret = %x\n", ret, 0);
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(23)));
+        goto destroy_realm;
+    }
+
+    if (rtt != p_rtte_addr)
+    {
+        LOG(ERROR, "\tFold rtt addr mismatch, expected %lx received %lx\n",
+                                    p_rtte_addr, rtt);
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(24)));
+        goto destroy_realm;
+    }
+
+    ret = val_host_rmi_rtt_read_entry(realm.rd, ipa, RTT_LEVEL_1, &rtte);
+    if (ret)
+    {
+        LOG(ERROR, "\trtt_read_entry failed ret = %x\n", ret, 0);
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(25)));
+        goto destroy_realm;
+    }
+
+    /* Successful fold should change Parent RTTE state from TABLE to UNASSIGNED */
+    if (rtte.state != RMI_UNASSIGNED)
+    {
+        LOG(ERROR, "\tUnexpected RTTE state at parent entry \n", 0, 0);
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(26)));
         goto destroy_realm;
     }
 

@@ -17,7 +17,7 @@ void pmu_overflow_host(void)
     uint64_t feature_reg;
     uint8_t pmu_num_ctrs;
     val_host_rec_exit_ts *rec_exit = NULL;
-    val_host_rec_entry_ts *rec_entry = NULL;
+    val_host_rec_enter_ts *rec_enter = NULL;
 
     dfr0 = read_id_aa64dfr0_el1();
     /* Check that PMU is supported */
@@ -73,13 +73,13 @@ void pmu_overflow_host(void)
     }
 
     val_irq_disable(PMU_VIRQ);
-    rec_entry = &(((val_host_rec_run_ts *)realm.run[0])->entry);
+    rec_enter = &(((val_host_rec_run_ts *)realm.run[0])->enter);
 
     /* Set No pending maintence interrupt in HCR register */
-    rec_entry->gicv3_hcr = 1ULL << GICV3_HCR_EL2_NPIE;
+    rec_enter->gicv3_hcr = 1ULL << GICV3_HCR_EL2_NPIE;
 
     /* Inject PMU virtual interrupt to realm using GIC list registers */
-    rec_entry->gicv3_lrs[0] = ((uint64_t)GICV3_LR_STATE_PENDING << GICV3_LR_STATE) |
+    rec_enter->gicv3_lrs[0] = ((uint64_t)GICV3_LR_STATE_PENDING << GICV3_LR_STATE) |
                                 (0ULL << GICV3_LR_HW) | (1ULL << GICV3_LR_GROUP) | PMU_VIRQ;
     /* Enter REC[0]  */
     ret = val_host_rmi_rec_enter(realm.rec[0], realm.run[0]);

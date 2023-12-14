@@ -14,7 +14,7 @@
 void mm_feat_s2fwb_check_2_host(void)
 {
     val_host_realm_ts realm;
-    val_host_rec_entry_ts *rec_entry = NULL;
+    val_host_rec_enter_ts *rec_enter = NULL;
     uint32_t index;
     uint64_t ret, mem_attr;
     uint64_t *addr = NULL;
@@ -74,10 +74,10 @@ void mm_feat_s2fwb_check_2_host(void)
     addr[1] = NS_HOST_DATA;
     addr[2] = NS_HOST_DATA;
 
-    rec_entry = &(((val_host_rec_run_ts *)realm.run[0])->entry);
-    rec_entry->gprs[1] = realm.granules[index].ipa;
-    rec_entry->gprs[2] = realm.granules[index].size;
-    rec_entry->flags = 0x0;
+    rec_enter = &(((val_host_rec_run_ts *)realm.run[0])->enter);
+    rec_enter->gprs[1] = realm.granules[index].ipa;
+    rec_enter->gprs[2] = realm.granules[index].size;
+    rec_enter->flags = 0x0;
     /* Test Intent: verify FWB preserves R-EL1 stage1 memory attribute as
      * final memory attribute
      */

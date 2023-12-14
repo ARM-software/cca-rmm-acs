@@ -23,8 +23,6 @@
 
 #define MAP_LEVEL 3
 #define L_STARTING_LEVEL 0
-#define L_1 1
-#define L_2 2
 #define L_OUT_OF_BOUND 4
 
 #define NUM_REALMS 1
@@ -231,18 +229,6 @@ static uint64_t intent_to_seq(struct stimulus *test_data, struct arguments *args
             args->rd = c_args.rd_valid;
             args->ipa = c_args.ipa_valid;
             args->level = L_STARTING_LEVEL;
-            break;
-
-        case LEVEL_L1:
-            args->rd = c_args.rd_valid;
-            args->ipa = c_args.ipa_valid;
-            args->level = L_1;
-            break;
-
-        case LEVEL_L2:
-            args->rd = c_args.rd_valid;
-            args->ipa = c_args.ipa_valid;
-            args->level = L_2;
             break;
 
         case LEVEL_OUT_OF_BOUND:

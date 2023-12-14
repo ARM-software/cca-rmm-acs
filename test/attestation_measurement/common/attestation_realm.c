@@ -317,7 +317,7 @@ static uint64_t parse_claims_platform_token(attestation_token_ts *attestation_to
 
 uint64_t val_attestation_verify_token(attestation_token_ts *attestation_token,
             uint64_t *challenge, __attribute__((unused)) size_t challenge_size,
-                                        uint8_t *token, size_t token_size)
+                                        uint64_t *token, size_t token_size)
 {
     uint64_t               status = VAL_SUCCESS;
     QCBORItem             item;

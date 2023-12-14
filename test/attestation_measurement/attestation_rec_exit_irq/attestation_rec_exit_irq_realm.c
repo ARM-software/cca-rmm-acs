@@ -20,8 +20,9 @@ void attestation_rec_exit_irq_realm(void)
     uint64_t *shared_err_flag = (val_get_shared_region_base() + TEST_USE_OFFSET5);
 
     val_smc_param_ts args = {0,};
-    uint64_t ret;
-    __attribute__((aligned (PAGE_SIZE))) uint8_t token[4096] = {0,};
+    uint64_t token_size = 0, size, max_size, len;
+    __attribute__((aligned (PAGE_SIZE))) uint64_t token[MAX_REALM_CCA_TOKEN_SIZE/8] = {0,};
+    uint64_t *granule = token;
     uint64_t challenge1[8] = {0xb4ea40d262abaf22,
                              0xe8d966127b6d78e2,
                              0x7ce913f20b954277,
@@ -34,30 +35,47 @@ void attestation_rec_exit_irq_realm(void)
 
     do {
 
-        ret = val_realm_rsi_attestation_token_init((uint64_t)token, challenge1[0], challenge1[1],
+        args = val_realm_rsi_attestation_token_init(challenge1[0], challenge1[1],
                                                     challenge1[2], challenge1[3], challenge1[4],
                                                     challenge1[5], challenge1[6], challenge1[7]);
 
-        if (ret)
+        if (args.x0)
         {
             *shared_err_flag = 1;
-            LOG(ERROR, "\tToken init failed, ret=%x\n", ret, 0);
+            LOG(ERROR, "\tToken init failed, ret=%x\n", args.x0, 0);
             val_set_status(RESULT_FAIL(VAL_ERROR_POINT(1)));
             goto exit;
         }
 
         val_realm_return_to_host();
 
-        do {
-            *shared_flag1 = 1;
+        max_size = args.x1;
 
-            args = val_realm_rsi_attestation_token_continue((uint64_t)token);
+        do {
+            uint64_t offset = 0;
+            do {
+                size = PAGE_SIZE - offset;
+
+                *shared_flag1 = 1;
+
+                args = val_realm_rsi_attestation_token_continue((uint64_t)granule, offset,
+                                                                              size, &len);
+                if (args.x0 == RSI_ERROR_INCOMPLETE)
+                {
+                    *shared_flag2 = 1;
+                }
+
+                offset += len;
+                token_size = token_size + len;
+
+            } while (args.x0 == RSI_ERROR_INCOMPLETE && offset < PAGE_SIZE);
+
             if (args.x0 == RSI_ERROR_INCOMPLETE)
             {
-                *shared_flag2 = 1;
+                granule += PAGE_SIZE;
             }
 
-        } while (args.x0 == RSI_ERROR_INCOMPLETE);
+        } while ((args.x0 == RSI_ERROR_INCOMPLETE) && (granule < token + max_size));
 
         *shared_flag3 = 1;
 
@@ -70,7 +88,6 @@ void attestation_rec_exit_irq_realm(void)
         }
 
     } while (*test_shared_region_flag != 1);
-
 
 exit:
     val_realm_return_to_host();

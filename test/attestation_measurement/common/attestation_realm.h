@@ -59,4 +59,4 @@ typedef struct {
 
 uint64_t val_attestation_verify_token(attestation_token_ts *attestation_token,
                                    uint64_t *challenge, size_t challenge_size,
-                                           uint8_t *token, size_t token_size);
+                                           uint64_t *token, size_t token_size);

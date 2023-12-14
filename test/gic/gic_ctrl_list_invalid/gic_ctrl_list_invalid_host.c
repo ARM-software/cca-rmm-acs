@@ -15,7 +15,7 @@ void gic_ctrl_list_invalid_host(void)
 {
     val_host_realm_ts realm;
     uint64_t ret;
-    val_host_rec_entry_ts *rec_entry = NULL;
+    val_host_rec_enter_ts *rec_enter = NULL;
 
     val_memset(&realm, 0, sizeof(realm));
 
@@ -29,10 +29,10 @@ void gic_ctrl_list_invalid_host(void)
         goto destroy_realm;
     }
 
-    rec_entry = &(((val_host_rec_run_ts *)realm.run[0])->entry);
+    rec_enter = &(((val_host_rec_run_ts *)realm.run[0])->enter);
 
     /* Set State[63:62]= 0x1(pending) and HW[61]=0x1 fields */
-    rec_entry->gicv3_lrs[0] = (1ULL << GICV3_LR_STATE) | (1ULL << GICV3_LR_HW) |
+    rec_enter->gicv3_lrs[0] = (1ULL << GICV3_LR_STATE) | (1ULL << GICV3_LR_HW) |
                              ((uint64_t)pINTID << GICV3_LR_pINTID) | vINTID;
     /* Enter REC[0]  */
     ret = val_host_rmi_rec_enter(realm.rec[0], realm.run[0]);
@@ -44,7 +44,7 @@ void gic_ctrl_list_invalid_host(void)
     }
 
     /* Set State[63:62]= 0x2(active) and HW[61]=0x1 fields */
-    rec_entry->gicv3_lrs[0] = (2ULL << GICV3_LR_STATE) | (1ULL << GICV3_LR_HW) |
+    rec_enter->gicv3_lrs[0] = (2ULL << GICV3_LR_STATE) | (1ULL << GICV3_LR_HW) |
                              ((uint64_t)pINTID << GICV3_LR_pINTID) | vINTID;
     /* Enter REC[0]  */
     ret = val_host_rmi_rec_enter(realm.rec[0], realm.run[0]);
@@ -56,7 +56,7 @@ void gic_ctrl_list_invalid_host(void)
     }
 
     /* Set State[63:62]= 0x3(pending and active) and HW[61]=0x1 fields */
-    rec_entry->gicv3_lrs[0] = (3ULL << GICV3_LR_STATE) | (1ULL << GICV3_LR_HW) |
+    rec_enter->gicv3_lrs[0] = (3ULL << GICV3_LR_STATE) | (1ULL << GICV3_LR_HW) |
                              ((uint64_t)pINTID << GICV3_LR_pINTID) | vINTID;
     /* Enter REC[0]  */
     ret = val_host_rmi_rec_enter(realm.rec[0], realm.run[0]);

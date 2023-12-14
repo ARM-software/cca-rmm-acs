@@ -16,7 +16,7 @@ void exception_rec_exit_ia_host(void)
 {
     val_host_realm_ts realm = {0,};
     uint64_t ret = 0;
-    val_host_rec_entry_ts *rec_entry = NULL;
+    val_host_rec_enter_ts *rec_enter = NULL;
     val_host_rec_exit_ts *rec_exit = NULL;
 
     val_host_realm_params(&realm);
@@ -46,7 +46,7 @@ void exception_rec_exit_ia_host(void)
         goto destroy_realm;
     }
 
-    rec_entry = &(((val_host_rec_run_ts *)realm.run[0])->entry);
+    rec_enter = &(((val_host_rec_run_ts *)realm.run[0])->enter);
     rec_exit = &(((val_host_rec_run_ts *)realm.run[0])->exit);
     /* Enter the realm through rec enter*/
     ret = val_host_rmi_rec_enter(realm.rec[0], realm.run[0]);
@@ -58,7 +58,7 @@ void exception_rec_exit_ia_host(void)
     }
 
     /* pass the address to realm */
-    rec_entry->gprs[1] = EXCEPTION_IA_IPA_ADDRESS;
+    rec_enter->gprs[1] = EXCEPTION_IA_IPA_ADDRESS;
 
     ret = val_host_rmi_rec_enter(realm.rec[0], realm.run[0]);
     if (ret)

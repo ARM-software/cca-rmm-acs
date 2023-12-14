@@ -196,15 +196,16 @@ typedef struct {
             /* GICv3 List Registers */
             unsigned long gicv3_lrs[VAL_REC_GIC_NUM_LRS];	/* 0x308 */
             }, 0x300, 0x800);
-} val_host_rec_entry_ts;
+} val_host_rec_enter_ts;
 
 typedef struct __attribute__((packed)) {
     uint8_t emul_mmio:1;
     uint8_t inject_sea:1;
     uint8_t trap_wfi:1;
     uint8_t trap_wfe:1;
-    uint64_t unused:60;
-} val_host_rec_entry_flags_ts;
+    uint8_t ripas_response:1;
+    uint64_t unused:59;
+} val_host_rec_enter_flags_ts;
 
 /*
  * Structure contains data passed from the RMM to the Host on REC exit
@@ -258,7 +259,7 @@ typedef struct {
 
 typedef struct {
     /* Entry information */
-    SET_MEMBER_RMI(val_host_rec_entry_ts entry, 0, 0x800);	/* Offset 0 */
+    SET_MEMBER_RMI(val_host_rec_enter_ts enter, 0, 0x800);	/* Offset 0 */
     /* Exit information */
     SET_MEMBER_RMI(val_host_rec_exit_ts exit, 0x800, 0x1000);/* 0x800 */
 } val_host_rec_run_ts;
@@ -372,6 +373,7 @@ uint32_t val_host_map_protected_data_to_realm(val_host_realm_ts *realm,
                                             val_data_create_ts *data_create);
 
 void val_host_realm_params(val_host_realm_ts *realm);
+void val_host_reset_mem_tack(void);
 
 #endif /* _VAL_HOST_REALM_H_ */
 

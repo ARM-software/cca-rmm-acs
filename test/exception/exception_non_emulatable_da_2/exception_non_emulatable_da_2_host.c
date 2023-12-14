@@ -14,7 +14,7 @@ void exception_non_emulatable_da_2_host(void)
 {
     val_host_realm_ts realm;
     uint64_t ret;
-    val_host_rec_entry_ts *rec_entry = NULL;
+    val_host_rec_enter_ts *rec_enter = NULL;
     val_host_rec_exit_ts *rec_exit = NULL;
     uint64_t ripas_ipa, ripas_size;
     uint64_t phys;
@@ -62,7 +62,7 @@ void exception_non_emulatable_da_2_host(void)
         goto destroy_realm;
     }
 
-    rec_entry = &(((val_host_rec_run_ts *)realm.run[0])->entry);
+    rec_enter = &(((val_host_rec_run_ts *)realm.run[0])->enter);
     rec_exit = &(((val_host_rec_run_ts *)realm.run[0])->exit);
     /* REC enter REC[0] execution */
     ret = val_host_rmi_rec_enter(realm.rec[0], realm.run[0]);
@@ -89,8 +89,8 @@ void exception_non_emulatable_da_2_host(void)
     }
 
     /* Resume back REC[0] execution */
-    rec_entry->gprs[1] = ripas_ipa;
-    rec_entry->gprs[2] = ripas_size;
+    rec_enter->gprs[1] = ripas_ipa;
+    rec_enter->gprs[2] = ripas_size;
     /* Test intent: Protected IPA, RIPAS=RAM, HIPAS=DESTROYED write access
      * => REC exit due to data abort.
      */
@@ -114,7 +114,7 @@ void exception_non_emulatable_da_2_host(void)
     /* Test intent: Protected IPA, RIPAS=RAM, HIPAS=DESTROYED read access
      * => REC exit due to data abort.
      */
-    rec_entry->flags = RMI_EMULATED_MMIO;
+    rec_enter->flags = RMI_EMULATED_MMIO;
     ret = val_host_rmi_rec_enter(realm.rec[0], realm.run[0]);
     if (ret)
     {

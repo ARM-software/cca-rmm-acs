@@ -297,20 +297,27 @@ void cmd_rtt_read_entry_host(void)
         }
     }
 
+    /* Check if rtte.state[63:8] & rtte.ripas[63:8} are zero */
+    if ((VAL_EXTRACT_BITS(rtte.state, 8, 63) != 0) || (VAL_EXTRACT_BITS(rtte.ripas, 8, 63) != 0)) {
+        LOG(ERROR, "\tUnused bits of RTTE.state & RTTE.ripas are non zero \n", 0, 0);
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(7)));
+        goto exit;
+    }
+
     /* For the Valid IPA (UNASSIGNED & EMPTY) check for X2(state) and X4(ripas)
        and X(3) is zero */
     ret = val_host_rmi_rtt_read_entry(c_args.rd_valid, c_args.ipa_valid,
                                                        c_args.level_valid, &rtte);
     if (ret) {
         LOG(ERROR, "\tREAD_ENTRY failed with ret value: %d\n", ret, 0);
-        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(7)));
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(8)));
         goto exit;
     }
 
     if (rtte.state != RMI_UNASSIGNED || rtte.state != RMI_EMPTY || rtte.desc != 0) {
         LOG(ERROR, "\n\t Unexpected RTT entry.\n\tState is: %d, desc is: 0x%x",
                                                              rtte.state, rtte.desc);
-        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(8)));
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(9)));
         goto exit;
     }
 
@@ -319,13 +326,13 @@ void cmd_rtt_read_entry_host(void)
                                                        c_args.level_valid, &rtte);
     if (ret) {
         LOG(ERROR, "\tREAD_ENTRY failed with ret value: %d\n", ret, 0);
-        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(9)));
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(10)));
         goto exit;
     }
 
     if (rtte.state == RMI_ASSIGNED && VAL_EXTRACT_BITS(rtte.desc, 2, 9) != 0) {
         LOG(ERROR, "\n\t Unexpected descriptor Lower attributes  \n", 0, 0);
-        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(10)));
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(11)));
         goto exit;
     }
 
@@ -333,14 +340,14 @@ void cmd_rtt_read_entry_host(void)
     if (create_mapping(IPA_ADDR_UNPROTECTED, false, c_args.rd_valid))
     {
         LOG(ERROR, "\tCouldn't create the unprotected mapping\n", 0, 0);
-        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(11)));
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(12)));
         goto exit;
     }
 
     uint64_t ns = g_undelegated_prep_sequence();
     if (ns == VAL_TEST_PREP_SEQ_FAILED) {
         LOG(ERROR, "\tUndelegated preparation sequence failed\n", 0, 0);
-        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(12)));
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(13)));
         goto exit;
     }
 
@@ -349,7 +356,7 @@ void cmd_rtt_read_entry_host(void)
                                                          VAL_RTT_MAX_LEVEL, desc))
     {
         LOG(ERROR, "\tCouldn't complete the unprotected mapping\n", 0, 0);
-        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(13)));
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(14)));
         goto exit;
     }
 
@@ -357,14 +364,14 @@ void cmd_rtt_read_entry_host(void)
                                                        c_args.level_valid, &rtte);
     if (ret) {
         LOG(ERROR, "\tREAD_ENTRY failed with ret value: %d\n", ret, 0);
-        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(14)));
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(15)));
         goto exit;
     }
 
     if (rtte.state == RMI_ASSIGNED && (rtte.desc != desc || rtte.ripas != RMI_EMPTY)) {
         LOG(ERROR, "\n\t Unexpected RTT entry\n\t State is: %d", rtte.state, 0);
         LOG(ERROR, " ,desc is: 0x%x & RIPAS is: %d\n", rtte.desc, rtte.ripas);
-        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(15)));
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(16)));
         goto exit;
     }
 

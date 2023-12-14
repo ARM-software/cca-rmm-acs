@@ -309,10 +309,22 @@ static uint64_t intent_to_seq(struct stimulus *test_data, struct arguments *args
             args->top = args->base + L3_SIZE;
             break;
 
-        case TOP_UNALIGNED:
+        case TOP_GRAN_UNALIGNED:
+            args->rd = c_args.rd_valid;
+            args->base = c_args.base_valid;
+            args->top = L3_SIZE / 2;
+            break;
+
+        case TOP_RTT_UNALIGNED:
             args->rd = c_args.rd_valid;
             args->base = ipa_protected_unmapped_prep_sequence();
-            args->top = args->base + L3_SIZE;
+            args->top = args->base + L2_SIZE + L3_SIZE;
+            break;
+
+        case TOP_GRAN_UNALIGNED_TOP_RTT_UNALIGNED:
+            args->rd = c_args.rd_valid;
+            args->base = ipa_protected_unmapped_prep_sequence();
+            args->top = args->base + (L3_SIZE / 2);
             break;
 
         default:
@@ -369,18 +381,24 @@ void cmd_rtt_init_ripas_host(void)
         goto exit;
     }
 
+    if (out_top != c_args.top_valid) {
+        LOG(ERROR, "\n\t Unexpected out_top received. out_top = 0x%lx ", out_top, 0);
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(5)));
+        goto exit;
+    }
+
     ret = val_host_rmi_rtt_read_entry(c_args.rd_valid,
                                       c_args.base_valid, MAP_LEVEL, &rtte);
     if (ret) {
         LOG(ERROR, "\tREAD_ENTRY failed with ret value: %d\n", ret, 0);
-        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(5)));
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(6)));
         goto exit;
     }
 
     if (rtte.walk_level == MAP_LEVEL && rtte.ripas != RMI_RAM) {
         LOG(ERROR, "\n\t Unexpected RTT entry. walk level = %d, RIPAS = %d",
                                                  rtte.walk_level, rtte.ripas);
-        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(6)));
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(7)));
         goto exit;
     }
 
