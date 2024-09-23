@@ -18,7 +18,7 @@ The RMM exposes the following interfaces, which are accessed via SMC instruction
 - The Realm Services Interface (RSI), which provides services used to manage resources allocated to the Realm, and to request an attestation report.
 - The Power State Coordination Interface (PSCI), which provides services used to control power states of VPEs within a Realm.
 
-For more information on RMM refer [RMM Specification](https://developer.arm.com/documentation/den0137/1-0eac5/?lang=en)
+For more information on RMM refer [RMM Specification]( https://developer.arm.com/-/cdn-downloads/permalink/PDF/Architectures/DEN0137_1.1-alp8_rmm-arch_external.pdf)
 
 ## Architecture Compliance Suite
 
@@ -27,12 +27,12 @@ The Architecture Compliance Suite (ACS) contains a set of functional tests, demo
 This suite contains self-checking, and portable C and assembly based tests with directed stimulus. These tests are available as open source. The tests and the corresponding abstraction layers are available with a BSD-3-Clause License allowing for external contribution.
 This suite is not a substitute for design verification.
 
-For more information on Architecture Compliance Suite see [Validation Methodology](<./docs/Arm CCA RMM Architecture Compliance Suite Validation Methodology.pdf>) document.
+For more information on Architecture Compliance Suite see [Validation Methodology](./docs/Arm_CCA_RMM_Architecture_Compliance_Suite_Validation_Methodology.pdf) document.
 
 ## Release details
-- Release Version - 1.0
-- Code Quality: EAC
-- The tests are written for Arm RMM 1.0-EAC5 specification version.
+- Release Version - v1.1 ACS PLANES BETA
+- Code Quality: BETA
+- The tests are written for Arm RMM 1.1-ALP8 specification version.
 - For information about the test coverage scenarios that are implemented in ACS, see [docs](./docs/).
 - The [Change log](./docs/change-log.rst) has details of the features implemented by this version of CCA-RMM-ACS.
 
@@ -90,7 +90,8 @@ make
 - -DCMAKE_BUILD_TYPE=<build_type>: Chooses between a debug and release build. It can take either release or debug as values. The default value is release.
 - -DSUITE_TEST_RANGE="<test_start_name>;<test_end_name>" is to select range of tests for build. All tests under -DSUITE are considered by default if not specified.
 - -RMM_ACS_TARGET_QCBOR=<path_for_pre_fetched_cbor_folder> this is option used where no network  connectivity is possible during the build.
-- -DSECURE_TEST_ENABLE=<value_to_enable_secure_test> Enable secure test macro defination and it will run secure test in regression. Valid value is 1. By default this macro will not define and secure test will not run in regression.
+- -DSECURE_TEST_ENABLE=<value_to_enable_secure_test> Enable secure test macro definition and it will run secure test in regression. Valid value is 1. By default this macro will not define and secure test will not run in regression.
+- -DRMM_SPEC_VER=<value_to_select_specification_version> Select the Specification version to test against. Current supported values are RMM_V_1_0, RMM_V_1_1 and ALL. If this flag is not set during compilation, ALL is selected by default.
 
 *To compile tests for tgt_tfa_fvp platform*:<br />
 ```
@@ -127,4 +128,4 @@ Arm CCA-RMM-ACS is distributed under BSD-3-Clause License.
 
 --------------
 
-*Copyright (c) 2023, Arm Limited or its affiliates. All rights reserved.*
+*Copyright (c) 2023-2024, Arm Limited or its affiliates. All rights reserved.*

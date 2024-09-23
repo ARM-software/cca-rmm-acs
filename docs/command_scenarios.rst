@@ -1,9 +1,9 @@
-.. Copyright [C] 2023, Arm Limited or its affiliates. All rights reserved.
+.. Copyright [C] 2023-2024, Arm Limited or its affiliates. All rights reserved.
       SPDX-License-Identifier: BSD-3-Clause
 
-**************************
-Command Scenario docuement
-**************************
+*************************
+Command Scenario document
+*************************
 .. raw:: pdf
 
    PageBreak
@@ -11,7 +11,7 @@ Command Scenario docuement
 .. section-numbering::
 
 .. contents::
-      :depth: 4
+      :depth: 3
 
 Introduction
 ============
@@ -19,7 +19,7 @@ Introduction
 In this document the test scenarios for all RMM ABI commands are detailed.
 First, an overview of the general test strategy is provided, which forms the
 basis of the overall flow and rationale of the various scenarios. Unless otherwise specified,
-this scenario doc is compliant to eac5 of `Realm Management Monitor (RMM) Specification`_ v1.0.
+this scenario doc is compliant to alp8 of `Realm Management Monitor (RMM) Specification`_ v1.1.
 
 Arm Realm Management Monitor Specification
 ==========================================
@@ -80,8 +80,8 @@ successful execution.
 
          * Circular Dependencies: Here we would require ABI commands that are yet to be verified to
            generate the stimulus (note that these are sometimes unavoidable)
-         * Multicausal Stimuli: This is unavoidable in certain cases. For example, an out-of-bound
-           rd in RMI_DATA_CREATE ABI would also result in Granule(rd).state error. However, we will
+         * Multi-causal Stimuli: This is unavoidable in certain cases. For example, an out-of-bound
+           rd in RMI_DATA_CREATE ABI would also result in granule(rd).state error. However, we will
            exclude stimuli that trigger multiple failure conditions which have both: I) different
            error codes, and II) no architected priority ordering relative to each other.
 
@@ -216,7 +216,7 @@ Observing Properties of a granule
   |                   |scenarios to ensure that the GPI encodings in the GPT has not   |
   |                   |changed.                                                        |
   +-------------------+----------------------------------------------------------------+
-  |Summmary           |When command fails, ACS will check for return error code, and   |
+  |Summary            |When command fails, ACS will check for return error code, and   |
   |                   |RTTE for some of the failure conditions.                        |
   +-------------------+----------------------------------------------------------------+
   |When the command   |In general, we will check that the returned error code is equal |
@@ -314,6 +314,7 @@ Argument list
   * - data
     - | granule(data) = 4K_ALIGNED
       | granule(data).state = DELEGATED
+      | data < 2^48 if Realm(rd).feat_lpa2 == FALSE
   * - ipa
     - | ipa = 4K_ALIGNED
       | ipa = Protected
@@ -325,7 +326,6 @@ Argument list
       | granule(src).gpt = GPT_NS
   * - flags
     - | flags = RMI_MEASURE_CONTENT
-
 
 Failure conditon testing
 ~~~~~~~~~~~~~~~~~~~~~~~~
@@ -340,7 +340,8 @@ Failure conditon testing
     - granule(rd) = unaligned_addr, mmio_region [A], outside_of_permitted_pa [B],
       not_backed_by_encryption, raz or wi [C]
 
-      granule(rd).state = UNDELEGATED, DELEGATED, REC, RTT, DATA
+      (rd).state = UNDELEGATED, DELEGATED, REC, RTT, DATA, PDEV, VDEV, IO_UNDELEGATED,
+      IO_DELEGATED_PRIVATE, IO_DELEGATED_SHARED, IO_PRIVATE, IO_SHARED [D]
 
       Realm(rd).state = Active, Null, System_Off
     - [A] Memory that behaves like mmio (i.e. read or write-sensitive region)
@@ -349,13 +350,20 @@ Failure conditon testing
       and ID_AA64MMFR0_EL1.PARange)
 
       [C] Memory address that reads as zero and ignores writes
+
+      [D] Granules states PDEV, VDEV, IO_UNDELEGATED, IO_DELEGATED_PRIVATE, IO_DELEGATED_SHARED,
+          IO_PRIVATE, IO_SHARED can only be tested when the implementaion supports Realm device
+          assignement.
   * - data
     - granule(data) = unaligned_addr, mmio_region [A], outside_of_permitted_pa [B],
       not_backed_by_encryption, raz or wi [C]
 
-      granule(data).state = UNDELEGATED, REC, RD, RTT, DATA
+      granule(data).state = UNDELEGATED, DELEGATED, RD, REC, RTT, PDEV, VDEV, IO_UNDELEGATED,
+      IO_DELEGATED_PRIVATE, IO_DELEGATED_SHARED, IO_PRIVATE, IO_SHARED [D]
 
       granule(data).gpt = GPT_SECURE
+
+      data >= 2^48 when Realm(rd).feat_lpa2 == FALSE
     -
   * - ipa
     - ipa = unaligned_addr, unprotected_ipa, outside_of_permitted_ipa (info)
@@ -444,6 +452,7 @@ Argument list
   * - data
     - | granule(data) = 4K_ALIGNED
       | granule(data).state = DELEGATED
+      | data < 2^48 if Realm(rd).feat_lpa2 == FALSE
   * - ipa
     - | ipa = 4K_ALIGNED
       | ipa = Protected
@@ -465,13 +474,18 @@ Failure conditon testing
     - granule(rd) = unaligned_addr, mmio_region [A], outside_of_permitted_pa [B],
       not_backed_by_encryption, raz or wi [C]
 
-      granule(rd).state = UNDELEGATED, DELEGATED, REC, RTT, DATA
+      granule(rd).state = UNDELEGATED, DELEGATED, REC, RTT, DATA, PDEV, VDEV, IO_UNDELEGATED,
+      IO_DELEGATED_PRIVATE, IO_DELEGATED_SHARED, IO_PRIVATE, IO_SHARED [D]
     -
   * - data
     - granule(data) = unaligned_addr, mmio_region [A], outside_of_permitted_pa [B],
       not_backed_by_encryption, raz or wi [C]
 
-      granule(data).state = UNDELEGATED, REC, RD, RTT, DATA
+      granule(data).state = UNDELEGATED, DELEGATED, RD, REC, RTT, PDEV, VDEV, IO_UNDELEGATED,
+      IO_DELEGATED_PRIVATE, IO_DELEGATED_SHARED, IO_PRIVATE, IO_SHARED [D]
+
+      data >= 2^48 when Realm(rd).feat_lpa2 == FALSE
+
     - See RMI_DATA_CREATE for specifics behind these stimuli
   * - ipa
     - ipa = unaligned_addr, unprotected_ipa, outside_of_permitted_ipa (info)
@@ -529,15 +543,14 @@ Observability
       Do this for Realm(rd).state = {NEW, ACTIVE} and RTTE[ipa].ripas = {EMPTY, RAM, DESTROYED}
   * - | granule(data).state
       | granule(data).content
-    - For granule(data).content, it needs to be tested outside of ACS command scennarios as part
+    - For granule(data).content, it needs to be tested outside of ACS command scenarios as part
       of verifying "granule wiping" security
       property for granule(data).state, it already tested outside of ACS command scenarios, as part
       of RMM/Realm state rollback at the end
       of each test.
 
-
-RM_DATA_DESTROY
-^^^^^^^^^^^^^^^
+RMI_DATA_DESTROY
+^^^^^^^^^^^^^^^^
 
 Argument list
 ~~~~~~~~~~~~~
@@ -556,7 +569,7 @@ Argument list
       | walk(ipa).level = LEAF_LEVEL
       | RTTE(ipa).state = ASSIGNED
       | RTTE(ipa).ripas = EMPTY, RAM, DESTROYED
-
+      | RTTE_AUX(ipa).state = UNASSIGNED provided Realm(rd).rtt_tree_pp is TRUE
 
 Failure conditon testing
 ~~~~~~~~~~~~~~~~~~~~~~~~
@@ -571,13 +584,16 @@ Failure conditon testing
     - granule(rd) = unaligned_addr, mmio_region [A], outside_of_permitted_pa [B],
       not_backed_by_encryption, raz or wi [C]
 
-      granule(rd).state = UNDELEGATED, DELEGATED, REC, RTT, DATA
+      granule(rd).state = UNDELEGATED, DELEGATED, REC, RTT, DATA, PDEV, VDEV, IO_UNDELEGATED,
+      IO_DELEGATED_PRIVATE, IO_DELEGATED_SHARED, IO_PRIVATE, IO_SHARED [D]
     -
   * - data
     - granule(data) = unaligned_addr, mmio_region [A], outside_of_permitted_pa [B],
       not_backed_by_encryption, raz or wi [C]
 
-      granule(data).state = UNDELEGATED, REC, RD, RTT, DATA
+      granule(data).state = UNDELEGATED, DELEGATED, RD, REC, RTT, PDEV, VDEV, IO_UNDELEGATED,
+      IO_DELEGATED_PRIVATE, IO_DELEGATED_SHARED, IO_PRIVATE, IO_SHARED [D]
+
     - See RMI_DATA_CREATE for specifics behind these stimuli
   * - ipa
     - ipa = unaligned_addr, unprotected_ipa, outside_of_permitted_ipa (info)
@@ -585,6 +601,8 @@ Failure conditon testing
       walk(ipa).level != LEAF_LEVEL
 
       RTTE[ipa].state = UNASSIGNED
+
+      RTTE_AUX[ipa].state = UNASSIGNED if Realm(rd).rtt_tree_pp == TRUE
 
     - unprotected_ipa := ipa >= 2**(IPA_WIDTH - 1)
 
@@ -605,6 +623,7 @@ Failure Priority ordering
   * - ipa
     - | unprotected_ipa && walk(ipa).level != LEAF_LEVEL
       | unprotected_ipa && RTTE[ipa].state = UNASSIGNED_NS
+      | unprotected_ipa && RTTE_AUX[ipa].state = ASSIGNED_NS
     -
 
 Observability
@@ -650,7 +669,6 @@ Argument list
   * - index
     - index = Any integer (64b)
 
-
 Failure conditon testing
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -687,9 +705,8 @@ Argument list
     - Valid Values
   * - addr
     - | granule(addr) = 4K_ALIGNED
-      | granule(addr).state = Undelegated
+      | granule(addr).state = UNDELEGATED
       | granule(addr).gpt = GPT_NS.
-
 
 Failure conditon testing
 ~~~~~~~~~~~~~~~~~~~~~~~~
@@ -704,7 +721,8 @@ Failure conditon testing
     - granule(addr) = unaligned_addr, mmio_region [A], outside_of_permitted_pa [B],
       not_backed_by_encryption, raz or wi [C]
 
-      granule(adr).state = DELEGATED,RD, REC, RTT, DATA
+      granule(addr).state = DELEGATED, RD, REC, RTT, DATA, PDEV, VDEV, IO_UNDELEGATED,
+      IO_DELEGATED_PRIVATE, IO_DELEGATED_SHARED, IO_PRIVATE, IO_SHARED [D]
 
       granule(addr).gpt = GPT_SECURE, GPT_REALM
     - See RMI_DATA_CREATE for the specifics behind these stimuli.
@@ -757,7 +775,138 @@ Observability
       set of tests
 
   * - granule(addr).state
-    - This is already teseted outside of ACS command scenarios (Realm creation with payload).
+    - This is already tested outside of ACS command scenarios (Realm creation with payload).
+
+RMI_GRANULE_IO_DELEGATE
+^^^^^^^^^^^^^^^^^^^^^^^
+
+Argument list
+~~~~~~~~~~~~~
+
+.. list-table::
+  :widths: 25 75
+
+  * - Input parameters
+    - Valid Values
+  * - addr
+    - | granule(addr) = 4K_ALIGNED
+      | granule(addr).state = IO_UNDELEGATED
+      | granule(addr).gpt = GPT_NS
+  * - flags
+    - | flags = RMI_IO_PRIVATE, RMI_IO_SHARED
+
+
+Failure conditon testing
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. list-table::
+  :widths: 20 40 40
+
+  * - Input parameters
+    - Input Values
+    - Remarks
+  * - addr
+    - granule(addr) = unaligned_addr, mmio_region (A), outside_of_permitted_pa (B),
+      not_backed_by_encryption, raz or wi (C)
+
+      granule(addr).state = Delegated, REC, DATA, RTT, RD, IO_DELEGATED_PRIVATE,
+      IO_DELEGATED_SHARED, IO_SHARED, IO_PRIVATE, PDEV, VDEV
+
+      grnaule(addr).gpt = GPT_SECURE, GPT_REALM
+    - See RMI_DATA_CREATE for the specifics behind these stimuli.
+
+      granule(addr).gpt = GPT_ROOT is outside the scope of ACS.
+
+Failure Priority ordering
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+This command has no failure priority orderings.
+
+Observability
+~~~~~~~~~~~~~
+.. list-table::
+  :widths: 25 75
+
+  * - Footprint
+    - Verification
+  * - Command Failure
+    -
+  * - granule(addr).gpt
+    - For granule(addr).gpt=GPT_NS, an access to addr from the NS world should be successful
+      and should be tested in command ACS.
+  * - granule(addr).state
+    - This is outside the scope of Fenimore ACS.
+  * - Command Success
+    -
+  * - granule(addr).gpt
+    - Private - For granule(addr).gpt= GPT_REALM, an access to addr from NS world should give GPT
+      fault.
+
+      Shared - For granule(addr).gpt= GPT_AAP, an access to addr from any PAS should be successful.
+  * - granule(addr).state
+    - This will be test in ACS DA flow scenario.
+
+
+RMI_GRANULE_IO_UNDELEGATE
+^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Argument list
+~~~~~~~~~~~~~
+
+.. list-table::
+  :widths: 25 75
+
+  * - Input parameters
+    - Valid Values
+  * - addr
+    - | granule(addr) = 4K_ALIGNED
+      | granule(addr).state = IO_DELEGATED_PRIVATE, IO_DELEGATED_SHARED
+      | granule(addr).gpt = GPT_REALM/ GPT_AAP
+
+
+Failure conditon testing
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. list-table::
+  :widths: 20 40 40
+
+  * - Input parameters
+    - Input Values
+    - Remarks
+  * - addr
+    - granule(addr) = unaligned_addr, mmio_region (A), outside_of_permitted_pa (B),
+      not_backed_by_encryption, raz or wi (C)
+
+      granule(addr).state = UNDELEGATED, REC, DATA, RTT, RD, DELEGATED, IO_UNDELEGATED, IO_PRIVATE,
+      IO_SHARED, PDEV, VDEV
+    -
+
+Failure Priority ordering
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+This command has no failure priority orderings.
+
+Observability
+~~~~~~~~~~~~~
+.. list-table::
+  :widths: 25 75
+
+  * - Footprint
+    - Verification
+  * - Command Failure
+    -
+  * - granule(addr).gpt
+    - Do RMI_IO_CREATE command and it should success
+  * - granule(addr).state
+    - For granule(addr).gpt = GPT_RELAM && granule(addr).state = REC/DATA/RD/RTT execute the
+      respective destroy command and verify that it is successful
+  * - Command Success
+    -
+  * - granule(addr).gpt
+    - granule(addr).gpt = IO_UNDELEGATED, access this granule from the NS world, and this
+      access should be successful. This is in scope for command ACS
+  * - granule(addr).state
+    - This will be teest outside of ACS command scenarios (Rollback sequence)
 
 RMI_GRANULE_UNDELEGATE
 ^^^^^^^^^^^^^^^^^^^^^^
@@ -771,9 +920,8 @@ Argument list
     - Valid Values
   * - addr
     - | granule(addr) = 4K_ALIGNED
-      | granule(addr).state = Delegated
-      | granule(addr).gpt = GPT_REALM.
-
+      | granule(addr).state = DELEGATED
+      | granule(addr).gpt = GPT_REALM
 
 Failure conditon testing
 ~~~~~~~~~~~~~~~~~~~~~~~~
@@ -788,7 +936,9 @@ Failure conditon testing
     - granule(addr) = unaligned_addr, mmio_region [A], outside_of_permitted_pa [B],
       not_backed_by_encryption, raz or wi [C]
 
-      granule(adr).state = UNDELEGATED, RD, REC, RTT, DATA
+      granule(addr).state = DELEGATED, RD, REC, RTT, DATA, PDEV, VDEV, IO_UNDELEGATED,
+      IO_DELEGATED_PRIVATE, IO_DELEGATED_SHARED, IO_PRIVATE, IO_SHARED [D]
+
     - See RMI_DATA_CREATE for the specifics behind these stimuli.
 
       granule(addr).gpt = GPT_ROOT is outside the scope of ACS.
@@ -809,8 +959,8 @@ Observability
     -
   * - | granule(addr).gpt
       | grnaule(addr).state
-    - For granule(addr).gpt = GPT_RELAM && granule(addr).state = REC/DATA/RD/RTT execute the
-      respective destroy command and verify that it is successful
+    - For granule(addr).gpt = GPT_RELAM && granule(addr).state = REC/DATA/RD/RTT/PDEV/VDEV/IO
+      execute the respective destroy command and verify that it is successful
   * - granule(addr).content
     - This is outside the scope of CCA-RMM-ACS. Refer Observing Properties of a Granule and
       Observing Contents of a Granule for details
@@ -828,12 +978,821 @@ Observability
       src != data
       This will be covered within the command ACS.
   * - granule(addr).state
-    - This is already teseted outside of ACS command scenarios (Realm teardown sequence).
+    - This is already tested outside of ACS command scenarios (Realm teardown sequence).
 
+RMI_IO_CREATE
+^^^^^^^^^^^^^
+
+Argument list
+~~~~~~~~~~~~~
+
+.. list-table::
+  :widths: 25 75
+
+  * - Input parameters
+    - Valid Values
+  * - rd
+    - | granule(rd).state = RD
+      | Realm(rd).state = New
+  * - ipa
+    - | ipa = 4K_ALIGNED
+      | ipa = protected
+      | walk(ipa).level = LEAF_LEVEL
+      | RTTE[ipa].state = Unassigned
+  * - flags
+    - flags = RMI_IO_PRIVATE, RMI_IO_SHARED
+  * - desc
+    - | desc = attr_valid
+      | RTTE[desc].addr = 4K_ALIGNED, protected
+      | grnaule(RTTE[desc].addr).state= IO_DELEGATED_PRIVATE,  IO_DELEGATED_SHARED
+
+
+Failure conditon testing
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. list-table::
+  :widths: 20 40 40
+
+  * - Input parameters
+    - Input Values
+    - Remarks
+  * - rd
+    - granule(rd) = unaligned_addr, mmio_region (A), outside_of_permitted_pa (B),
+      not_backed_by_encryption, raz or wi (C)
+
+      granule(rd).state = UNDELEGATED, DELEGATED, REC, RTT, DATA, IO_DELEGATED_PRIVATE,
+      IO_DELEGATED_SHARED, IO_PRIVATE, IO_SHARED, IO_UNDELEGATED, PDEV, VDEV
+    -
+  * - ipa
+    - ipa = unaligned_addr, unprotected_ipa, outside_of_permitted_ipa
+
+      walk(ipa).level != LEAF_LEVEL
+
+      RTTE[ipa].state = ASSIGNED (circular)
+    -
+  * - desc
+    - RTTE[desc].addr = unaligned, unprotected, invalid_attr, outside_of_permitted_pa (B),
+      not_backed_by_encryption, raz or wi (C)
+
+      Give flag RMI_IO_PRIVATE and grnaule(RTTE[desc].addr).state = UNDELEGATED, IO_UNDELEGATED,
+      DELEGATED, REC, RTT, DATA, IO_DELEGATED_SHARED, IO_PRIVATE, IO_SHARED, IO_UNDELEGATED, PDEV,
+      VDEV
+
+      Give flag RMI_IO_SHARED and grnaule(RTTE[desc].addr).state = IO_DELEGATED_PRIVATE
+    -
+
+Failure Priority ordering
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. list-table::
+  :widths: 20 40 40
+
+  * - Input parameters
+    - Input Values
+    - Remarks
+  * - ipa
+    - | unprotected_ipa && walk(ipa).level != LEAF_LEVEL
+      | unprotected_ipa && RTTE[ipa].state = ASSIGNED_NS
+    -
+
+Observability
+~~~~~~~~~~~~~
+.. list-table::
+  :widths: 25 75
+
+  * - Footprint
+    - Verification
+  * - Command Failure
+    -
+  * - RTTE.state, RTTE.addr
+    - Refer Observing Properties of a Granule and Observing Contents of a Granule for details.
+  * - granule(rtte.addr).state
+    - This is outside the scope of CCA-RMM-ACS. Refer Observing Properties of a Granule and
+      Observing Contents of a Granule for details
+  * - Command Success
+    -
+  * - RTTE.state, RTTE.addr
+    - Execute RTT_READ_ENTRY and compare the outcome with expected value. Check the rtte.state
+      based on flag set
+  * - granule(rtte.addr).state
+    - This will be test in ACS DA flow scenario.
+
+
+RMI_IO_DESTROY
+^^^^^^^^^^^^^^
+
+Argument list
+~~~~~~~~~~~~~
+
+.. list-table::
+  :widths: 25 75
+
+  * - Input parameters
+    - Valid Values
+  * - rd
+    - | granule(rd).state = RD
+      | Realm(rd).state = New, Active
+  * - ipa
+    - | ipa = 4K_ALIGNED
+      | ipa = protected
+      | walk(ipa).level = LEAF_LEVEL
+      | RTTE[ipa].state = ASSIGNED_IO_PRIVATE, ASSIGNED_IO_SHARED
+      | RTTE[ipa].ripas = EMPTY, RAM
+
+
+Failure conditon testing
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. list-table::
+  :widths: 20 40 40
+
+  * - Input parameters
+    - Input Values
+    - Remarks
+  * - rd
+    - granule(rd) = unaligned_addr, mmio_region (A), outside_of_permitted_pa (B),
+      not_backed_by_encryption, raz or wi (C)
+
+      granule(rd).state = UNDELEGATED, DELEGATED, REC, RTT, DATA, IO_DELEGATED_PRIVATE,
+      IO_DELEGATED_SHARED, IO_PRIVATE, IO_SHARED, IO_UNDELEGATED, PDEV, VDEV
+    -
+  * - ipa
+    - ipa = unaligned_addr, unprotected_ipa, outside_of_permitted_ipa
+
+      walk(ipa).level != LEAF_LEVEL
+
+      RTTE[ipa].state = UNASSIGNED
+    -
+
+
+Failure Priority ordering
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. list-table::
+  :widths: 20 40 40
+
+  * - Input parameters
+    - Input Values
+    - Remarks
+  * - ipa
+    - | unprotected_ipa && walk(ipa).level != LEAF_LEVEL
+      | unprotected_ipa && RTTE[ipa].state = UNASSIGNED_NS
+    -
+
+Observability
+~~~~~~~~~~~~~
+.. list-table::
+  :widths: 25 75
+
+  * - Footprint
+    - Verification
+  * - Command Failure
+    -
+  * - RTTE.state, RTTE.addr
+    - Refer Observing Properties of a Granule and Observing Contents of a Granule for details.
+  * - granule(walk(ipa).rtte.addr).state
+    - This is outside the scope of CCA-RMM-ACS. Refer Observing Properties of a Granule and
+      Observing Contents of a Granule for details
+  * - Command Success
+    -
+  * - RTTE.state, RTTE.addr
+    - Execute RTT_READ_ENTRY and compare the outcome with expected value (as defined by the
+      architecture)
+
+      Do this for Realm(rd).state = {New, Active} & RTTE[ipa].ripas = {EMPTY, IO, RAM, DESTROYED}
+  * - granule(walk(ipa).rtte.addr).state
+    - This will be test outside command ACS as part of rollback sequence.
+
+
+RMI_PDEV_ABORT
+^^^^^^^^^^^^^^
+
+Argument list
+~~~~~~~~~~~~~
+
+.. list-table::
+  :widths: 25 75
+
+  * - Input parameters
+    - Valid Values
+  * - pdev_ptr
+    - | pdev_ptr = 4K_ALIGNED
+      | granule(pdev_ptr).state = PDEV
+      | pdev(pdev_ptr).state = PDEV_NEW, PDEV_HAS_KEY, PDEV_COMMUNICATING
+
+
+Failure conditon testing
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. list-table::
+  :widths: 20 40 40
+
+  * - Input parameters
+    - Input Values
+    - Remarks
+  * - pdev_ptr
+    - granule(pdev_ptr) = unaligned_addr, mmio_region (A), outside_of_permitted_pa (B),
+      not_backed_by_encryption, raz or wi (C)
+
+      granule(pdev_ptr).state = UNDELEGATED, DELEGATED, RD, REC, RTT, DATA, IO_DELEGATED_PRIVATE,
+      IO_DELEGATED_SHARED, IO_PRIVATE, IO_SHARED, IO_UNDELEGATED, VDEV
+
+      pdev(pdev_ptr).state = PDEV_ERROR,  PDEV_IDE_RESETTING, PDEV_NEEDS_KEY, PDEV_READY,
+      PDEV_STOPPED, PDEV_STOPPING
+    -
+
+
+Failure Priority ordering
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+This command has failure condition ordering but we can't verify in ACS.
+
+Observability
+~~~~~~~~~~~~~
+.. list-table::
+  :widths: 25 75
+
+  * - Footprint
+    - Verification
+  * - Command Failure
+    -
+  * - pdev(pdev_ptr).state
+    - Check pdev(pdev_ptr).state = PDEV_COMMUNICATING through RMI_PDEV_GET_STATE command
+  * - pdev(pdev_ptr).io_state
+    -
+  * - Command Success
+    -
+  * - pdev(pdev_ptr).state
+    - Check pdev(pdev_ptr).state = PDEV_READY through RMI_PDEV_GET_STATE command
+  * - pdev(pdev_ptr).io_state
+    - This will be test in ACS DA flow scenario.
+
+
+RMI_PDEV_COMMUNICATE
+^^^^^^^^^^^^^^^^^^^^
+
+Argument list
+~~~~~~~~~~~~~
+
+.. list-table::
+  :widths: 25 75
+
+  * - Input parameters
+    - Valid Values
+  * - pdev_ptr
+    - | pdev_ptr = 4K_ALIGNED
+      | granule(pdev_ptr).state = PDEV
+      | pdev(pdev_ptr).io_state = IO_ACTIVE/ IO_PENDING
+  * - data_ptr
+    - | data_ptr = 4K_ALIGNED
+      | granule(data_ptr).gpt = GPT_NS
+      | IoData(data_ptr).enter.req_addr = 4K_ALIGNED
+      | granule(IoData(data_ptr).enter.req_addr).gpt = GPT_NS
+      | IoData(data_ptr).enter.resp_addr = 4K_ALIGNED
+      | granule(IoData(data_ptr).enter.resp_addr).gpt = GPT_NS
+      | IoData(data_ptr).enter.resp_len <= RMM_GRANULE_SIZE
+
+
+Failure conditon testing
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. list-table::
+  :widths: 20 40 40
+
+  * - Input parameters
+    - Input Values
+    - Remarks
+  * - pdev_ptr
+    - granule(pdev_ptr) = unaligned_addr, mmio_region (A), outside_of_permitted_pa (B),
+      not_backed_by_encryption, raz or wi (C)
+
+      granule(pdev_ptr).state = UNDELEGATED, DELEGATED, RD, REC, RTT, DATA, IO_DELEGATED_PRIVATE,
+      IO_DELEGATED_SHARED, IO_PRIVATE, IO_SHARED, IO_UNDELEGATED, VDEV
+
+      pdev(pdev_ptr).io_state = IO_IDLE, IO_ERROR
+    -
+  * - data_ptr
+    - granule(data_ptr) = unaligned_addr, mmio_region (A), outside_of_permitted_pa (B),
+      not_backed_by_encryption, raz or wi (C)
+
+      granule(data_ptr).gpt == GPT_SECURE, GPT_REALM
+
+      granule(IoData(data_ptr).enter.req_addr) = unaligned_addr, mmio_region (A),
+      outside_of_permitted_pa (B), not_backed_by_encryption, raz or wi (C)
+
+      granule(IoData(data_ptr).enter.req_addr).gpt == GPT_SECURE, GPT_REALM
+
+      granule(IoData(data_ptr).enter.resp_addr) = unaligned_addr, mmio_region (A),
+      outside_of_permitted_pa (B), not_backed_by_encryption, raz or wi (C)
+
+      granule(IoData(data_ptr).enter.resp_addr).gpt == GPT_SECURE, GPT_REALM
+
+      IoData(data_ptr).enter.resp_len = RMM_GRANULE_SIZE + 1
+    -
+
+Failure Priority ordering
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+This command has failure condition ordering but we can't verify in ACS.
+
+Observability
+~~~~~~~~~~~~~
+.. list-table::
+  :widths: 25 75
+
+  * - Footprint
+    - Verification
+  * - Command Failure
+    -
+  * - pdev(pdev_ptr).state
+    - Check pdev(pdev_ptr).state = pdev_state_pre through RMI_PDEV_GET_STATE command
+  * - pdev(pdev_ptr).io_state
+    -
+  * - Command Success
+    -
+  * - pdev(pdev_ptr).state
+    - Check pdev(pdev_ptr).state based on pdev_state_pre through RMI_PDEV_GET_STATE command
+  * - pdev(pdev_ptr).io_state
+    - This will be test in ACS DA flow scenario.
+
+
+RMI_PDEV_CREATE
+^^^^^^^^^^^^^^^
+
+Argument list
+~~~~~~~~~~~~~
+
+.. list-table::
+  :widths: 25 75
+
+  * - Input parameters
+    - Valid Values
+  * - pdev_ptr
+    - | pdev_ptr = 4K_ALIGNED
+      | granule(pdev_ptr).state = DELEGATED
+  * - params_ptr
+    - | params_ptr = 4K_ALIGNED
+      | granule(params_ptr).gpt = GPT_NS
+      | granule(params_ptr).content(aux) = 4K_ALIGNED
+      | granule(params_ptr).content(num_aux) = ImplFeatures.pdev_num_aux
+      | granule(params_ptr).content(aux).state = Delegated
+
+
+Failure conditon testing
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. list-table::
+  :widths: 20 40 40
+
+  * - Input parameters
+    - Input Values
+    - Remarks
+  * - pdev_ptr
+    - granule(pdev_ptr) = unaligned_addr, mmio_region (A), outside_of_permitted_pa (B),
+      not_backed_by_encryption, raz or wi (C)
+
+      granule(pdev_ptr).state = UNDELEGATED, RD, REC, RTT, DATA, IO_DELEGATED_PRIVATE,
+      IO_DELEGATED_SHARED, IO_PRIVATE, IO_SHARED, IO_UNDELEGATED, PDEV, VDEV
+    -
+  * - params_ptr
+    - granule(params_ptr) = unaligned_addr, mmio_region, outside_of_permitted_pa,
+      not_backed_by_encryption, raz or wi
+
+      granule(params_ptr).content(num_aux) != ImplFeatures.pdev_num_aux
+
+      granule(params_ptr).content(aux...num_aux) = unaligned_addr
+
+      granule(params_ptr).content(aux) = mmio_region, outside_of_permitted_pa,
+      not_backed_by_encryption, raz or wi
+
+      granule(params_ptr).content(aux...num_aux).state = Undelegated, REC, RTT, DATA, RD,
+      IO_DELEGATED_PRIVATE, IO_DELEGATED_SHARED, IO_PRIVATE, IO_SHARED, IO_UNDELEGATED, PDEV, VDEV
+
+      granule(params_ptr).gpt = GPT_REALM, GPT_SECURE, GPT_ROOT
+    -
+
+Failure Priority ordering
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+This command has failure condition ordering but we can't verify in ACS.
+
+Observability
+~~~~~~~~~~~~~
+.. list-table::
+  :widths: 25 75
+
+  * - Footprint
+    - Verification
+  * - Command Failure
+    -
+  * - granule(pdev_ptr).state
+
+      granule(pdev_ptr).aux_state
+    - This is outside the scope of CCA-RMM-ACS. Refer Observing Properties of a Granule and
+      Observing Contents of a Granule for details
+  * - Command Success
+    -
+  * - granule(pdev_ptr).state
+
+      granule(pdev_ptr).aux_state
+    - This will be test in ACS DA flow scenario.
+
+RMI_PDEV_DESTROY
+^^^^^^^^^^^^^^^^
+
+Argument list
+~~~~~~~~~~~~~
+
+.. list-table::
+  :widths: 25 75
+
+  * - Input parameters
+    - Valid Values
+  * - pdev_ptr
+    - | pdev_ptr = 4K_ALIGNED
+      | granule(pdev_ptr).state = PDEV
+      | pdev(pdev_ptr).state = PDEV_STOPPED
+
+
+Failure conditon testing
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. list-table::
+  :widths: 20 40 40
+
+  * - Input parameters
+    - Input Values
+    - Remarks
+  * - pdev_ptr
+    - granule(pdev_ptr) = unaligned_addr, mmio_region (A), outside_of_permitted_pa (B),
+      not_backed_by_encryption, raz or wi (C)
+
+      granule(pdev_ptr).state = UNDELEGATED, DELEGATED, RD, REC, RTT, DATA, IO_DELEGATED_PRIVATE,
+      IO_DELEGATED_SHARED, IO_PRIVATE, IO_SHARED, IO_UNDELEGATED, VDEV
+
+      pdev(pdev_ptr).state = PDEV_COMMUNICATING, PDEV_ERROR, PDEV_HAS_KEY, PDEV_IDE_RESETTING,
+      PDEV_NEEDS_KEY, PDEV_NEW, PDEV_READY, PDEV_STOPPING
+    -
+
+
+Failure Priority ordering
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+This command has failure condition ordering but we can't verify in ACS.
+
+Observability
+~~~~~~~~~~~~~
+.. list-table::
+  :widths: 25 75
+
+  * - Footprint
+    - Verification
+  * - Command Failure
+    -
+  * - granule(pdev_ptr).state
+
+      granule(pdev_ptr).aux_state
+    - This is outside the scope of CCA-RMM-ACS. Refer Observing Properties of a Granule and
+      Observing Contents of a Granule for details
+  * - Command Success
+    -
+  * - granule(pdev_ptr).state
+
+      granule(pdev_ptr).aux_state
+    - This will be test in ACS DA flow scenario.
+
+
+RMI_PDEV_GET_STATE
+^^^^^^^^^^^^^^^^^^
+
+Argument list
+~~~~~~~~~~~~~
+
+.. list-table::
+  :widths: 25 75
+
+  * - Input parameters
+    - Valid Values
+  * - pdev_ptr
+    - | pdev_ptr = 4K_ALIGNED
+      | granule(pdev_ptr).state = PDEV
+
+
+Failure conditon testing
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. list-table::
+  :widths: 20 40 40
+
+  * - Input parameters
+    - Input Values
+    - Remarks
+  * - pdev_ptr
+    - granule(pdev_ptr) = unaligned_addr, mmio_region (A), outside_of_permitted_pa (B),
+      not_backed_by_encryption, raz or wi (C)
+
+      granule(pdev_ptr).state = UNDELEGATED, DELEGATED, RD, REC, RTT, DATA, IO_DELEGATED_PRIVATE,
+      IO_DELEGATED_SHARED, IO_PRIVATE, IO_SHARED, IO_UNDELEGATED, VDEV
+    -
+
+
+Failure Priority ordering
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+This command has failure condition ordering but we can't verify in ACS.
+
+Observability
+~~~~~~~~~~~~~
+
+This command has no footprint.
+
+RMI_PDEV_IDE_RESET
+^^^^^^^^^^^^^^^^^^
+
+Argument list
+~~~~~~~~~~~~~
+
+.. list-table::
+  :widths: 25 75
+
+  * - Input parameters
+    - Valid Values
+  * - pdev_ptr
+    - | pdev_ptr = 4K_ALIGNED
+      | granule(pdev_ptr).state = PDEV
+      | pdev(pdev_ptr).cls = PDEV_PCIE
+      | pdev(pdev_ptr).state = PDEV_READY
+
+
+Failure conditon testing
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. list-table::
+  :widths: 20 40 40
+
+  * - Input parameters
+    - Input Values
+    - Remarks
+  * - pdev_ptr
+    - granule(pdev_ptr) = unaligned_addr, mmio_region (A), outside_of_permitted_pa (B),
+      not_backed_by_encryption, raz or wi (C)
+
+      granule(pdev_ptr).state = UNDELEGATED, DELEGATED, RD, REC, RTT, DATA, IO_DELEGATED_PRIVATE,
+      IO_DELEGATED_SHARED, IO_PRIVATE, IO_SHARED, IO_UNDELEGATED, VDEV
+
+      pdev(pdev_ptr).cls = Give encoding other than RMI_PCIE (for ex: 1 instead of 0)
+
+      pdev(pdev_ptr).state = PDEV_COMMUNICATING, PDEV_ERROR, PDEV_HAS_KEY, PDEV_IDE_RESETTING,
+      PDEV_NEEDS_KEY, PDEV_NEW, PDEV_STOPPED, PDEV_STOPPING
+    -
+
+
+Failure Priority ordering
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+This command has failure condition ordering but we can't verify in ACS.
+
+Observability
+~~~~~~~~~~~~~
+.. list-table::
+  :widths: 25 75
+
+  * - Footprint
+    - Verification
+  * - Command Failure
+    -
+  * - pdev(pdev_ptr).state
+    - | Check pdev(pdev_ptr).state = PDEV_READY through RMI_PDEV_GET_STATE command
+  * - pdev(pdev_ptr).io_state
+    -
+  * - Command Success
+    -
+  * - pdev(pdev_ptr).state
+    - | Check pdev(pdev_ptr).state = PDEV_IDE_RESETTING through RMI_PDEV_GET_STATE command
+  * - pdev(pdev_ptr).io_state
+    - This will be test in ACS DA flow scenario.
+
+RMI_PDEV_NOTIFY
+^^^^^^^^^^^^^^^
+
+Argument list
+~~~~~~~~~~~~~
+
+.. list-table::
+  :widths: 25 75
+
+  * - Input parameters
+    - Valid Values
+  * - pdev_ptr
+    - | pdev_ptr = 4K_ALIGNED
+      | granule(pdev_ptr).state = PDEV
+      | pdev(pdev_ptr).state = PDEV_READY
+  * - ev
+    - | ev = RMI_IDE_KEY_REFRESH
+
+
+Failure conditon testing
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. list-table::
+  :widths: 20 40 40
+
+  * - Input parameters
+    - Input Values
+    - Remarks
+  * - pdev_ptr
+    - granule(pdev_ptr) = unaligned_addr, mmio_region (A), outside_of_permitted_pa (B),
+      not_backed_by_encryption, raz or wi (C)
+
+      granule(pdev_ptr).state = UNDELEGATED, DELEGATED, RD, REC, RTT, DATA, IO_DELEGATED_PRIVATE,
+      IO_DELEGATED_SHARED, IO_PRIVATE, IO_SHARED, IO_UNDELEGATED, VDEV
+
+      pdev(pdev_ptr).state = PDEV_COMMUNICATING, PDEV_ERROR, PDEV_HAS_KEY, PDEV_IDE_RESETTING,
+      PDEV_NEEDS_KEY, PDEV_NEW, PDEV_STOPPED, PDEV_STOPPING
+    -
+  * - ev
+    - ev = Give encoding other than RMI_IDE_KEY_REFRESH (for ex: 1 instead of 0)
+    -
+
+
+Failure Priority ordering
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+This command has failure condition ordering but we can't verify in ACS.
+
+Observability
+~~~~~~~~~~~~~
+.. list-table::
+  :widths: 25 75
+
+  * - Footprint
+    - Verification
+  * - Command Failure
+    -
+  * - pdev(pdev_ptr).state
+    - | Check pdev(pdev_ptr).state = PDEV_READY through RMI_PDEV_GET_STATE command
+  * - pdev(pdev_ptr).io_state
+    -
+  * - Command Success
+    -
+  * - pdev(pdev_ptr).state
+    - | Check pdev(pdev_ptr).state = PDEV_COMMUNICATING through RMI_PDEV_GET_STATE command
+  * - pdev(pdev_ptr).io_state
+    - This will be test in ACS DA flow scenario.
+
+RMI_PDEV_SET_KEY
+^^^^^^^^^^^^^^^^
+
+Argument list
+~~~~~~~~~~~~~
+
+.. list-table::
+  :widths: 25 75
+
+  * - Input parameters
+    - Valid Values
+  * - pdev_ptr
+    - | pdev_ptr = 4K_ALIGNED
+      | granule(pdev_ptr).state = PDEV
+      | pdev(pdev_ptr).state = PDEV_NEEDS_KEY
+  * - key
+    - | key = 4K_ALIGNED
+      | granule(key).gpt = GPT_NS
+      | valid_key
+  * - len
+    - | len <= RMM_GRANULE_SIZE
+      | valid_key_length
+  * - algo
+    - | algo = RMI_SIG_RSASSA_3072, RMI_SIG_ECDSA_P256, RMI_SIG_ECDSA_P384
+
+
+Failure conditon testing
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. list-table::
+  :widths: 20 40 40
+
+  * - Input parameters
+    - Input Values
+    - Remarks
+  * - pdev_ptr
+    - granule(pdev_ptr) = unaligned_addr, mmio_region (A), outside_of_permitted_pa (B),
+      not_backed_by_encryption, raz or wi (C)
+
+      granule(pdev_ptr).state = UNDELEGATED, DELEGATED, RD, REC, RTT, DATA, IO_DELEGATED_PRIVATE,
+      IO_DELEGATED_SHARED, IO_PRIVATE, IO_SHARED, IO_UNDELEGATED, VDEV
+
+      pdev(pdev_ptr).state = PDEV_COMMUNICATING, PDEV_ERROR, PDEV_HAS_KEY, PDEV_IDE_RESETTING,
+      PDEV_NEW, PDEV_READY, PDEV_STOPPED, PDEV_STOPPING
+    -
+  * - key
+    - granule(key) = unaligned_addr, mmio_region (A), outside_of_permitted_pa (B),
+      not_backed_by_encryption, raz or wi (C)
+
+      granule(key).gpt == GPT_SECURE, GPT_REALM
+
+      key = key_invalid
+    -
+  * - len
+    - len = RMM_GRANULE_SIZE + 1
+    -
+
+
+Failure Priority ordering
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+This command has failure condition ordering but we can't verify in ACS.
+
+Observability
+~~~~~~~~~~~~~
+.. list-table::
+  :widths: 25 75
+
+  * - Footprint
+    - Verification
+  * - Command Failure
+    -
+  * - pdev(pdev_ptr).state
+    - | Check pdev(pdev_ptr).state = PDEV_NEEDS_KEY through RMI_PDEV_GET_STATE command
+  * - pdev(pdev_ptr).io_state
+    -
+  * - Command Success
+    -
+  * - pdev(pdev_ptr).state
+    - | Check pdev(pdev_ptr).state = PDEV_HAS_KEY through RMI_PDEV_GET_STATE command
+  * - pdev(pdev_ptr).io_state
+    - This will be test in ACS DA flow scenario.
+
+RMI_PDEV_STOP
+^^^^^^^^^^^^^
+
+Argument list
+~~~~~~~~~~~~~
+
+.. list-table::
+  :widths: 25 75
+
+  * - Input parameters
+    - Valid Values
+  * - pdev_ptr
+    - | pdev_ptr = 4K_ALIGNED
+      | granule(pdev_ptr).state = PDEV
+      | pdev(pdev_ptr).state = PDEV_COMMUNICATING, PDEV_STOPPING, PDEV_STOPPED
+      | pdev(pdev_ptr).num_vdevs = non zero value
+
+
+Failure conditon testing
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. list-table::
+  :widths: 20 40 40
+
+  * - Input parameters
+    - Input Values
+    - Remarks
+  * - pdev_ptr
+    - granule(pdev_ptr) = unaligned_addr, mmio_region (A), outside_of_permitted_pa (B),
+      not_backed_by_encryption, raz or wi (C)
+
+      granule(pdev_ptr).state = UNDELEGATED, DELEGATED, RD, REC, RTT, DATA, IO_DELEGATED_PRIVATE,
+      IO_DELEGATED_SHARED, IO_PRIVATE, IO_SHARED, IO_UNDELEGATED, VDEV
+
+      pdev(pdev_ptr).state = PDEV_ERROR, PDEV_HAS_KEY, PDEV_IDE_RESETTING, PDEV_NEEDS_KEY,
+      PDEV_NEW, PDEV_READY
+
+      pdev(pdev_ptr).num_vdevs = 0
+    -
+
+
+Failure Priority ordering
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+This command has failure condition ordering but we can't verify in ACS.
+
+Observability
+~~~~~~~~~~~~~
+.. list-table::
+  :widths: 25 75
+
+  * - Footprint
+    - Verification
+  * - Command Failure
+    -
+  * - pdev(pdev_ptr).io_state
+    - | Check pdev(pdev_ptr).state = PDEV_COMMUNICATING, PDEV_STOPPING, PDEV_STOPPED through
+        RMI_PDEV_GET_STATE command
+  * - pdev(pdev_ptr).io_state
+    -
+  * - Command Success
+    -
+  * - pdev(pdev_ptr).io_state
+    - | Check pdev(pdev_ptr).state = PDEV_STOPPING through RMI_PDEV_GET_STATE command
+  * - pdev(pdev_ptr).io_state
+    - This will be test in ACS DA flow scenario.
 
 RMI_PSCI_COMPLETE
 ^^^^^^^^^^^^^^^^^
-To test this command, unless otherwise specified below, the pre-requsite is that the realm needs to
+To test this command, unless otherwise specified below, the pre-requisite is that the realm needs to
 initiate corresponding PSCI request (PSCI_AFFINITY_INFO or PSCI_CPU_ON) through RSI.
 
 Argument list
@@ -844,16 +1803,16 @@ Argument list
 
   * - Input parameters
     - Valid Values
-  * - calling_rec
-    - | granule(calling_rec) = 4K_ALIGNED
-      | granule(calling_rec).state = REC
-      | Rec(calling_rec).psci_pending = PSCI_REQUEST_PENDING
-      | calling rec != target rec
-  * - target_rec
-    - | granule(target_rec) = 4K_ALIGNED
-      | granule(target_rec).state = REC
-      | Rec(target_rec).owner = Rec(calling_rec).owner
-      | Rec(target_rec).owner = Rec(calling_rec).gprs[1]
+  * - calling_rec_ptr
+    - | granule(calling_rec_ptr) = 4K_ALIGNED
+      | granule(calling_rec_ptr).state = REC
+      | Rec(calling_rec_ptr).psci_pending = PSCI_REQUEST_PENDING
+      | calling_rec_ptr != target_rec_ptr
+  * - target_rec_ptr
+    - | granule(target_rec_ptr) = 4K_ALIGNED
+      | granule(target_rec_ptr).state = REC
+      | Rec(target_rec_ptr).owner = Rec(calling_rec_ptr).owner
+      | Rec(target_rec_ptr).mpidr = Rec(calling_rec_ptr).gprs[1]
   * - status
     - Valid PSCI status code which is permitted.
 
@@ -866,30 +1825,32 @@ Failure conditon testing
   * - Input parameters
     - Input Values
     - Remarks
-  * - calling_rec
-    - granule(calling_rec) = granule(target_rec), unaligned_addr, mmio_region [A],
+  * - calling_rec_ptr
+    - granule(calling_rec_ptr) = granule(target_rec_ptr), unaligned_addr, mmio_region [A],
       outside_of_permitted_pa [B], not_backed_by_encryption, raz or wi [C].
 
-      granule(calling_rec).state = Undelegated, Delegated, RD, RTT
+      granule(calling_rec_ptr).state = UNDELEGATED, DELEGATED, RD, REC_AUX, RTT, DATA, PDEV, VDEV,
+      IO_UNDELEGATED, IO_DELEGATED_PRIVATE, IO_DELEGATED_SHARED, IO_PRIVATE, IO_SHARED [D]
 
-      Rec(calling_rec).psci_pending != PSCI_REQUEST_PENDING [E]
+      Rec(calling_rec_ptr).psci_pending != PSCI_REQUEST_PENDING [E]
     - [E] - This can be achieved in two ways.
 
       [1] Execute RMI_PSCI_COMPLETE without a request from realm
 
       [2] provide incorrect calling_rec arg value (same realm but didn't initiate RSI request,
       REC belonging to different realm) in RMI_PSCI_COMPLETE
-  * - target_rec
-    - granule(target_rec) = unaligned_addr, mmio_region, outside of permitted pa, not backed by
-      encryption, raz or wi, other_realm_owned rec, wrong_target [D]
+  * - target_rec_ptr
+    - granule(target_rec_ptr) = unaligned_addr, mmio_region, outside of permitted pa, not backed by
+      encryption, raz or wi, other_realm_owned rec, wrong_target [F]
 
-      granule(target_rec).state = Undelegated, Delegated, RD, RTT
-    - [D] wrong_target implies that calling_rec has a different mpidr value stored in gprs[1] than
+      granule(target_rec_ptr).state = UNDELEGATED, DELEGATED, RD, REC_AUX, RTT, DATA, PDEV, VDEV,
+      IO_UNDELEGATED, IO_DELEGATED_PRIVATE, IO_DELEGATED_SHARED, IO_PRIVATE, IO_SHARED [D]
+
+    - [F] wrong_target implies that calling_rec has a different mpidr value stored in gprs[1] than
       target_rec.mpidr
   * - status
     - Return a PSCI status code which is not permitted to return.
     -
-
 
 Failure Priority ordering
 ~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -905,13 +1866,13 @@ Observability
     - Verification
   * - Command Failure
     -
-  * - | target_rec.content,
-      | calling_rec.content
+  * - | target_rec_ptr.content,
+      | calling_rec_ptr.content
     - Refer Observing Properties of a Granule and Observing Contents of a Granule for details
   * - Command Success
     -
-  * - | target_rec.content,
-      | calling_rec.content
+  * - | target_rec_ptr.content,
+      | calling_rec_ptr.content
     - Tested outside of ACS command scenarios.
 
       Overlap with a scenario in Exception Model module - exception_rec_exit_due_to_psci
@@ -932,7 +1893,6 @@ Argument list
       | granule(rd).state = RD
       | Realm(rd).state = New
 
-
 Failure conditon testing
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -946,12 +1906,13 @@ Failure conditon testing
     - granule(rd) = unaligned_addr, mmio_region [A], outside_of_permitted_pa [B],
       not_backed_by_encryption, raz or wi [C]
 
-      granule(rd).state = UNDELEGATED, DELEGATED, REC, RTT, DATA
+      granule(rd).state = UNDELEGATED, DELEGATED, REC, RTT, DATA, PDEV, VDEV, IO_UNDELEGATED,
+      IO_DELEGATED_PRIVATE, IO_DELEGATED_SHARED, IO_PRIVATE, IO_SHARED [D]
 
-      Realm(rd).state = Active[D], NULL, System off[D]
-    - (A - C) See RMI_DATA_CREATE for the specifics behind these stimuli
+      Realm(rd).state = Active[E], NULL, System off[E]
+    - (A - D) See RMI_DATA_CREATE for the specifics behind these stimuli
 
-      [D] Active requires a valid REALM_ACTIVATE call (circular dependency) -> Do this as part of
+      [E] Active requires a valid REALM_ACTIVATE call (circular dependency) -> Do this as part of
       the positive observability check
 
 Failure Priority ordering
@@ -965,7 +1926,7 @@ Failure Priority ordering
     - Remarks
   * - rd
     - granule(rd).state DELEGATED & Realm(rd).state = NULL
-    - This is already coverd with Realm(rd).state = NULL in the failure condition stimulus above
+    - This is already covered with Realm(rd).state = NULL in the failure condition stimulus above
 
 Observability
 ~~~~~~~~~~~~~
@@ -997,12 +1958,12 @@ Argument list
     - Valid Values
   * - rd
     - | granule(rd) = 4K_ALIGNED
-      | granule(rd).state = Delegated
+      | granule(rd).state = DELEGATED
   * - params_ptr
     - | granule(params_ptr) = 4K_ALIGNED
       | granule(params_ptr).gpt = GPT_NS
       | granule(params_ptr).content(rtt_base) = 4K_ALIGNED
-      | granule(params_ptr).content(rtt_base).state = Delegated
+      | granule(params_ptr).content(rtt_base).state = DELEGATED
       | granule(params_ptr).content(flags, s2sz, sve_vl, num_bps, num_wps, pmu_num_ctrs) = supported
       | granule(params_ptr).content(vmid) = valid, not_in_use
       | granule(params_ptr).content(hash_algo) = valid, supported
@@ -1025,26 +1986,27 @@ Failure conditon testing
 
       params_ptr.content(rtt_base)
 
-      granule(rd).state = Undelegated, RD, RTT, DATA, REC
+      granule(rd).state = UNDELEGATED, DELEGATED, REC, RTT, DATA, PDEV, VDEV, IO_UNDELEGATED,
+      IO_DELEGATED_PRIVATE, IO_DELEGATED_SHARED, IO_PRIVATE, IO_SHARED [D]
     -
   * - params_ptr
     - granule(params_ptr) = unaligned_addr, mmio_region[A], outside_of_permitted_pa [B],
       not_backed_by_encryption, raz or wi [C]
 
-      granule(params_ptr).content(hash_algo) = encoding_reserved [D], not_supported [E]
+      granule(params_ptr).content(hash_algo) = encoding_reserved [E], not_supported [F]
 
       granule(params_ptr).content(rtt_base) = unaligned_addr,
 
-      granule(params_ptr).content(rtt_num_start, rtt_level_start) = incompatible [F],
+      granule(params_ptr).content(rtt_num_start, rtt_level_start) = incompatible [G],
 
-      granule(params_ptr).content(rtt_base, rttsize*).state = Undelegated,
+      granule(params_ptr).content(rtt_base, rttsize(*)).state = UNDELEGATED,
 
       granule(params_ptr).content(vmid) = invalid, in_use
 
       granule(params_ptr).gpt = GPT_REALM, GPT_SECURE, GPT_ROOT (may be outside the scope of ACS
       as we may not get to know Root memory from platform memory map)
 
-      ***rtt size = rtt base<addr<rtt_num_start*RMM granule size so, cover
+      (*)rtt size = rtt base<addr<rtt_num_start*RMM granule size so, cover
       RMIRealmparams.rtt_num_start =1 and >1.
 
       For the latter, for example, if read of RMIFeatureregister0.S2SZ=16 (that is implementation
@@ -1052,15 +2014,15 @@ Failure conditon testing
       RMIRealmparams.rtt_num_start ~2, RMIRealmparams.rtt_level_start ~1, choose rtt_base ~ 8K
       aligned address with first 4KB in delegate state and the next 4KB in undelegate state
     -
-      [D] encoding_reserved refers to values thatare reserved for future implementations (i.e.,
+      [E] encoding_reserved refers to values that are reserved for future implementations (i.e.,
       not in the table in spec)
 
-      [E] not_supported refers to a valid encoding that is not supported by current implementation
+      [F] not_supported refers to a valid encoding that is not supported by current implementation
       - To achieve this error, perform following sequence read RMI Featureregister0.HASH_SHA_256
       and HASH_SHA_512 and figure out which one of these is supported by the underlying platform
       Provide the unsupported value from previous step in granule(params_ptr).hash_algo
 
-      [F] params_ptr.content(rtt_num_start, rtt_level_start) = incompatible with
+      [G] params_ptr.content(rtt_num_start, rtt_level_start) = incompatible with
       RMIFeatureregister0.S2SZ
 
       Scenario: Host to choose rtt_level_start and ipa_width such that number of starting
@@ -1087,7 +2049,7 @@ Failure conditon testing
       if S2SZ ~ [34-42], set RMIRealmparams.rtt_num_start ~ >16
 
       Note that S2SZ format in RMIFeatureregister0 is different from VTCR_EL2.T0SZ in that the
-      former expects the actual IPA width to be programmed (or returned during quering) as against
+      former expects the actual IPA width to be programmed (or returned during querying) as against
       specifying the equivalent of T0SZ value.
 
 Failure Priority ordering
@@ -1131,7 +2093,6 @@ Argument list
       | granule(rd).state = RD
       | Realm Liveliness = FALSE
 
-
 Failure conditon testing
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -1143,14 +2104,14 @@ Failure conditon testing
     - Remarks
   * - rd
     - granule(rd) = unaligned_addr, mmio_region [A], outside_of_permitted_pa [B],
-      not_backed_by_encryption, raz or wi [C], alive [D]
+      not_backed_by_encryption, raz or wi [C], alive
 
-      granule(rd).state = Delegated*, Undelegated, REC, DATA, RTT
+      granule(rd).state = UNDELEGATED, DELEGATED[E], REC, RTT, DATA, PDEV, VDEV, IO_UNDELEGATED,
+      IO_DELEGATED_PRIVATE, IO_DELEGATED_SHARED, IO_PRIVATE, IO_SHARED [D]
 
-      ***-create a realm, destroy a realm. The state of granule is in delegated state. Use this
+      [E] create a realm, destroy a realm. The state of granule is in delegated state. Use this
       granule to destroy an already destroyed realm. The command should fail due to rd_state error.
     -
-
 
 Failure Priority ordering
 ~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1190,7 +2151,6 @@ Observability
       For granule(rd).state, Realm(rd).state, verify this is command ACS by performing
       RMI_REALM_CREATE again with identical attributes.
 
-
 RMI_REC_AUX_COUNT
 ^^^^^^^^^^^^^^^^^
 
@@ -1206,7 +2166,6 @@ Argument list
     - | granule(rd) = 4K_ALIGNED
       | granule(rd).state = RD
 
-
 Failure conditon testing
 ~~~~~~~~~~~~~~~~~~~~~~~~
 .. list-table::
@@ -1219,7 +2178,9 @@ Failure conditon testing
     - granule(rd) = unaligned_addr, mmio_region [A], outside_of_permitted_pa [B],
       not_backed_by_encryption, raz or wi [C]
 
-      granule(rd).state = Delegated, Undelegated, DATA, RTT
+      granule(rd).state = UNDELEGATED, DELEGATED, REC, RTT, DATA, PDEV, VDEV, IO_UNDELEGATED,
+      IO_DELEGATED_PRIVATE, IO_DELEGATED_SHARED, IO_PRIVATE, IO_SHARED [D]
+
     - See RMI_DATA_CREATE for the specifics behind these stimuli
 
 Failure Priority ordering
@@ -1255,17 +2216,16 @@ Argument list
       | Realm(rd).state = New
   * - rec
     - | granule(rec) = 4K_ALIGNED
-      | granule(rec).state = Delegated
+      | granule(rec).state = DELEGATED
   * - params_ptr
     - | granule(params_ptr) = 4K_ALIGNED
       | granule(params_ptr).gpt = GPT_NS
       | granule(params_ptr).content(mpidr) = in_range (where in_range = 0, 1, 2, ...)
       | granule(params_ptr).content(aux) = 4K_ALIGNED
       | granule(params_ptr).content(num_aux) = RMI_REC_AUX_COUNT(rd)
-      | granule(params_ptr).content(aux).state = Delegated
+      | granule(params_ptr).content(aux).state = DELEGATED
       | granule(params_ptr).content/content(name).MBZ/SBZ = 0, where name can be flags. Try with
         flag = runnable and not runnable.
-
 
 Failure conditon testing
 ~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1280,20 +2240,23 @@ Failure conditon testing
     - granule(rd) = unaligned_addr, mmio_region [A], outside_of_permitted_pa [B],
       not_backed_by_encryption, raz or wi [C]
 
-      granule(rd).state = Undelegated, Delegated*, REC, RTT, DATA
-
-      ***-create a realm, destroy the realm and use the granule that's in delegated state as an
-      input to this ABI to test above failure condition.
+      granule(rd).state = UNDELEGATED, DELEGATED[E], REC, RTT, DATA, PDEV, VDEV, IO_UNDELEGATED,
+      IO_DELEGATED_PRIVATE, IO_DELEGATED_SHARED, IO_PRIVATE, IO_SHARED [D]
 
       Realm(rd).state = Active, System off
-    -  Prepare granule whose granule(rd).state=Delegated and realm(rd).state=Null
-       Realm(rd).state = Null will result in more than one failure condition whose error codes are
-       different and priority order ing is not defined
+
+    - [E] create a realm, destroy the realm and use the granule that's in delegated state as an
+      input to this ABI to test above failure condition.
+
+      Prepare granule whose granule(rd).state=DELEGATED and realm(rd).state=Null
+      Realm(rd).state = Null will result in more than one failure condition whose error codes are
+      different and priority ordering is not defined
   * - rec
     - granule(rec) = unaligned_addr, mmio_region [A], outside_of_permitted_pa [B],
       not_backed_by_encryption, raz or wi [C]
 
-      granule(rec).state = Undelegated, REC, RTT, RD, DATA
+      granule(rec).state = UNDELEGATED, DELEGATED, RD, REC_AUX, RTT, DATA, PDEV, VDEV,
+      IO_UNDELEGATED, IO_DELEGATED_PRIVATE, IO_DELEGATED_SHARED, IO_PRIVATE, IO_SHARED [D]
     -
   * - params_ptr
     - granule(params_ptr) = unaligned_addr, mmio_region [A], outside_of_permitted_pa [B],
@@ -1301,25 +2264,26 @@ Failure conditon testing
 
       granule(params_ptr).content(num_aux) != RMI_REC_AUX_COUNT(rd)
 
-      granule(params_ptr).content(aux...num_aux) = unaligned_addr [F]
+      granule(params_ptr).content(aux...num_aux) = unaligned_addr [G]
 
-      granule(params_ptr).content(aux...num_aux) = granule(rec) [G]
+      granule(params_ptr).content(aux...num_aux) = granule(rec) [H]
 
       granule(params_ptr).content(aux) = mmio_region [A], outside_of_permitted_pa [B],
       not_backed_by_encryption, raz or wi [C]
 
-      granule(params_ptr).content(aux...num_aux).state = Undelegated, REC, RTT, DATA, RD
+      granule(params_ptr).content(aux...num_aux).state = UNDELEGATED, REC, RTT, DATA, PDEV, VDEV,
+      IO_UNDELEGATED, IO_DELEGATED_PRIVATE, IO_DELEGATED_SHARED, IO_PRIVATE, IO_SHARED [D]
+
 
       granule(params_ptr).content(mpidr) = provide mpidr value starting from 2
 
-      granule(params_ptr).gpt = GPT_REALM, GPT_SECURE, GPT_ROOT [E]
-    - [E] GPT_ROOT (may be outside the scope of ACS as we may not get to know Root memory from
+      granule(params_ptr).gpt = GPT_REALM, GPT_SECURE, GPT_ROOT [F]
+    - [F] GPT_ROOT (may be outside the scope of ACS as we may not get to know Root memory from
       platform memory map)
 
-      [F] at least one aux_granule must be unaligned
+      [G] at least one aux_granule must be unaligned
 
-      [G] Provide granule(rec) address to one of aux address
-
+      [H] Provide granule(rec) address to one of aux address
 
 Failure Priority ordering
 ~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1394,10 +2358,11 @@ Failure conditon testing
     - granule(rec) = unaligned_addr, mmio_region [A], outside_of_permitted_pa [B],
       not_backed_by_encryption, raz or wi [C]
 
-      granule(rec).state = Undelegated, Delegated, RTT, DATA, RD, REC_AUX
+      granule(rec).state = UNDELEGATED, DELEGATED, RD, REC_AUX, RTT, DATA, PDEV, VDEV,
+      IO_UNDELEGATED, IO_DELEGATED_PRIVATE, IO_DELEGATED_SHARED, IO_PRIVATE, IO_SHARED [D]
 
-      Rec(rec).state = Running [D]
-    - [D] This can be verified only in an MP envrionment and need to be tested outside of
+      Rec(rec).state = Running [E]
+    - [E] This can be verified only in an MP environment and need to be tested outside of
       command ACS.
 
 Failure Priority ordering
@@ -1432,7 +2397,7 @@ Observability
       that's needed to run ACS as a single ELF.
 
 RMI_REC_ENTER
-^^^^^^^^^^^^
+^^^^^^^^^^^^^
 
 Argument list
 ~~~~~~~~~~~~~
@@ -1473,7 +2438,8 @@ Failure conditon testing
 
       granule(rec).content(psci_pending) = PSCI_REQUEST_PENDING
 
-      granule(rec).state = Undelegated, Delegated, RTT, RD, DATA, REC_AUX
+      granule(rec).state = UNDELEGATED, DELEGATED, RD, REC_AUX, RTT, DATA, PDEV, VDEV,
+      IO_UNDELEGATED, IO_DELEGATED_PRIVATE, IO_DELEGATED_SHARED, IO_PRIVATE, IO_SHARED [D]
 
       Rec(rec).state = Running [E]
 
@@ -1519,8 +2485,8 @@ Observability
   * - Rec(rec).content
     - This is already tested outside of ACS command scenarios. (Exception scenarios)
 
-RMI_RTT_CREATE
-^^^^^^^^^^^^^^
+RMI_RTT_AUX_CREATE
+^^^^^^^^^^^^^^^^^^
 
 Argument list
 ~~~~~~~~~~~~~
@@ -1531,12 +2497,13 @@ Argument list
   * - Input parameters
     - Valid Values
   * - rd
-    - | granule(rtt) = 4K_ALIGNED
-      | granule(rtt).state = Delegated
-  * - rtt
     - | granule(rd) = 4K_ALIGNED
       | granule(rd).state = RD
       | Realm(rd).state = New, Active, System_Off
+  * - rtt
+    - | granule(rtt) = 4K_ALIGNED
+      | granule(rtt).state = DELEGATED
+      | rtt < 2^48 if Realm(rd).feat_lpa2 == FALSE
   * - ipa
     - | ipa = (level-1)_aligned
       | ipa = within_permissible_ipa (< 2^features0.S2SZ)
@@ -1544,7 +2511,8 @@ Argument list
       | RTTE[ipa].state = UNASSIGNED
   * - level
     - level = {1, 2, 3} if start level is level 0.
-
+  * - index
+    - 0 < index < realm.num_aux_planes, provided Realm(rd).rtt_tree_pp is TRUE.
 
 Failure conditon testing
 ~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1559,13 +2527,744 @@ Failure conditon testing
     - granule(rd) = unaligned_addr, mmio_region [A], outside_of_permitted_pa [B],
       not_backed_by_encryption, raz or wi [C]
 
-      granule(rd).state = Undelegated, Delegated, REC, RTT, DATA
+      granule(rd).state = UNDELEGATED, DELEGATED, REC, RTT, DATA, PDEV, VDEV, IO_UNDELEGATED,
+      IO_DELEGATED_PRIVATE, IO_DELEGATED_SHARED, IO_PRIVATE, IO_SHARED [D]
     -
   * - rtt
     - granule(rtt) = unaligned_addr (<4KB aligned), mmio_region [A], outside_of_permitted_pa [B],
       not_backed_by_encryption, raz or wi [C]
 
-      granule(rtt).state = Undelegated, REC, RD, RTT, DATA
+      granule(rtt).state = UNDELEGATED, DELEGATED, RD, REC, DATA, PDEV, VDEV, IO_UNDELEGATED,
+      IO_DELEGATED_PRIVATE, IO_DELEGATED_SHARED, IO_PRIVATE, IO_SHARED
+
+      rtt >= 2^48 when Realm(rd).feat_lpa2 == FALSE
+    -
+  * - ipa
+    - ipa = unaligned_addr (for example, a 4KB aligned IPA to create level2 RTT),
+      outside_permissible_ipa (*)
+
+      walk(ipa).level < level - 1
+
+      RTTE[ipa].state = TABLE (circular -> same as positive Observability check)
+    - (*)Must cover statement - IFBZPQ The input address to an RTT walk is always less than
+      2^w, where w is the IPA width of the target Realm as defined by RMIFeatureregister0.S2SZ
+  * - level
+    - level = start_level (for example 0 if S2SZ supports an IPA width compatible to level0), 4
+    -
+  * - index
+    - index = 0, Realm(rd).num_aux_planes + 1
+
+      index = X, Realm(rd).rtt_tree_pp = FALSE
+    -
+
+Failure Priority ordering
+~~~~~~~~~~~~~~~~~~~~~~~~~
+All failure priority ordering conditions specified in spec are tested as part of failure condition
+testing (multi-causal stimuli)
+
+Observability
+~~~~~~~~~~~~~
+.. list-table::
+  :widths: 25 75
+
+  * - Footprint
+    - Verification
+  * - Command Failure
+    -
+  * - | rtt.state
+      | RTTE.state
+      | RTTE.addr
+      | RTT[ipa].content
+    - Refer Observing Properties of a Granule and Observing Contents of a Granule for details.
+  * - Command Success
+    -
+  * - | rtt.state
+      | RTTE.state
+      | RTTE.addr
+      | RTT[ipa].content
+    - | Execute Valid RTT_AUX__CREATE --> success
+      | Execute RTT_AUX_READ_ENTRY and verify the outcome is as expected by the architecture.
+
+RMI_RTT_AUX_DESTROY
+^^^^^^^^^^^^^^^^^^^
+
+Argument list
+~~~~~~~~~~~~~
+
+.. list-table::
+  :widths: 25 75
+
+  * - Input parameters
+    - Valid Values
+  * - rd
+    - | granule(rd) = 4K_ALIGNED
+      | granule(rd).state = RD
+      | Realm(rd).state = New, Active, System_Off
+  * - ipa
+    - | ipa = (level-1)_aligned
+      | ipa = within_permissible_ipa (< 2^ (features0.S2SZ))
+      | walk(ipa).level = level - 1
+      | RTTE[ipa].state = Table
+      | Rtt(walk(ipa, level-1).addr) = Non live
+  * - level
+    - level = {1, 2, 3} if start level is level 0.
+  * - index
+    - 0 < index < realm.num_aux_planes, provided Realm(rd).rtt_tree_pp is TRUE.
+
+Failure conditon testing
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. list-table::
+  :widths: 20 40 40
+
+  * - Input parameters
+    - Input Values
+    - Remarks
+  * - rd
+    - granule(rd) = unaligned_addr, mmio_region [A], outside_of_permitted_pa [B],
+      not_backed_by_encryption, raz or wi [C]
+
+      granule(rd).state = UNDELEGATED, DELEGATED, REC, RTT, DATA, PDEV, VDEV, IO_UNDELEGATED,
+      IO_DELEGATED_PRIVATE, IO_DELEGATED_SHARED, IO_PRIVATE, IO_SHARED [D]
+    -
+  * - ipa
+    - ipa = unaligned_addr(for example, a 4KB aligned IPA to destroy level2 RTT),
+      outside_permissible_ipa,
+
+      walk(ipa).level < level - 1
+
+      RTTE[ipa].state = ASSIGNED, UNASSIGNED
+
+      Rtt(walk(ipa, level-1).addr) = Live [E]
+    - [E] Destroy a RTT with at least one live entry (ex RTTE[walk(ipa, level)] = ASSIGNED or TABLE)
+  * - level
+    - level = start_level (for example 0 if S2SZ supports an IPA width compatible to level0), 4
+    -
+  * - index
+    - index = 0, Realm(rd).num_aux_planes + 1
+
+      index = X, Realm(rd).rtt_tree_pp = FALSE
+    -
+
+Failure Priority ordering
+~~~~~~~~~~~~~~~~~~~~~~~~~
+All failure priority ordering conditions specified in spec are tested as part of failure condition
+testing (multi-causal stimuli) and some fall under well-formed ordering
+
+Observability
+~~~~~~~~~~~~~
+.. list-table::
+  :widths: 25 75
+
+  * - Footprint
+    - Verification
+  * - Command Failure
+    -
+  * - rtt.state, rtte
+    - Refer Observing Properties of a Granule and Observing Contents of a Granule for details.
+  * - Command Success
+    -
+  * - rtt.state, rtte
+    - | Execute Valid RTT_AUX_DESTROY --> success
+      | Execute RTT_AUX_READ_ENTRY and verify the outcome is as expected by the architecture.
+
+RMI_RTT_AUX_FOLD
+^^^^^^^^^^^^^^^^
+
+Argument list
+~~~~~~~~~~~~~
+
+.. list-table::
+  :widths: 25 75
+
+  * - Input parameters
+    - Valid Values
+  * - rd
+    - | granule(rd) = 4K_ALIGNED
+      | granule(rd).state = RD
+      | Realm(rd).state = New, Active, System_Off
+  * - ipa
+    - | ipa = (level-1)_aligned
+      | ipa = within_permissible_ipa (< 2^Features0.S2SZ)
+      | walk(ipa).level = level-1
+      | RTTE[ipa].state = Table
+      | RTT[walk(ipa, level-1).addr) = Homogeneous
+  * - level
+    - level = {1 when RMIFeatureregister0.LPA2 is True, 2, 3}
+  * - index
+    - 0 < index < realm.num_aux_planes, provided Realm(rd).rtt_tree_pp is TRUE.
+
+Failure conditon testing
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. list-table::
+  :widths: 20 40 40
+
+  * - Input parameters
+    - Input Values
+    - Remarks
+  * - rd
+    - granule(rd) = unaligned_addr, mmio_region [A], outside_of_permitted_ipa [B],
+      not_backed_by_encryption, raz or wi [C]
+
+      granule(rd).state = UNDELEGATED, DELEGATED, REC, RTT, DATA, PDEV, VDEV, IO_UNDELEGATED,
+      IO_DELEGATED_PRIVATE, IO_DELEGATED_SHARED, IO_PRIVATE, IO_SHARED [D]
+    -
+  * - ipa
+    - ipa = unaligned_addr (for example, a 4KB aligned IPA to fold level3 RTT),
+      outside_permissible_ipa.
+
+      walk(ipa).level < level - 1
+
+      RTTE[ipa].state = ASSIGNED, UNASSIGNED
+
+      RTT[walk(ipa, level-1).addr) = not_homogeneous [E]
+    - [E] not_homogeneous refers to an RTT that has RTTEs in different states. For example, an RTTE
+      is in assigned state and another RTTE in destroyed state.
+  * - level
+    - level = SL (-1 when RMIFeatureregister0.LPA2 is supported, otherwise 0),4,1(when
+      RMIFeatureregister0.LPA2 is not supported)
+    -
+  * - index
+    - index = 0, Realm(rd).num_aux_planes + 1
+
+      index = X, Realm(rd).rtt_tree_pp = FALSE
+    -
+
+Failure Priority ordering
+~~~~~~~~~~~~~~~~~~~~~~~~~
+All failure priority ordering conditions specified in spec are tested as part of failure condition
+testing (multi-causal stimuli) and some fall under well-formed ordering
+
+Observability
+~~~~~~~~~~~~~
+.. list-table::
+  :widths: 25 75
+
+  * - Footprint
+    - Verification
+  * - Command Failure
+    -
+  * - | rtt.state
+      | RTTE.state
+    - Refer Observing Properties of a Granule and Observing Contents of a Granule for details.
+  * - Command Success
+    -
+  * - | rtt.state
+      | RTTE.state
+    - | Execute Valid RTT_AUX_FOLD --> success
+      | Execute RTT_AUX_READ_ENTRY and verify the outcome is as expected by the architecture.
+
+RMI_RTT_AUX_MAP_PROTECTED
+^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Argument list
+~~~~~~~~~~~~~
+
+.. list-table::
+  :widths: 25 75
+
+  * - Input parameters
+    - Valid Values
+  * - rd
+    - | granule(rd).state = RD
+      | Realm(rd).state = New
+  * - ipa
+    - | ipa = 4K_ALIGNED
+      | ipa = Protected
+      | walk_aux(index, ipa).level = walk_pri(ipa).level
+      | RTTE_PRI(ipa).state = ASSIGNED
+      | RTTE_PRI(ipa).ripas = RAM
+      | RTTE_AUX(index, ipa).state = UNASSIGNED
+  * - index
+    - 0 < index < realm.num_aux_planes, provided Realm(rd).rtt_tree_pp is TRUE.
+
+Failure conditon testing
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. list-table::
+  :widths: 20 40 40
+
+  * - Input parameters
+    - Input Values
+    - Remarks
+  * - rd
+    - granule(rd) = unaligned_addr, mmio_region [A], outside_of_permitted_pa [B],
+      not_backed_by_encryption, raz or wi [C]
+
+      granule(rd).state = UNDELEGATED, DELEGATED, REC, RTT, DATA, PDEV, VDEV, IO_UNDELEGATED,
+      IO_DELEGATED_PRIVATE, IO_DELEGATED_SHARED, IO_PRIVATE, IO_SHARED [D]
+
+      Realm(rd).state = Active, Null, System_Off
+    -
+  * - ipa
+    - ipa = unaligned_addr, unprotected_ipa, outside_of_permitted_ipa (info)
+
+      walk_aux(index, ipa).level < walk_pri(ipa).level
+
+      RTTE_PRI[ipa].state = UNASSIGNED, TABLE
+      RTTE_PRI[ipa].ripas = EMPTY, DESTROYED, IO
+
+      RTTE_AUX[index][ipa].state = UNASSIGNED, AUX_DESTROYED
+
+    - unprotected_ipa := ipa >= 2**(IPA_WIDTH - 1)
+
+      IPA_WIDTH = RmiFeatureRegister0.S2SZ
+
+      (info) Must cover statement - IFBZPQ The input address to an RTT walk is always less than
+      2^w, where w is the IPA width of the target Realm.
+
+      No way to prevent circular dependencies here
+  * - index
+    - index = 0, Realm(rd).num_aux_planes + 1
+
+      index = X, Realm(rd).rtt_tree_pp = FALSE
+    -
+
+Failure Priority ordering
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. list-table::
+  :widths: 20 40 40
+
+  * - Input parameters
+    - Input Values
+    - Remarks
+  * - index, ipa
+    - | index = 0 && walk_pri(ipa).state = UNASSIGNED
+      | unprotected_ipa && walk_aux(index, ipa).level != walk_pri(ipa).level
+      | unprotected_ipa && RTTE[ipa].state = ASSIGNED_NS
+
+    - All other priority orderings are tested as part of failure condition testing
+
+Observability
+~~~~~~~~~~~~~
+.. list-table::
+  :widths: 25 75
+
+  * - Footprint
+    - Verification
+  * - Command Failure
+    -
+  * - | RTTE.state,
+      | RTTE.addr
+    - Refer Observing Properties of a Granule and Observing Contents of a Granule for details
+  * - Command Success
+    -
+  * - | RTTE.state,
+      | RTTE.addr
+      | RTTE.ripas
+    - Execute RTT_READ_ENTRY and compare the outcome with expected value (as defined by the
+      architecture)
+
+RMI_RTT_AUX_MAP_UNPROTECTED
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Argument list
+~~~~~~~~~~~~~
+
+.. list-table::
+  :widths: 25 75
+
+  * - Input parameters
+    - Valid Values
+  * - rd
+    - | granule(rd) = 4K_ALIGNED
+      | granule(rd).state = RD
+  * - ipa
+    - | ipa = (level) aligned
+      | ipa = unprotected_ipa and within_permissible_ipa (< 2^Features0.S2SZ)
+      | walk_aux(index, ipa).level = walk_pri(ipa).level
+      | RTTE_PRI[ipa].state = ASSIGNED
+      | RTTE_AUX[ipa].state = UNASSIGNED_NS
+  * - index
+    - 0 < index < realm.num_aux_planes, provided Realm(rd).rtt_tree_pp is TRUE.
+
+Failure conditon testing
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. list-table::
+  :widths: 20 40 40
+
+  * - Input parameters
+    - Input Values
+    - Remarks
+  * - rd
+    - granule(rd) = unaligned_addr, mmio_region [A], outside_of_permitted_ipa [B],
+      not_backed_by_encryption, raz or wi [C]
+
+      granule(rd).state = UNDELEGATED, DELEGATED, REC, RTT, DATA, PDEV, VDEV, IO_UNDELEGATED,
+      IO_DELEGATED_PRIVATE, IO_DELEGATED_SHARED, IO_PRIVATE, IO_SHARED [D]
+    -
+  * - ipa
+    - ipa = unaligned_addr(wrt "level" argument value supplied to the command. For example,
+      if level = 3, provide an IPA that's < 4KB aligned),protected_ipa, outside_permissible_ipa
+
+      walk(ipa).level != level
+
+      RTTE[ipa].state = ASSIGNED_NS
+    -
+  * - index
+    - index = 0, Realm(rd).num_aux_planes + 1
+
+      index = X, Realm(rd).rtt_tree_pp = FALSE
+    -
+
+Failure Priority ordering
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. list-table::
+  :widths: 20 40 40
+
+  * - Input parameters
+    - Input Values
+    - Remarks
+  * - index, ipa
+    - | index = 0 && walk_pri(ipa).state = UNASSIGNED_NS
+      | protected_ipa && walk_aux(index, ipa).level != walk_pri(ipa).level
+      | protected_ipa && RTTE[ipa].state = ASSIGNED
+    - All other priority orderings are tested as part of failure condition testing
+
+Observability
+~~~~~~~~~~~~~
+.. list-table::
+  :widths: 25 75
+
+  * - Footprint
+    - Verification
+  * - Command Failure
+    -
+  * - | RTTE_AUX.state
+      | RTTE_AUX.content
+    - Refer Observing Properties of a Granule and Observing Contents of a Granule for details.
+  * - Command Success
+    -
+  * - | RTTE_AUX.state
+      | RTTE_AUX.content
+    - Execute Valid RTT_AUX_MAP_UNPROTECTED -> success
+
+      Execute RTT_READ_ENTRY
+      -> RTTE_AUX.state = ASSIGNED_NS
+      -> RTTE_AUX.s2ap = RTTE_PRI.s2ap
+      -> RTTE_AUX.addr = RTTE_PRI.addr
+
+RMI_RTT_AUX_READ_ENTRY
+^^^^^^^^^^^^^^^^^^^^^^
+
+Argument list
+~~~~~~~~~~~~~
+
+.. list-table::
+  :widths: 25 75
+
+  * - Input parameters
+    - Valid Values
+  * - rd
+    - | granule(rd) = 4K_ALIGNED
+      | granule(rd).state = RD
+  * - ipa
+    - | ipa = level_aligned
+      | ipa = within_permissible_ipa (< 2^Features0.S2SZ)
+  * - level
+    - level = SL/SL+1 (depending on the value read from RMIFeatureregister0.S2SZ),2, 3
+  * - index
+    - 0 < index < realm.num_aux_planes, provided Realm(rd).rtt_tree_pp is TRUE.
+
+Failure conditon testing
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. list-table::
+  :widths: 20 40 40
+
+  * - Input parameters
+    - Input Values
+    - Remarks
+  * - rd
+    - granule(rd) = unaligned_addr, mmio_region [A], outside_of_permitted_ipa [B],
+      not_backed_by_encryption, raz or wi [C]
+
+      granule(rd).state = UNDELEGATED, DELEGATED, REC, RTT, DATA, PDEV, VDEV, IO_UNDELEGATED,
+      IO_DELEGATED_PRIVATE, IO_DELEGATED_SHARED, IO_PRIVATE, IO_SHARED [D]
+    -
+  * - ipa
+    - ipa = unaligned_addrr(wrt "level" argument value supplied to the command. For example,
+      if level = 3, provide an IPA that's < 4KB aligned), outside_permissible_ipa
+    -
+  * - level
+    - level = 4
+    -
+  * - index
+    - index = 0, Realm(rd).num_aux_planes + 1
+
+      index = X, Realm(rd).rtt_tree_pp = FALSE
+    -
+
+Failure Priority ordering
+~~~~~~~~~~~~~~~~~~~~~~~~~
+This command has no failure priority orderings.
+
+Observability
+~~~~~~~~~~~~~
+.. list-table::
+  :widths: 25 75
+
+  * - Footprint
+    - Verification
+  * - Command Failure
+    -
+  * - X1 - X4
+    - Check for X1-X4 = zeros()
+  * - Command Success
+    -
+  * -
+    - | Follow below steps for output values,
+      | Execute Valid RTT_READ_ENTRY --> success
+      | Execute RTT_READ_ENTRY and verify the outcome is as expected by the architecture.
+  * - X1(walk_level)
+    - Create a maximum RTT depth (say, till level3 mapping) and use the same IPA aligned to
+      corresponding level to cover various walk levels.
+  * - X2(state)
+    - Although some of this is tested in other commands as part of their successful execution,
+      we will do this for completeness' sake in this command. see last row in this table.
+  * - X3(desc)
+    - Although some of this is tested in other commands as part of their successful execution,
+      we will do this for completeness' sake in this command. see last row in this table.
+  * - X4(ripas)
+    - Although some of this is tested in other commands as part of their successful execution,
+      we will do this for completeness' sake in this command. see last row in this table.
+  * - | rtte.state
+      | rtte.ripas
+    - | Provide IPA whose state is UNASSIGNED/DESTROYED and validate X3(desc) as per spec
+      | Provide protected IPA whose state is ASSIGNED or IPA whose state is TABLE and validate
+        X3(desc).MemAtt, X3(desc). S2AP, and X3(desc).addr as per spec.
+      | Provide Unprotected IPA whose state is ASSIGNED and validate that X3(desc).MemAttr,
+        X3(desc).S2AP and X3(desc).addr as per spec.
+      | Provide unprotected IPA/ provide IPA whose state is in DESTROYED/TABLE and validate
+        X4 as per spec.
+
+RMI_RTT_AUX_UNMAP_PROTECTED
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Argument list
+~~~~~~~~~~~~~
+
+.. list-table::
+  :widths: 25 75
+
+  * - Input parameters
+    - Valid Values
+  * - rd
+    - | granule(rd).state = RD
+      | Realm(rd).state = New, Active
+  * - ipa
+    - | ipa = 4K_ALIGNED
+      | ipa = Protected
+      | walk(index, ipa).level = LEAF_LEVEL
+      | RTTE(index, ipa).state = ASSIGNED
+      | RTTE(index, ipa).ripas = EMPTY, RAM, DESTROYED
+  * - index
+    - 0 < index < realm.num_aux_planes, provided Realm(rd).rtt_tree_pp is TRUE.
+
+Failure conditon testing
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. list-table::
+  :widths: 20 40 40
+
+  * - Input parameters
+    - Input Values
+    - Remarks
+  * - rd
+    - granule(rd) = unaligned_addr, mmio_region [A], outside_of_permitted_pa [B],
+      not_backed_by_encryption, raz or wi [C]
+
+      granule(rd).state = UNDELEGATED, DELEGATED, REC, RTT, DATA, PDEV, VDEV, IO_UNDELEGATED,
+      IO_DELEGATED_PRIVATE, IO_DELEGATED_SHARED, IO_PRIVATE, IO_SHARED [D]
+    -
+  * - ipa
+    - ipa = unaligned_addr, unprotected_ipa, outside_of_permitted_ipa (info)
+
+      walk(ipa).level != LEAF_LEVEL
+
+      RTTE[index, ipa].state = UNASSIGNED
+
+    - unprotected_ipa := ipa >= 2**(IPA_WIDTH - 1)
+
+      IPA_WIDTH = RmiFeatureRegister0.S2SZ
+
+      (info) Must cover statement - IFBZPQ The input address to an RTT walk is always less than
+      2^w, where w is the IPA width of the target Realm.
+  * - index
+    - index = 0, Realm(rd).num_aux_planes + 1
+
+      index = X, Realm(rd).rtt_tree_pp = FALSE
+    -
+
+Failure Priority ordering
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. list-table::
+  :widths: 20 40 40
+
+  * - Input parameters
+    - Input Values
+    - Remarks
+  * - ipa, index
+    - | index = 0 && RTTE[index, ipa].state = UNASSIGNED_NS
+      | unprotected_ipa && walk(index, ipa).level != LEAF_LEVEL
+      | unprotected_ipa && RTTE[index, ipa].state = UNASSIGNED_NS
+    - All other priority orderings are tested as part of failure condition testing.
+
+Observability
+~~~~~~~~~~~~~
+.. list-table::
+  :widths: 25 75
+
+  * - Footprint
+    - Verification
+  * - Command Failure
+    -
+  * - | RTTE.state,
+      | RTTE.addr
+    - Refer Observing Properties of a Granule and Observing Contents of a Granule for details
+  * - Command Success
+    -
+  * - | RTTE.state,
+      | RTTE.addr
+    - Execute RTT_AUX_READ_ENTRY and compare the outcome with expected value (as defined by the
+      architecture)
+
+      Do this for Realm(rd).state = {NEW, ACTIVE} and RTTE[ipa].ripas = {EMPTY, RAM}
+
+RMI_RTT_AUX_UNMAP_UNPROTECTED
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Argument list
+~~~~~~~~~~~~~
+
+.. list-table::
+  :widths: 25 75
+
+  * - Input parameters
+    - Valid Values
+  * - rd
+    - | granule(rd) = 4K_ALIGNED
+      | granule(rd).state = RD
+  * - ipa
+    - | ipa = level_aligned, unprotected_ipa and within_permissible_ipa (< 2^Features0.S2SZ)
+      | RTTE[index, ipa].state = ASSIGNED_NS
+  * - index
+    - 0 < index < realm.num_aux_planes, provided Realm(rd).rtt_tree_pp is TRUE.
+
+Failure conditon testing
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. list-table::
+  :widths: 20 40 40
+
+  * - Input parameters
+    - Input Values
+    - Remarks
+  * - rd
+    - rd = unaligned_addr, mmio_region [A], outside_of_permitted_ipa [B], not_backed_by_encryption,
+      raz or wi [C]
+
+      granule(rd).state = UNDELEGATED, DELEGATED, REC, RTT, DATA, PDEV, VDEV, IO_UNDELEGATED,
+      IO_DELEGATED_PRIVATE, IO_DELEGATED_SHARED, IO_PRIVATE, IO_SHARED [D]
+    -
+  * - ipa
+    - ipa = unaligned_addr(wrt "level" argument value supplied to the command. For example,
+      if level = 3, provide an IPA that's < 4KB aligned), protected_ipa, outside_permissible_ipa
+
+      RTTE[ipa].state = UNASSIGNED_NS
+    -
+  * - index
+    - index = 0, Realm(rd).num_aux_planes + 1
+
+      index = X, Realm(rd).rtt_tree_pp = FALSE
+    -
+
+Failure Priority ordering
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. list-table::
+  :widths: 20 40 40
+
+  * - Input parameters
+    - Input Values
+    - Remarks
+  * - ipa, index
+    - index = 0 && RTTE[index, ipa].state = UNASSIGNED_NS
+    - All other priority orderings are tested as part of failure condition testing.
+
+Observability
+~~~~~~~~~~~~~
+.. list-table::
+  :widths: 25 75
+
+  * - Footprint
+    - Verification
+  * - Command Failure
+    -
+  * - RTTE.state
+    - Refer Observing Properties of a Granule and Observing Contents of a Granule for details.
+  * - Command Success
+    -
+  * - RTTE.state
+    - | Execute Valid RTT_AUX_UNMAP_UNPROTECTED --> success
+      | Execute RTT_AUX_READ_ENTRY and verify the outcome is as expected by the architecture.
+
+RMI_RTT_CREATE
+^^^^^^^^^^^^^^
+
+Argument list
+~~~~~~~~~~~~~
+
+.. list-table::
+  :widths: 25 75
+
+  * - Input parameters
+    - Valid Values
+  * - rd
+    - | granule(rd) = 4K_ALIGNED
+      | granule(rd).state = RD
+      | Realm(rd).state = New, Active, System_Off
+  * - rtt
+    - | granule(rtt) = 4K_ALIGNED
+      | granule(rtt).state = DELEGATED
+      | rtt < 2^48 if Realm(rd).feat_lpa2 == FALSE
+  * - ipa
+    - | ipa = (level-1)_aligned
+      | ipa = within_permissible_ipa (< 2^features0.S2SZ)
+      | walk(ipa).level = level - 1
+      | RTTE[ipa].state = UNASSIGNED
+  * - level
+    - level = {1, 2, 3} if start level is level 0.
+
+Failure conditon testing
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. list-table::
+  :widths: 20 40 40
+
+  * - Input parameters
+    - Input Values
+    - Remarks
+  * - rd
+    - granule(rd) = unaligned_addr, mmio_region [A], outside_of_permitted_pa [B],
+      not_backed_by_encryption, raz or wi [C]
+
+      granule(rd).state = UNDELEGATED, DELEGATED, REC, RTT, DATA, PDEV, VDEV, IO_UNDELEGATED,
+      IO_DELEGATED_PRIVATE, IO_DELEGATED_SHARED, IO_PRIVATE, IO_SHARED [D]
+    -
+  * - rtt
+    - granule(rtt) = unaligned_addr (<4KB aligned), mmio_region [A], outside_of_permitted_pa [B],
+      not_backed_by_encryption, raz or wi [C]
+
+      granule(rtt).state = UNDELEGATED, DELEGATED, RD, REC, DATA, PDEV, VDEV, IO_UNDELEGATED,
+      IO_DELEGATED_PRIVATE, IO_DELEGATED_SHARED, IO_PRIVATE, IO_SHARED
+
+      rtt >= 2^48 when Realm(rd).feat_lpa2 == FALSE
     -
   * - ipa
     - ipa = unaligned_addr (for example, a 4KB aligned IPA to create level2 RTT),
@@ -1576,7 +3275,7 @@ Failure conditon testing
       RTTE[ipa].state = Table (circular -> same as positive Observability check)
     - (*)Must cover statement - IFBZPQ The input address to an RTT walk is always less than
       2^w, where w is the IPA width of the target Realm as defined by RMIFeatureregister0.S2SZ
-  * - levle
+  * - level
     - level = start_level (for example 0 if S2SZ supports an IPA width compatible to level0), 4
     -
 
@@ -1632,7 +3331,6 @@ Argument list
   * - level
     - level = {1, 2, 3} if start level is level 0.
 
-
 Failure conditon testing
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -1646,7 +3344,8 @@ Failure conditon testing
     - granule(rd) = unaligned_addr, mmio_region [A], outside_of_permitted_pa [B],
       not_backed_by_encryption, raz or wi [C]
 
-      Granule(rd).state = Undelegated, Delegated, DATA, REC, RTT
+      granule(rd).state = UNDELEGATED, DELEGATED, REC, RTT, DATA, PDEV, VDEV, IO_UNDELEGATED,
+      IO_DELEGATED_PRIVATE, IO_DELEGATED_SHARED, IO_PRIVATE, IO_SHARED [D]
     -
   * - ipa
     - ipa = unaligned_addr(for example, a 4KB aligned IPA to destroy level2 RTT),
@@ -1656,8 +3355,8 @@ Failure conditon testing
 
       RTTE[ipa].state = ASSIGNED, UNASSIGNED
 
-      Rtt(walk(ipa, level-1).addr) = Live [D]
-    - [D] Destroy a RTT with at least one live entry (ex RTTE[walk(ipa, level)] = ASSIGNED or TABLE)
+      Rtt(walk(ipa, level-1).addr) = Live [E]
+    - [E] Destroy a RTT with at least one live entry (ex RTTE[walk(ipa, level)] = ASSIGNED or TABLE)
   * - level
     - level = start_level (for example 0 if S2SZ supports an IPA width compatible to level0), 4
     -
@@ -1723,7 +3422,8 @@ Failure conditon testing
     - granule(rd) = unaligned_addr, mmio_region [A], outside_of_permitted_ipa [B],
       not_backed_by_encryption, raz or wi [C]
 
-      granule(rd).state = Undelegated, Delegated, REC, DATA, RTT
+      granule(rd).state = UNDELEGATED, DELEGATED, REC, RTT, DATA, PDEV, VDEV, IO_UNDELEGATED,
+      IO_DELEGATED_PRIVATE, IO_DELEGATED_SHARED, IO_PRIVATE, IO_SHARED [D]
     -
   * - ipa
     - ipa = unaligned_addr (for example, a 4KB aligned IPA to fold level3 RTT),
@@ -1733,8 +3433,8 @@ Failure conditon testing
 
       RTTE[ipa].state = ASSIGNED, UNASSIGNED
 
-      RTT[walk(ipa, level-1).addr) = not_homogeneous
-    - [D] not_homogeneous refers to an RTT that has RTTEs in different states. For example, an RTTE
+      RTT[walk(ipa, level-1).addr) = not_homogeneous [E]
+    - [E] not_homogeneous refers to an RTT that has RTTEs in different states. For example, an RTTE
       is in assigned state and another RTTE in destroyed state.
   * - level
     - level = SL (-1 when RMIFeatureregister0.LPA2 is supported, otherwise 0),4,1(when
@@ -1786,7 +3486,6 @@ Argument list
   * - top
     - | top = protected_ipa
       | top > base
-      | top < RttUperbound(walk.ipa) && top = RTT level aligned.
 
 Failure conditon testing
 ~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1801,7 +3500,8 @@ Failure conditon testing
     - granule(rd) = unaligned_addr, mmio_region [A], outside_of_permitted_ipa [B],
       not_backed_by_encryption, raz or wi [C]
 
-      granule(rd).state = Undelegated, Delegated, DATA, RTT, REC
+      granule(rd).state = UNDELEGATED, DELEGATED, REC, RTT, DATA, PDEV, VDEV, IO_UNDELEGATED,
+      IO_DELEGATED_PRIVATE, IO_DELEGATED_SHARED, IO_PRIVATE, IO_SHARED [D]
 
       Realm(rd).state = Active, Null, System_off
     -
@@ -1818,7 +3518,6 @@ Failure conditon testing
 
       top = unaligned_addr (provide addr which is less than 4KB aligned)
 
-      top = 4KB aligned address which falls in next RTT.
     -
 
 Failure Priority ordering
@@ -1833,8 +3532,6 @@ Failure Priority ordering
   * - top
     - top != GRANULE aligned & top != Rtt(walk.ipa) aligned.
     -
-
-
 
 Observability
 ~~~~~~~~~~~~~
@@ -1882,7 +3579,6 @@ Argument list
   * - desc
     - desc = attr_valid, output_addr_aligned to level
 
-
 Failure conditon testing
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -1896,7 +3592,8 @@ Failure conditon testing
     - granule(rd) = unaligned_addr, mmio_region [A], outside_of_permitted_ipa [B],
       not_backed_by_encryption, raz or wi [C]
 
-      granule(rd).state = Undelegated, Delegated, REC, DATA, RTT
+      granule(rd).state = UNDELEGATED, DELEGATED, REC, RTT, DATA, PDEV, VDEV, IO_UNDELEGATED,
+      IO_DELEGATED_PRIVATE, IO_DELEGATED_SHARED, IO_PRIVATE, IO_SHARED [D]
     -
   * - ipa
     - ipa = unaligned_addr(wrt "level" argument value supplied to the command. For example,
@@ -1942,7 +3639,6 @@ Observability
       -> RTTE.state =ASSIGNED
       -> RTTE.MemAttr = desc.MemAttr
       -> RTTE.s2ap = desc.s2ap
-      -> RTTE.sh = desc.sh
       -> RTTE.addr = desc.addr
 
 RMI_RTT_READ_ENTRY
@@ -1978,7 +3674,8 @@ Failure conditon testing
     - granule(rd) = unaligned_addr, mmio_region [A], outside_of_permitted_ipa [B],
       not_backed_by_encryption, raz or wi [C]
 
-      granule(rd).state = Undelegated, Delegated, REC, RTT, DATA
+      granule(rd).state = UNDELEGATED, DELEGATED, REC, RTT, DATA, PDEV, VDEV, IO_UNDELEGATED,
+      IO_DELEGATED_PRIVATE, IO_DELEGATED_SHARED, IO_PRIVATE, IO_SHARED [D]
     -
   * - ipa
     - ipa = unaligned_addrr(wrt "level" argument value supplied to the command. For example,
@@ -2025,9 +3722,9 @@ Observability
       | rtte.ripas
     - | Provide IPA whose state is UNASSIGNED/DESTROYED and validate X3(desc) as per spec
       | Provide protected IPA whose state is ASSIGNED or IPA whose state is TABLE and validate
-        X3(desc).MemAtt, X3(desc). S2AP, X3(desc).SH, and X3(desc).addr as per spec.
+        X3(desc).MemAtt, X3(desc). S2AP, and X3(desc).addr as per spec.
       | Provide Unprotected IPA whose state is ASSIGNED and validate that X3(desc).MemAttr,
-        X3(desc).S2AP, X3(desc).SH, and X3(desc).addr as per spec.
+        X3(desc).SPP , and X3(desc).addr as per spec.
       | Provide unprotected IPA/ provide IPA whose state is in DESTROYED/TABLE and validate
         X4 as per spec.
 
@@ -2056,8 +3753,7 @@ Argument list
   * - top
     - | top <= Rec(rec).ripas_top
       | top > base
-      | top < RttUperbound(walk.ipa) && top = RTT level aligned.
-
+      | RTTE_AUX[base, top].state = UNASSIGNED
 
 Failure conditon testing
 ~~~~~~~~~~~~~~~~~~~~~~~~
@@ -2072,22 +3768,24 @@ Failure conditon testing
     - granule(rd) = unaligned_addr, mmio_region [A], outside_of_permitted_ipa [B],
       not_backed_by_encryption, raz or wi [C]
 
-      granule(rd).state = Undelegated, Delegated, REC, RTT, DATA
+      granule(rd).state = UNDELEGATED, DELEGATED, REC, RTT, DATA, PDEV, VDEV, IO_UNDELEGATED,
+      IO_DELEGATED_PRIVATE, IO_DELEGATED_SHARED, IO_PRIVATE, IO_SHARED [D]
     -
   * - rec
     - granule(rec) = unaligned_addr, mmio_region [A], outside_of_permitted_ipa [B],
       not_backed_by_encryption, raz or wi [C]
 
-      granule(rec).state = Undelegated, Delegated, RD, DATA, RTT
+      granule(rec).state = UNDELEGATED, DELEGATED, RD, REC_AUX, RTT, DATA, PDEV, VDEV,
+      IO_UNDELEGATED, IO_DELEGATED_PRIVATE, IO_DELEGATED_SHARED, IO_PRIVATE, IO_SHARED [D]
 
-      Rec(rec).state = Running [D]
+      Rec(rec).state = Running [E]
 
-      Rec(rec).owner = not_rd [E]
-    - [D] This is an MP scenario as one thread (REC) will be running inside the Realm,
+      Rec(rec).owner = not_rd [F]
+    - [E] This is an MP scenario as one thread (REC) will be running inside the Realm,
       while another will attempt to enter into realm using the same REC. This needs to be tested
       outside of command ACS.
 
-      [E] Other RD than the one used to create rec.
+      [F] Other RD than the one used to create rec.
   * - base
     - base = unaligned_addr (ensuring walk.level = 2, provide an IPA that's 4KB aligned),
 
@@ -2100,8 +3798,7 @@ Failure conditon testing
 
       top = unaligned_addr (provide addr which is less than 4KB aligned)
 
-      top = 4KB aligned address which falls in next RTT.
-
+      RTT_AUX(base, top) = Live
     -
 
 Failure Priority ordering
@@ -2115,7 +3812,8 @@ Failure Priority ordering
     - Remarks
   * - base
     - base != Rec.ripas_addr, base_unaligned
-    - Both base_align and base_bound can be triggered with same stimuli, The test should expect RMI_ERROR_INPUT
+    - Both base_align and base_bound can be triggered with same stimuli, The test should expect
+      RMI_ERROR_INPUT
   * - top
     - top != GRANULE aligned & top != Rtt(walk.ipa) aligned.
     -
@@ -2139,9 +3837,91 @@ Observability
   * - ripas_addr
     -
 
+RMI_RTT_SET_S2AP
+^^^^^^^^^^^^^^^^
+
+Argument list
+~~~~~~~~~~~~~
+
+.. list-table::
+  :widths: 25 75
+
+  * - Input parameters
+    - Valid Values
+  * - rd
+    - | granule(rd) = 4K_ALIGNED
+      | granule(rd).state = RD
+  * - rec_ptr
+    - | granule(rec_ptr) = 4K_ALIGNED
+      | granule(rec_ptr).state = REC
+      | Rec(rec_ptr).state = READY
+      | Rec(rec_ptr).owner = rd
+  * - base
+    - | base = walk_pri.level aligned
+      | base = walk_aux.level aligned in all auxilliary RTTs
+      | base = Rec(rec_ptr).s2ap_addr
+  * - top
+    - | top = 4K_ALIGNED
+      | top <= Rec(rec_ptr).s2ap_top
+      | top > base
+
+Failure conditon testing
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. list-table::
+  :widths: 20 40 40
+
+  * - Input parameters
+    - Input Values
+    - Remarks
+  * - rd
+    - granule(rd) = unaligned_addr, mmio_region [A], outside_of_permitted_ipa [B],
+      not_backed_by_encryption, raz or wi [C]
+
+      granule(rd).state = UNDELEGATED, DELEGATED, REC, RTT, DATA, PDEV, VDEV, IO_UNDELEGATED,
+      IO_DELEGATED_PRIVATE, IO_DELEGATED_SHARED, IO_PRIVATE, IO_SHARED [D]
+    -
+  * - rec_ptr
+    - granule(rec_ptr) = unaligned_addr, mmio_region [A], outside_of_permitted_ipa [B],
+      not_backed_by_encryption, raz or wi [C]
+
+      granule(rec_ptr).state = UNDELEGATED, DELEGATED, RD, RTT, DATA, PDEV, VDEV, IO_UNDELEGATED,
+      IO_DELEGATED_PRIVATE, IO_DELEGATED_SHARED, IO_PRIVATE, IO_SHARED [D]
+
+      Rec(rec_ptr).state = Running [E]
+
+      Rec(rec_ptr).owner = not_rd [F]
+    - [E] This is an MP scenario as one thread (REC) will be running inside the Realm,
+      while another will attempt to enter into realm using the same REC. This needs to be tested
+      outside of command ACS.
+
+      [F] Other RD than the one used to create rec.
+  * - base
+    - base = unaligned to walk_pri(base).level
+
+      base = unaligned to walk_aux(base).level in any one of auxiliarry RTT
+
+      base != rec_ptr.s2ap_addr
+    -
+  * - top
+    - top > rec.s2ap_top
+
+      top <= base
+
+      top = unaligned_addr (provide addr which is less than 4KB aligned)
+
+    -
+
+Failure Priority ordering
+~~~~~~~~~~~~~~~~~~~~~~~~~
+This command has no failure priority orderings.
+
+Observability
+~~~~~~~~~~~~~
+This command has no footprint.
+
 RMI_RTT_UNMAP_UNPROTECTED
 ^^^^^^^^^^^^^^^^^^^^^^^^^
-
 
 Argument list
 ~~~~~~~~~~~~~
@@ -2161,7 +3941,6 @@ Argument list
   * - level
     - level = LEAF_LEVEL
 
-
 Failure conditon testing
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -2175,7 +3954,8 @@ Failure conditon testing
     - rd = unaligned_addr, mmio_region [A], outside_of_permitted_ipa [B], not_backed_by_encryption,
       raz or wi [C]
 
-      rd.state = Undelegated, Delegated, REC, DATA, RTT
+      granule(rd).state = UNDELEGATED, DELEGATED, REC, RTT, DATA, PDEV, VDEV, IO_UNDELEGATED,
+      IO_DELEGATED_PRIVATE, IO_DELEGATED_SHARED, IO_PRIVATE, IO_SHARED [D]
     -
   * - ipa
     - ipa = unaligned_addr(wrt "level" argument value supplied to the command. For example,
@@ -2211,6 +3991,428 @@ Observability
     - | Execute Valid RMI_UNMAP_UNPROTECTED --> success
       | Execute RTT_READ_ENTRY and verify the outcome is as expected by the architecture.
 
+RMI_VDEV_ABORT
+^^^^^^^^^^^^^^
+
+Argument list
+~~~~~~~~~~~~~
+
+.. list-table::
+  :widths: 25 75
+
+  * - Input parameters
+    - Valid Values
+  * - vdev_ptr
+    - | vdev_ptr = 4K_ALIGNED
+      | granule(vdev_ptr).state = VDEV
+      | vdev(vdev_ptr).state = VDEV_COMMUNICATING
+
+
+Failure conditon testing
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. list-table::
+  :widths: 20 40 40
+
+  * - Input parameters
+    - Input Values
+    - Remarks
+  * - vdev_ptr
+    - granule(vdev_ptr) = unaligned_addr, mmio_region (A), outside_of_permitted_pa (B),
+      not_backed_by_encryption, raz or wi (C)
+
+      granule(vdev_ptr).state = UNDELEGATED, DELEGATED, RD, REC, RTT, DATA, IO_DELEGATED_PRIVATE,
+      IO_DELEGATED_SHARED, IO_PRIVATE, IO_SHARED, IO_UNDELEGATED, PDEV
+
+      vdev(vdev_ptr).state = VDEV_ERROR, VDEV_READY, VDEV_STOPPED, VDEV_STOPPING
+    -
+
+
+Failure Priority ordering
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+This command has failure condition ordering but we can't verify in ACS.
+
+Observability
+~~~~~~~~~~~~~
+.. list-table::
+  :widths: 25 75
+
+  * - Footprint
+    - Verification
+  * - Command Failure
+    -
+  * - vdev(vdev_ptr).state
+    - | Check vdev(vdev_ptr).state = VDEV_COMMUNICATING through RMI_VDEV_GET_STATE command
+  * - vdev(vdev_ptr).io_state
+    -
+  * - Command Success
+    -
+  * - vdev(vdev_ptr).state
+    - | Check vdev(vdev_ptr).state = VDEV_READY through RMI_VDEV_GET_STATE command
+  * - vdev(vdev_ptr).io_state
+    - This will be test in ACS DA flow scenario.
+
+
+RMI_VDEV_COMMUNICATE
+^^^^^^^^^^^^^^^^^^^^
+
+Argument list
+~~~~~~~~~~~~~
+
+.. list-table::
+  :widths: 25 75
+
+  * - Input parameters
+    - Valid Values
+  * - vdev_ptr
+    - | vdev_ptr = 4K_ALIGNED
+      | granule(vdev_ptr).state = VDEV
+      | vdev(vdev_ptr).state = VDEV_COMMUNICATING, VDEV_STOPPING
+  * - data_ptr
+    - | data_ptr = 4K_ALIGNED
+      | granule(data_ptr).gpt = GPT_NS
+      | IoData(data_ptr).enter.req_addr = 4K_ALIGNED
+      | granule(IoData(data_ptr).enter.req_addr).gpt = GPT_NS
+      | IoData(data_ptr).enter.resp_addr = 4K_ALIGNED
+      | granule(IoData(data_ptr).enter.resp_addr).gpt = GPT_NS
+      | IoData(data_ptr).enter.resp_len <= RMM_GRANULE_SIZE
+
+
+Failure conditon testing
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. list-table::
+  :widths: 20 40 40
+
+  * - Input parameters
+    - Input Values
+    - Remarks
+  * - vdev_ptr
+    - granule(vdev_ptr) = unaligned_addr, mmio_region (A), outside_of_permitted_pa (B),
+      not_backed_by_encryption, raz or wi (C)
+
+      granule(vdev_ptr).state = UNDELEGATED, DELEGATED, RD, REC, RTT, DATA, IO_DELEGATED_PRIVATE,
+      IO_DELEGATED_SHARED, IO_PRIVATE, IO_SHARED, IO_UNDELEGATED, PDEV
+
+      vdev(vdev_ptr).state = VDEV_ERROR, VDEV_READY, VDEV_STOPPED
+    -
+  * - data_ptr
+    - granule(data_ptr) = unaligned_addr, mmio_region (A), outside_of_permitted_pa (B),
+      not_backed_by_encryption, raz or wi (C)
+
+      granule(data_ptr).gpt == GPT_SECURE, GPT_REALM
+
+      granule(IoData(data_ptr).enter.req_addr) = unaligned_addr, mmio_region (A),
+      outside_of_permitted_pa (B), not_backed_by_encryption, raz or wi (C)
+
+      granule(IoData(data_ptr).enter.req_addr).gpt == GPT_SECURE, GPT_REALM
+
+      granule(IoData(data_ptr).enter.resp_addr) = unaligned_addr, mmio_region (A),
+      outside_of_permitted_pa (B), not_backed_by_encryption, raz or wi (C)
+
+      granule(IoData(data_ptr).enter.resp_addr).gpt == GPT_SECURE, GPT_REALM
+
+      IoData(data_ptr).enter.resp_len = RMM_GRANULE_SIZE + 1
+    -
+
+Failure Priority ordering
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+This command has failure condition ordering but we can't verify in ACS.
+
+Observability
+~~~~~~~~~~~~~
+.. list-table::
+  :widths: 25 75
+
+  * - Footprint
+    - Verification
+  * - Command Failure
+    -
+  * - vdev(vdev_ptr).state
+    - | Check vdev.state = vdev_state_pre through RMI_VDEV_GET_STATE command
+  * - vdev(vdev_ptr).io_state
+    -
+  * - Command Success
+    -
+  * - vdev(vdev_ptr).state
+    - | Check vdev.state based on vdev_state_pre through RMI_vDEV_GET_STATE command
+  * - vdev(vdev_ptr).io_state
+    - This will be test in ACS DA flow scenario.
+
+
+RMI_VDEV_CREATE
+^^^^^^^^^^^^^^^
+
+Argument list
+~~~~~~~~~~~~~
+
+.. list-table::
+  :widths: 25 75
+
+  * - Input parameters
+    - Valid Values
+  * - rd
+    - | granule(rd) = 4K_ALIGNED
+      | granule(rd).state = RD
+      | Realm(rd).feat_da = TRUE
+  * - pdev_ptr
+    - | pdev_ptr = 4K_ALIGNED
+      | granule(pdev_ptr).state = PDEV
+      | pdev(pdev_ptr).state = PDEV_READY
+  * - vdev_ptr
+    - | vdev_ptr = 4K_ALIGNED
+      | granule(vdev_ptr).state = VDEV
+      | vdev(vdev_ptr).state = DELEGATED
+  * - params_ptr
+    - | params_ptr = 4K_ALIGNED
+      | granule(params_ptr).gpt = GPT_NS
+
+
+Failure conditon testing
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. list-table::
+  :widths: 20 40 40
+
+  * - Input parameters
+    - Input Values
+    - Remarks
+  * - rd
+    - granule(rd) = unaligned_addr, mmio_region [A], outside_of_permitted_pa [B],
+      not_backed_by_encryption, raz or wi [C]
+
+      granule(rd).state = UNDELEGATED, DELEGATED, REC, RTT, DATA
+
+      Realm(rd).state = Active, Null, System_Off
+
+      Realm(rd).feat_da = FALSE
+    -
+  * - pdev_ptr
+    - granule(pdev_ptr) = unaligned_addr, mmio_region (A), outside_of_permitted_pa (B),
+      not_backed_by_encryption, raz or wi (C)
+
+      granule(pdev_ptr).state = UNDELEGATED, RD, REC, RTT, DATA, IO_DELEGATED_PRIVATE,
+      IO_DELEGATED_SHARED, IO_PRIVATE, IO_SHARED, IO_UNDELEGATED, PDEV, VDEV
+
+      pdev(pdev_ptr).state = PDEV_COMMUNICATING, PDEV_ERROR, PDEV_HAS_KEY, PDEV_IDE_RESETTING,
+      PDEV_NEEDS_KEY, PDEV_NEW, PDEV_STOPPED, PDEV_STOPPING
+    -
+  * - vdev_ptr
+    - granule(vdev_ptr) = unaligned_addr, mmio_region (A), outside_of_permitted_pa (B),
+      not_backed_by_encryption, raz or wi (C)
+
+      granule(vdev_ptr).state = UNDELEGATED, RD, REC, RTT, DATA, IO_DELEGATED_PRIVATE,
+      IO_DELEGATED_SHARED, IO_PRIVATE, IO_SHARED, IO_UNDELEGATED, PDEV, VDEV
+    -
+  * - params_ptr
+    - granule(params_ptr) = unaligned_addr, mmio_region, outside_of_permitted_pa,
+      not_backed_by_encryption, raz or wi
+
+      granule(params_ptr).gpt = GPT_REALM, GPT_SECURE, GPT_ROOT
+    -
+
+Failure Priority ordering
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+This command has failure condition ordering but we can't verify in ACS.
+
+Observability
+~~~~~~~~~~~~~
+.. list-table::
+  :widths: 25 75
+
+  * - Footprint
+    - Verification
+  * - Command Failure
+    -
+  * - vdev(vdev_ptr).state
+
+      num_vdevs
+    - | This is outside the scope of CCA-RMM-ACS. Refer Observing Properties of a Granule and
+        Observing Contents of a Granule for details
+  * - vdev(vdev_ptr).io_state
+    -
+  * - Command Success
+    -
+  * - vdev(vdev_ptr).state
+    - | Check vdev(vdev_ptr).state = VDEV_READY through RMI_VDEV_GET_STATE command
+  * - vdev(vdev_ptr).io_state
+    - This will be test in ACS DA flow scenario.
+
+
+RMI_VDEV_DESTROY
+^^^^^^^^^^^^^^^^
+
+Argument list
+~~~~~~~~~~~~~
+
+.. list-table::
+  :widths: 25 75
+
+  * - Input parameters
+    - Valid Values
+  * - vdev_ptr
+    - | vdev_ptr = 4K_ALIGNED
+      | granule(vdev_ptr).state = VDEV
+      | vdev(vdev_ptr).state = VDEV_STOPPED
+
+
+Failure conditon testing
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. list-table::
+  :widths: 20 40 40
+
+  * - Input parameters
+    - Input Values
+    - Remarks
+  * - vdev_ptr
+    - granule(vdev_ptr) = unaligned_addr, mmio_region (A), outside_of_permitted_pa (B),
+      not_backed_by_encryption, raz or wi (C)
+
+      granule(vdev_ptr).state = UNDELEGATED, DELEGATED, RD, REC, RTT, DATA, IO_DELEGATED_PRIVATE,
+      IO_DELEGATED_SHARED, IO_PRIVATE, IO_SHARED, IO_UNDELEGATED, PDEV
+
+      vdev(vdev_ptr).state = VDEV_COMMUNICATING, VDEV_ERROR, VDEV_READY, VDEV_STOPPING
+    -
+
+
+Failure Priority ordering
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+This command has failure condition ordering but we can't verify in ACS.
+
+Observability
+~~~~~~~~~~~~~
+.. list-table::
+  :widths: 25 75
+
+  * - Footprint
+    - Verification
+  * - Command Failure
+    -
+  * - vdev(vdev_ptr).state
+
+      num_vdevs
+    - | This is outside the scope of CCA-RMM-ACS. Refer Observing Properties of a Granule and
+        Observing Contents of a Granule for details
+  * - vdev(vdev_ptr).io_state
+    -
+  * - Command Success
+    -
+  * - vdev(vdev_ptr).state
+    - This will be teest outside of ACS command scenarios (Rollback sequence)
+  * - vdev(vdev_ptr).io_state
+    - This will be test in ACS DA flow scenario.
+
+
+RMI_VDEV_GET_STATE
+^^^^^^^^^^^^^^^^^^
+
+Argument list
+~~~~~~~~~~~~~
+
+.. list-table::
+  :widths: 25 75
+
+  * - Input parameters
+    - Valid Values
+  * - vdev_ptr
+    - | vdev_ptr = 4K_ALIGNED
+      | granule(vdev_ptr).state = VDEV
+
+
+Failure conditon testing
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. list-table::
+  :widths: 20 40 40
+
+  * - Input parameters
+    - Input Values
+    - Remarks
+  * - vdev_ptr
+    - granule(vdev_ptr) = unaligned_addr, mmio_region (A), outside_of_permitted_pa (B),
+      not_backed_by_encryption, raz or wi (C)
+
+      granule(vdev_ptr).state = UNDELEGATED, DELEGATED, RD, REC, RTT, DATA, IO_DELEGATED_PRIVATE,
+      IO_DELEGATED_SHARED, IO_PRIVATE, IO_SHARED, IO_UNDELEGATED, PDEV
+    -
+
+
+Failure Priority ordering
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+This command has failure condition ordering but we can't verify in ACS.
+
+Observability
+~~~~~~~~~~~~~
+
+This command has no footprint.
+
+RMI_VDEV_STOP
+^^^^^^^^^^^^^
+
+Argument list
+~~~~~~~~~~~~~
+
+.. list-table::
+  :widths: 25 75
+
+  * - Input parameters
+    - Valid Values
+  * - vdev_ptr
+    - | vdev_ptr = 4K_ALIGNED
+      | granule(vdev_ptr).state = VDEV
+      | vdev(vdev_ptr).state = VDEV_READY, VDEV_ERROR
+
+
+Failure conditon testing
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. list-table::
+  :widths: 20 40 40
+
+  * - Input parameters
+    - Input Values
+    - Remarks
+  * - vdev_ptr
+    - granule(vdev_ptr) = unaligned_addr, mmio_region (A), outside_of_permitted_pa (B),
+      not_backed_by_encryption, raz or wi (C)
+
+      granule(vdev_ptr).state = UNDELEGATED, DELEGATED, RD, REC, RTT, DATA, IO_DELEGATED_PRIVATE,
+      IO_DELEGATED_SHARED, IO_PRIVATE, IO_SHARED, IO_UNDELEGATED, PDEV
+
+      vdev(vdev_ptr).state = VDEV_COMMUNICATING, VDEV_STOPPED, VDEV_STOPPING
+    -
+
+Failure Priority ordering
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+This command has failure condition ordering but we can't verify in ACS.
+
+Observability
+~~~~~~~~~~~~~
+.. list-table::
+  :widths: 25 75
+
+  * - Footprint
+    - Verification
+  * - Command Failure
+    -
+  * - vdev(vdev_ptr).state
+    - | Check vdev.state = VDEV_READY, VDEV_ERROR through RMI_VDEV_GET_STATE command
+  * - vdev(vdev_ptr).io_state
+    -
+  * - Command Success
+    -
+  * - vdev(vdev_ptr).state
+    - | Check vdev(vdev_ptr).state = VDEV_STOPPING through RMI_VDEV_GET_STATE command
+  * - vdev(vdev_ptr).io_state
+    - | This will be test in ACS DA flow scenario.
+
 RMI_VERSION
 ^^^^^^^^^^^^
 
@@ -2225,14 +4427,12 @@ Argument list
   * - req
     - Requested interface version by host.
 
-
 Failure conditon testing
 ~~~~~~~~~~~~~~~~~~~~~~~~
 This command has no failure conditions.
 
 Failure Priority ordering
 ~~~~~~~~~~~~~~~~~~~~~~~~~
-
 This command has no failure priority orderings.
 
 Observability
@@ -2242,6 +4442,7 @@ This command has no footprint.
 * Check that outupt.lower[31:63]  & output.higher[31:63] = Zeros()
 * Upon receiving RMI_SUCCESS, check if output.lower = req as per specification, else stop executing
   tests since ABI versions are not compatible.
+
 
 RSI Commands
 ------------
@@ -2264,8 +4465,7 @@ Argument list
     - offset < RMM_GRANULE_SIZE
   * - size
     - | offset + size >= offset
-    - | offset + size <= RMM_GRANULE_SIZE
-
+      | offset + size <= RMM_GRANULE_SIZE
 
 Failure conditon testing
 ~~~~~~~~~~~~~~~~~~~~~~~~
@@ -2324,7 +4524,6 @@ Argument list
 
 Failure conditon testing
 ~~~~~~~~~~~~~~~~~~~~~~~~
-
 This command has no failure conditions.
 
 Failure Priority ordering
@@ -2333,6 +4532,7 @@ This command has no failure priority orderings
 
 Observability
 ~~~~~~~~~~~~~
+
 .. list-table::
   :widths: 25 75
 
@@ -2360,14 +4560,12 @@ Argument list
   * - index
     - index of a valid feature register.
 
-
 Failure conditon testing
 ~~~~~~~~~~~~~~~~~~~~~~~~
 This command has no failure conditions.
 
 Failure Priority ordering
 ~~~~~~~~~~~~~~~~~~~~~~~~~
-
 This command has no failure priority orderings.
 
 Observability
@@ -2425,7 +4623,7 @@ Observability
   * - host_call
     - Execute RSI_HOST_CALL --> At host REC_ENTER with rec_enter.gprs[1] = val
 
-      After succesful REC_ENTER chec host_call_struct.gprs[1] == val
+      After succesful REC_ENTER check host_call_struct.gprs[1] == val
 
 RSI_IPA_STATE_GET
 ^^^^^^^^^^^^^^^^^
@@ -2525,7 +4723,6 @@ Observability
     - | when response = RSI_ACCEPT, check if new_base == top
       | when response = RSI_REJECT, check if new_base == base
 
-
 RSI_MEASUREMENT_EXTEND
 ^^^^^^^^^^^^^^^^^^^^^^
 
@@ -2543,7 +4740,6 @@ Argument list
     - size < 64 bytes
   * - value_0:7
     - Doubleword n of the measurement value (0 <= n <=7)
-
 
 Failure conditon testing
 ~~~~~~~~~~~~~~~~~~~~~~~~
@@ -2595,7 +4791,6 @@ Argument list
   * - index
     - index = valid
 
-
 Failure conditon testing
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -2617,6 +4812,700 @@ Observability
 ~~~~~~~~~~~~~
 This command has no footprint.
 
+RSI_MEM_GET_PERM_VALUE
+^^^^^^^^^^^^^^^^^^^^^^
+
+Argument list
+~~~~~~~~~~~~~
+
+.. list-table::
+  :widths: 25 45
+
+  * - Input parameters
+    - Valid Values
+  * - plane_index
+    - plane_index <= realm.num_aux_planes
+  * - perm_index
+    - perm_index < 15
+
+Failure conditon testing
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. list-table::
+  :widths: 20 40 40
+
+  * - Input parameters
+    - Input Values
+    - Remarks
+  * - plane_index
+    - plane_index > realm.num_aux_planes
+    - | Create realm with realm.num_aux_planes = 1
+      | Execute RSI_MEM_GET_PERM_VALUE with plane_index = 2
+  * - perm_index
+    - perm_index >= 15
+    -
+
+Failure Priority ordering
+~~~~~~~~~~~~~~~~~~~~~~~~~
+This command has no failure priority orderings.
+
+Observability
+~~~~~~~~~~~~~
+This command has no footprint.
+
+.. list-table::
+  :widths: 25 75
+
+  * - Footprint
+    - Verification
+  * - Command Success
+    -
+  * - value
+    - | Execute RSI_MEM_SET_PERM_VALUE for (plane_index, perm_index) tuple with value RW.
+      | Execute RSI_MEM_GET_PERM_VALUE for above tuple and check value == RW.
+
+RSI_MEM_SET_PERM_INDEX
+^^^^^^^^^^^^^^^^^^^^^^
+
+Argument list
+~~~~~~~~~~~~~
+
+.. list-table::
+  :widths: 25 45
+
+  * - Input parameters
+    - Valid Values
+  * - base
+    - | base = 4K_ALIGNED
+      | base = Protected
+      | base < top
+  * - top
+    - | top = 4K_ALIGNED
+      | base + top <= 2^(ipa_width -1)
+  * - perm_index
+    - perm_index < 15
+  * - cookie
+    - Valid cookie
+
+Failure conditon testing
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. list-table::
+  :widths: 20 40 40
+
+  * - Input parameters
+    - Input Values
+    - Remarks
+  * - base
+    - base = unaligned_addr, base >= top
+    -
+  * - top
+    - top = unaligned_addr , top > 2^(ipa_width -1)
+    -
+  * - perm_index
+    - perm_index >= 15
+    -
+  * - cookie
+    - Invalid cookie [A]
+    - [A] The contents of the cookie is implementation defined and hence out of scope of ACS.
+
+Failure Priority ordering
+~~~~~~~~~~~~~~~~~~~~~~~~~
+This command has no failure priority orderings.
+
+Observability
+~~~~~~~~~~~~~
+
+.. list-table::
+  :widths: 25 75
+
+  * - Footprint
+    - Verification
+  * - Command Success
+    -
+  * - | locked
+
+      | new_base & response
+    - | Execute RSI_MEM_SET_PERM_VALUE for the same perm_index, expect RSI_ERROR_INPUT
+
+      | when response = RSI_ACCEPT, check if new_base == top
+      | when response = RSI_REJECT, check if new_base == base
+
+RSI_MEM_SET_PERM_VALUE
+^^^^^^^^^^^^^^^^^^^^^^
+
+Argument list
+~~~~~~~~~~~~~
+
+.. list-table::
+  :widths: 25 75
+
+  * - Input parameters
+    - Valid Values
+  * - plane_index
+    - 0 < plane_index < realm.num_aux_planes
+  * - perm_index
+    - perm_index < 15
+  * - value
+    - Valid encoding and supported by the implementation.
+
+Failure conditon testing
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. list-table::
+  :widths: 20 40 40
+
+  * - Input parameters
+    - Input Values
+    - Remarks
+  * - plane_index
+    - plane_index = 0, realm.num_aux_palens + 1 [A].
+    - [A] Create realm with num_aux_planes = 1, Execute RSI_MEM_SET_PERM_VALUE with plane_index = 2.
+  * - perm_index
+    - perm_index = locked[B], 15
+    - [B] A permission index is locked when there was a previous RSI_MEM_SET_PERM_INDEX call to the perm_index.
+  * - value
+    - value = Invalid encoding, Unsupported value[C]
+    - [C] Permission values supported is implementation defined and is outside the scope of ACS.
+
+Failure Priority ordering
+~~~~~~~~~~~~~~~~~~~~~~~~~
+This command has no failure priority orderings.
+
+Observability
+~~~~~~~~~~~~~
+This command has no footprint.
+
+.. list-table::
+  :widths: 25 75
+
+  * - Footprint
+    - Verification
+  * - Command Success
+    -
+  * - label
+    - | Execute RSI_MEM_SET_PERM_VALUE for (plane_index, perm_index) tuple with value RW.
+      | Execute RSI_MEM_GET_PERM_VALUE for above tuple and check value == RW.
+
+RSI_PLANE_ENTER
+^^^^^^^^^^^^^^^
+
+Argument list
+~~~~~~~~~~~~~
+
+.. list-table::
+  :widths: 25 75
+
+  * - Input parameters
+    - Valid Values
+  * - plane_index
+    - 0 < plane_index < realm.num_aux_planes
+  * - run_ptr
+    - | run_ptr = 4K_ALIGNED
+      | run_ptr = Protected
+
+Failure conditon testing
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. list-table::
+  :widths: 20 40 40
+
+  * - Input parameters
+    - Input Values
+    - Remarks
+  * - plane_index
+    - plane_index = 0, realm.num_aux_planes + 1 [A]
+    - [A] Create realm with num_aux_planes = 1, Execute RSI_PLANE_ENTER with plane_index = 2.
+  * - run_ptr
+    - run_ptr = unaligned_addr, unprotected_ipa
+    - unprotected_ipa = ipa > 2^(ipa_width -1)
+
+Failure Priority ordering
+~~~~~~~~~~~~~~~~~~~~~~~~~
+This command has no failure priority orderings.
+
+Observability
+~~~~~~~~~~~~~
+This command has no footprint.
+
+.. list-table::
+  :widths: 25 75
+
+  * - Footprint
+    - Verification
+  * - Command Success
+    -
+  * - plane_exit
+    - Execute RSI_PLANE_ENTER to P1, P1 to return back to P0 with a HVC call.
+      Check necessary exit fields for correctness.
+
+RSI_RDEV_CONTINUE
+^^^^^^^^^^^^^^^^^
+
+Argument list
+~~~~~~~~~~~~~
+
+.. list-table::
+  :widths: 25 75
+
+  * - Input parameters
+    - Valid Values
+  * - dev_id
+    - | dev_id = valid dev_id associated with vdev for given realm
+      | Rdev(dev_id).state = RDEV_NEW_BUSY, RDEV_LOCKED_BUSY, RDEV_STARTED_BUSY, RDEV_STOPPING
+
+
+Failure conditon testing
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. list-table::
+  :widths: 20 40 40
+
+  * - Input parameters
+    - Input Values
+    - Remarks
+  * - dev_id
+    - | dev_id = invalid dev_id (can give different dev_id which is not associated with vdev)
+      | Rdev(dev_id).state = RDEV_ERROR, RDEV_LOCKED, RDEV_NEW, RDEV_STARTED, RDEV_STOPPED
+    -
+
+Failure Priority ordering
+~~~~~~~~~~~~~~~~~~~~~~~~~
+This command has failure condition ordering but we can't verify in ACS.
+
+Observability
+~~~~~~~~~~~~~
+
+.. list-table::
+  :widths: 25 75
+
+  * - Footprint
+    - Verification
+  * - Command Failure
+    -
+  * - | Rdev(dev_id).state
+    - Check Rdev(dev_id).state = rdev_state_pre RMI_RDEV_GET_STATE command
+  * - Command Success
+    -
+  * - | Rdev(dev_id).state
+    - Check Rdev(dev_id).state based on rdev_state_pre through RMI_RDEV_GET_STATE command
+
+RSI_RDEV_GET_DIGESTS
+^^^^^^^^^^^^^^^^^^^^
+
+Argument list
+~~~~~~~~~~~~~
+
+.. list-table::
+  :widths: 25 75
+
+  * - Input parameters
+    - Valid Values
+  * - dev_id
+    - | dev_id = valid dev_id associated with vdev for given realm
+      | Rdev(dev_id).state = RDEV_LOCKED, RDEV_STARTED
+  * - addr
+    - | addr = 4K_ALIGNED, protected
+
+
+Failure conditon testing
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. list-table::
+  :widths: 20 40 40
+
+  * - Input parameters
+    - Input Values
+    - Remarks
+  * - dev_id
+    - | dev_id = invalid dev_id (can give different dev_id which is not associated with vdev)
+      | Rdev(dev_id).state = RDEV_ERROR, RDEV_LOCKED_BUSY, RDEV_NEW, RDEV_NEW_BUSY,
+        RDEV_STARTED_BUSY, RDEV_STOPPED, RDEV_STOPPING
+    -
+  * - addr
+    - | addr =unaligned_addr, unprotected_addr, outside_of_permitted_addr
+    -
+
+Failure Priority ordering
+~~~~~~~~~~~~~~~~~~~~~~~~~
+This command has failure condition ordering but we can't verify in ACS.
+
+Observability
+~~~~~~~~~~~~~
+
+This command doesn't have any success condition.
+
+RSI_RDEV_GET_INTERFACE_REPORT
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Argument list
+~~~~~~~~~~~~~
+
+.. list-table::
+  :widths: 25 75
+
+  * - Input parameters
+    - Valid Values
+  * - dev_id
+    - | dev_id = valid dev_id associated with vdev for given realm
+      | Rdev(dev_id).state = RDEV_LOCKED, RDEV_STARTED
+  * - version_max
+    - | valid supported TDISP version
+
+
+Failure conditon testing
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. list-table::
+  :widths: 20 40 40
+
+  * - Input parameters
+    - Input Values
+    - Remarks
+  * - dev_id
+    - | dev_id = invalid dev_id (can give different dev_id which is not associated with vdev)
+      | Rdev(dev_id).state = RDEV_ERROR, RDEV_LOCKED_BUSY, RDEV_NEW, RDEV_NEW_BUSY,
+        RDEV_STARTED_BUSY, RDEV_STOPPED, RDEV_STOPPING
+    -
+  * - version
+    - | version = TDISP version is not supported
+    -
+
+Failure Priority ordering
+~~~~~~~~~~~~~~~~~~~~~~~~~
+This command has failure condition ordering but we can't verify in ACS.
+
+Observability
+~~~~~~~~~~~~~
+
+.. list-table::
+  :widths: 25 75
+
+  * - Footprint
+    - Verification
+  * - Command Failure
+    -
+  * - | Rdev(dev_id).state
+    - Check Rdev(dev_id).state = rdev_state_pre through RMI_RDEV_GET_STATE command
+  * - Command Success
+    -
+  * - | Rdev(dev_id).state
+    - Check Rdev(dev_id).state based on rdev_state_pre through RMI_RDEV_GET_STATE command
+
+RSI_RDEV_GET_MEASUREMENTS
+^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Argument list
+~~~~~~~~~~~~~
+
+.. list-table::
+  :widths: 25 75
+
+  * - Input parameters
+    - Valid Values
+  * - dev_id
+    - | dev_id = valid dev_id associated with vdev for given realm
+      | Rdev(dev_id).state = RDEV_NEW, RDEV_LOCKED, RDEV_STARTED
+  * - params_ptr
+    - | params_ptr = valid_params
+
+
+Failure conditon testing
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. list-table::
+  :widths: 20 40 40
+
+  * - Input parameters
+    - Input Values
+    - Remarks
+  * - dev_id
+    - | dev_id = invalid dev_id (can give different dev_id which is not associated with vdev)
+      | Rdev(dev_id).state = RDEV_ERROR, RDEV_LOCKED_BUSY, RDEV_NEW, RDEV_NEW_BUSY,
+        RDEV_STARTED_BUSY, RDEV_STOPPED, RDEV_STOPPING
+    -
+  * - params_ptr
+    - | params_ptr = Give invalid meas_ids/meas_params
+    -
+
+Failure Priority ordering
+~~~~~~~~~~~~~~~~~~~~~~~~~
+This command has failure condition ordering but we can't verify in ACS.
+
+Observability
+~~~~~~~~~~~~~
+
+.. list-table::
+  :widths: 25 75
+
+  * - Footprint
+    - Verification
+  * - Command Failure
+    -
+  * - | Rdev(dev_id).state
+    - Check Rdev(dev_id).state = rdev_state_pre through RMI_RDEV_GET_STATE command
+  * - Command Success
+    -
+  * - | Rdev(dev_id).state
+    - Check Rdev(dev_id).state based on rdev_state_pre through RMI_RDEV_GET_STATE command
+
+RSI_RDEV_GET_STATE
+^^^^^^^^^^^^^^^^^^
+
+Argument list
+~~~~~~~~~~~~~
+
+.. list-table::
+  :widths: 25 75
+
+  * - Input parameters
+    - Valid Values
+  * - dev_id
+    - | dev_id = valid dev_id associated with vdev for given realm
+
+
+Failure conditon testing
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. list-table::
+  :widths: 20 40 40
+
+  * - Input parameters
+    - Input Values
+    - Remarks
+  * - dev_id
+    - | dev_id = invalid dev_id (can give different dev_id which is not associated with vdev)
+    -
+
+Failure Priority ordering
+~~~~~~~~~~~~~~~~~~~~~~~~~
+This command has failure condition ordering but we can't verify in ACS.
+
+Observability
+~~~~~~~~~~~~~
+This command doesn't have any footprint.
+
+RSI_RDEV_LOCK
+^^^^^^^^^^^^^^
+
+Argument list
+~~~~~~~~~~~~~
+
+.. list-table::
+  :widths: 25 75
+
+  * - Input parameters
+    - Valid Values
+  * - dev_id
+    - | dev_id = valid dev_id associated with vdev for given realm
+      | Rdev(dev_id).state = RDEV_NEW
+
+
+Failure conditon testing
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. list-table::
+  :widths: 20 40 40
+
+  * - Input parameters
+    - Input Values
+    - Remarks
+  * - dev_id
+    - | dev_id = invalid dev_id (can give different dev_id which is not associated with vdev)
+      | Rdev(dev_id).state = RDEV_ERROR, RDEV_LOCKED, RDEV_LOCKED_BUSY, RDEV_NEW_BUSY,
+        RDEV_STARTED, RDEV_STARTED_BUSY, RDEV_STOPPED, RDEV_STOPPING
+    -
+
+Failure Priority ordering
+~~~~~~~~~~~~~~~~~~~~~~~~~
+This command has failure condition ordering but we can't verify in ACS.
+
+Observability
+~~~~~~~~~~~~~
+
+.. list-table::
+  :widths: 25 75
+
+  * - Footprint
+    - Verification
+  * - Command Failure
+    -
+  * - | Rdev(dev_id).state
+    - Check Rdev(dev_id).state = RDEV_NEW through RMI_RDEV_GET_STATE command
+  * - Command Success
+    -
+  * - | Rdev(dev_id).state
+    - Check Rdev(dev_id).state = RDEV_NEW_BUSY through RMI_RDEV_GET_STATE command
+
+RSI_RDEV_START
+^^^^^^^^^^^^^^
+
+Argument list
+~~~~~~~~~~~~~
+
+.. list-table::
+  :widths: 25 75
+
+  * - Input parameters
+    - Valid Values
+  * - dev_id
+    - | dev_id = valid dev_id associated with vdev for given realm
+      | Rdev(dev_id).state = RDEV_LOCKED
+
+
+Failure conditon testing
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. list-table::
+  :widths: 20 40 40
+
+  * - Input parameters
+    - Input Values
+    - Remarks
+  * - dev_id
+    - | dev_id = invalid dev_id (can give different dev_id which is not associated with vdev)
+      | Rdev(dev_id).state = RDEV_ERROR, RDEV_NEW, RDEV_LOCKED_BUSY, RDEV_NEW_BUSY, RDEV_STARTED,
+        RDEV_STARTED_BUSY, RDEV_STOPPED, RDEV_STOPPING
+    -
+  * -
+    - | realm.feat_da = FEATURE_FALSE
+    -
+
+Failure Priority ordering
+~~~~~~~~~~~~~~~~~~~~~~~~~
+This command has failure condition ordering but we can't verify in ACS.
+
+Observability
+~~~~~~~~~~~~~
+
+.. list-table::
+  :widths: 25 75
+
+  * - Footprint
+    - Verification
+  * - Command Failure
+    -
+  * - | Rdev(dev_id).state
+    - Check Rdev(dev_id).state = RDEV_LOCKED through RMI_RDEV_GET_STATE command
+  * - Command Success
+    -
+  * - | Rdev(dev_id).state
+    - Check Rdev(dev_id).state = RDEV_LOCKED_BUSY through RMI_RDEV_GET_STATE command
+
+
+RSI_RDEV_STOP
+^^^^^^^^^^^^^
+
+Argument list
+~~~~~~~~~~~~~
+
+.. list-table::
+  :widths: 25 75
+
+  * - Input parameters
+    - Valid Values
+  * - dev_id
+    - | dev_id = valid dev_id associated with vdev for given realm
+      | Rdev(dev_id).state = RDEV_NEW, RDEV_LOCKED, RDEV_STARTED, RDEV_ERROR
+
+Failure conditon testing
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. list-table::
+  :widths: 20 40 40
+
+  * - Input parameters
+    - Input Values
+    - Remarks
+  * - dev_id
+    - | dev_id = invalid dev_id (can give different dev_id which is not associated with vdev)
+      | Rdev(dev_id).state = RDEV_LOCKED_BUSY, RDEV_NEW_BUSY, RDEV_STARTED_BUSY, RDEV_STOPPED,
+        RDEV_STOPPING
+    -
+
+Failure Priority ordering
+~~~~~~~~~~~~~~~~~~~~~~~~~
+This command has failure condition ordering but we can't verify in ACS.
+
+Observability
+~~~~~~~~~~~~~
+
+.. list-table::
+  :widths: 25 75
+
+  * - Footprint
+    - Verification
+  * - Command Failure
+    -
+  * - | Rdev(dev_id).state
+    - Check Rdev(dev_id).state = rdev_state_pre through RMI_RDEV_GET_STATE command
+  * - Command Success
+    -
+  * - | Rdev(dev_id).state
+    - Check Rdev(dev_id).state = RDEV_STOPPING through RMI_RDEV_GET_STATE command
+
+
+RSI_RDEV_VALIDATE_IO
+^^^^^^^^^^^^^^^^^^^^
+
+Argument list
+~~~~~~~~~~~~~
+
+.. list-table::
+  :widths: 25 75
+
+  * - Input parameters
+    - Valid Values
+  * - dev_id
+    - | dev_id = valid dev_id associated with vdev for given realm
+      | Rdev(dev_id).state = RDEV_LOCKED, RDEV_STARTED
+  * - ipa_base
+    - | ipa_base = 4K_ALIGNED
+      | ipa_top < = ipa_base
+      | (ipa_base ipa_top) range =  protected
+  * - ipa_top
+    - | ipa_top = 4K_ALIGNED
+      | ipa_top > ipa_base
+      | (ipa_base ipa_top) range =  protected
+  * - pa_base
+    - pa_base = 4K_ALIGNED
+  * - flags
+    - flags = RSI_IO_PRIVATE, RSI_IO_SHARED
+
+Failure conditon testing
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. list-table::
+  :widths: 20 40 40
+
+  * - Input parameters
+    - Input Values
+    - Remarks
+  * - dev_id
+    - | dev_id = invalid dev_id (can give different dev_id which is not associated with vdev)
+      | Rdev(dev_id).state = RDEV_ERROR, RDEV_NEW RDEV_LOCKED_BUSY, RDEV_NEW_BUSY,
+        RDEV_STARTED_BUSY, RDEV_STOPPED, RDEV_STOPPING
+    -
+  * - ipa_base
+    - | ipa_base = unaligned_addr
+    -
+  * - ipa_top
+    - | ipa_top = unaligned_addr
+      | ipa_top <= ipa_base
+      | Give unprotected range
+    -
+  * - pa_base
+    - | pa_base = unaligned_addr
+    -
+
+Failure Priority ordering
+~~~~~~~~~~~~~~~~~~~~~~~~~
+This command has failure condition ordering but we can't verify in ACS.
+
+Observability
+~~~~~~~~~~~~~
+This command doesn't have any footprint.
+
 RSI_REALM_CONFIG
 ^^^^^^^^^^^^^^^^
 
@@ -2631,7 +5520,6 @@ Argument list
   * - addr
     - | addr = 4K_ALIGNED
       | addr = Protected
-
 
 Failure conditon testing
 ~~~~~~~~~~~~~~~~~~~~~~~~
@@ -2669,15 +5557,12 @@ Argument list
   * - req
     - Requested interface version by host.
 
-
-
 Failure conditon testing
 ~~~~~~~~~~~~~~~~~~~~~~~~
 This command has no failure conditions.
 
 Failure Priority ordering
 ~~~~~~~~~~~~~~~~~~~~~~~~~
-
 This command has no failure priority orderings.
 
 Observability
@@ -2687,6 +5572,113 @@ This command has no footprint.
 * Check that outupt.lower[31:63]  & output.higher[31:63] = Zeros()
 * Upon receiving RSI_SUCCESS, check if output.lower = req as per specification, else stop executing
   tests since ABI versions are not compatible.
+
+RSI_PLANE_REG_READ
+^^^^^^^^^^^^^^^^^^
+
+Argument list
+~~~~~~~~~~~~~
+
+.. list-table::
+  :widths: 25 45
+
+  * - Input parameters
+    - Valid Values
+  * - plane_idx
+    - plane_idx <= realm.num_aux_planes
+  * - encoding
+    - Encoding that identifies a Plane register
+
+Failure conditon testing
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. list-table::
+  :widths: 20 40 40
+
+  * - Input parameters
+    - Input Values
+    - Remarks
+  * - plane_index
+    - plane_index > realm.num_aux_planes
+    - | Create realm with realm.num_aux_planes = 1
+      | Execute RSI_PLANE_REG_READ with plane_index = 2
+  * - encoding
+    - Invalid encodign
+    - An example of a invalid register would be any EL3 register
+
+Failure Priority ordering
+~~~~~~~~~~~~~~~~~~~~~~~~~
+This command has no failure priority orderings.
+
+Observability
+~~~~~~~~~~~~~
+This command has no footprint.
+
+.. list-table::
+  :widths: 25 75
+
+  * - Footprint
+    - Verification
+  * - Command Success
+    -
+  * - value
+    - | Enter P1 and set ALignment check bit in SCTLR_EL1
+      | Execute RSI_PLANE_REG_READ from P0 and check for SCTLR_EL1.A bit
+
+RSI_PLANE_REG_WRITE
+^^^^^^^^^^^^^^^^^^^
+
+Argument list
+~~~~~~~~~~~~~
+
+.. list-table::
+  :widths: 25 45
+
+  * - Input parameters
+    - Valid Values
+  * - plane_idx
+    - plane_idx <= realm.num_aux_planes
+  * - encoding
+    - Encoding that identifies a Plane register
+  * - value
+    -
+
+
+Failure conditon testing
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. list-table::
+  :widths: 20 40 40
+
+  * - Input parameters
+    - Input Values
+    - Remarks
+  * - plane_index
+    - plane_index > realm.num_aux_planes
+    - | Create realm with realm.num_aux_planes = 1
+      | Execute RSI_PLANE_REG_READ with plane_index = 2
+  * - encoding
+    - Invalid encodign
+    - An example of a invalid register would be any EL3 register
+
+Failure Priority ordering
+~~~~~~~~~~~~~~~~~~~~~~~~~
+This command has no failure priority orderings.
+
+Observability
+~~~~~~~~~~~~~
+This command has no footprint.
+
+.. list-table::
+  :widths: 25 75
+
+  * - Footprint
+    - Verification
+  * - Command Success
+    -
+  * - value
+    - | Execute RSI_PLANE_REG_WRITE from P0 with SCTLR_EL1.A bit set
+      | Enter P1 and read SCTLR_EL1 and check for SCTLR_EL1.A bit
 
 PSCI Commands
 -------------
@@ -2725,7 +5717,6 @@ Failure conditon testing
 
 Failure Priority ordering
 ~~~~~~~~~~~~~~~~~~~~~~~~~
-
 This command has no failure priority orderings.
 
 Observability
@@ -2747,7 +5738,6 @@ This command has no failure conditions.
 
 Failure Priority ordering
 ~~~~~~~~~~~~~~~~~~~~~~~~~
-
 This command has no failure priority orderings.
 
 Observability
@@ -2836,7 +5826,6 @@ This command has no failure conditions.
 
 Failure Priority ordering
 ~~~~~~~~~~~~~~~~~~~~~~~~~
-
 This command has no failure priority orderings.
 
 Observability
@@ -2864,7 +5853,6 @@ This command has no failure conditions.
 
 Failure Priority ordering
 ~~~~~~~~~~~~~~~~~~~~~~~~~
-
 This command has no failure priority orderings.
 
 Observability
@@ -2884,7 +5872,6 @@ This command has no failure conditions.
 
 Failure Priority ordering
 ~~~~~~~~~~~~~~~~~~~~~~~~~
-
 This command has no failure priority orderings.
 
 Observability
@@ -2937,6 +5924,6 @@ Check for PSCI_Version.major == 1, PSCI_Version.minor = 1
 
 .. |Priority orderings| image:: ./diagrams/priority_ordering.png
 .. |Intent to sequence structure| image:: ./diagrams/intent_structure.png
-.. _Realm Management Monitor (RMM) Specification: https://developer.arm.com/documentation/den0137/1-0eac5/?lang=en
+.. _Realm Management Monitor (RMM) Specification: https://developer.arm.com/-/cdn-downloads/permalink/PDF/Architectures/DEN0137_1.1-alp8_rmm-arch_external.pdf
 .. _Arm CCA: https://www.arm.com/architecture/security-features/arm-confidential-compute-architecture
 
