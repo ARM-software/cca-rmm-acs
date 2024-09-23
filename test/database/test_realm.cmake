@@ -1,5 +1,5 @@
 #-------------------------------------------------------------------------------
-# Copyright (c) 2023, Arm Limited or its affiliates. All rights reserved.
+# Copyright (c) 2023-2024, Arm Limited or its affiliates. All rights reserved.
 #
 # SPDX-License-Identifier: BSD-3-Clause
 #
@@ -47,6 +47,7 @@ if(${SUITE} STREQUAL "all")
 file(GLOB TEST_SRC
     "${ROOT_DIR}/test/*/*/*_realm.c"
     "${ROOT_DIR}/test/*/*/*_realm.S"
+    "${ROOT_DIR}/test/planes/*/*/*_realm.c"
     "${ROOT_DIR}/test/*/common/*_realm.c"
     "${ROOT_DIR}/test/common/*_realm.c"
     "${RMM_ACS_TARGET_QCBOR}/src/qcbor_decode.c"
@@ -57,6 +58,7 @@ else()
 file(GLOB TEST_SRC
     "${ROOT_DIR}/test/${SUITE}/*/*_realm.c"
     "${ROOT_DIR}/test/${SUITE}/*/*_realm.S"
+    "${ROOT_DIR}/test/${SUITE}/*/*/*_realm.c"
     "${ROOT_DIR}/test/${SUITE}/common/*_realm.c"
     "${ROOT_DIR}/test/common/*_realm.c"
     "${RMM_ACS_TARGET_QCBOR}/src/UsefulBuf.c"
@@ -97,7 +99,11 @@ endif()
 foreach(SUITE ${SUITE_LIST})
     #message(STATUS "[ACS] : Compiling sources from ${SUITE} suite")
     # Get all the test folders from a given test component
-    _get_sub_dir_list(TEST_LIST ${TEST_SOURCE_DIR}/${SUITE})
+    if(${SUITE} STREQUAL "planes")
+        _get_sub_dir_list(TEST_LIST ${TEST_SOURCE_DIR}/${SUITE}/*/)
+    else()      
+        _get_sub_dir_list(TEST_LIST ${TEST_SOURCE_DIR}/${SUITE})
+    endif()
     foreach(TEST ${TEST_LIST})
         #message(STATUS "[ACS] : Compiling sources from ${TEST} Test")
         file(GLOB TEST_SRC "${TEST_SOURCE_DIR}/${SUITE}/${TEST}/${TEST}_realm.c")
@@ -107,6 +113,9 @@ foreach(SUITE ${SUITE_LIST})
                     "${RMM_ACS_TARGET_QCBOR}/src/UsefulBuf.c"
                     "${RMM_ACS_TARGET_QCBOR}/src/ieee754.c"
                 )
+        endif()
+        if(${SUITE} STREQUAL "planes")
+            list(APPEND TEST_SRC ${TEST_SOURCE_DIR}/${SUITE}/*/${TEST}/${TEST}_realm.c)
         endif()
         list(APPEND TEST_SRC ${TEST_SOURCE_DIR}/database/test_database_realm.c)
         file(GLOB TEST_COMMON_FILE ${TEST_SOURCE_DIR}/common/*_realm.c)

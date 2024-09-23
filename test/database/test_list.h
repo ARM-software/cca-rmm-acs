@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023-2024, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -85,7 +85,6 @@ DECLARE_TEST_FN(attestation_platform_challenge_size);
 DECLARE_TEST_FN(attestation_rem_extend_check);
 DECLARE_TEST_FN(attestation_rem_extend_check_realm_token);
 DECLARE_TEST_FN(attestation_rec_exit_irq);
-
 /*ATTESTATION and MEASUREMENT testcase declaration ends here*/
 
 /*memory management testcase declaration starts here*/
@@ -144,6 +143,21 @@ DECLARE_TEST_FN(gic_ctrl_hcr);
 /*PMU and DEBUG testcase declaration starts here*/
 DECLARE_TEST_FN(pmu_overflow);
 /*PMU and DEBUG testcase declaration ends here*/
+
+/* Planes test declaration starts here */
+DECLARE_TEST_FN(planes_plane_exit_smc_hvc);
+DECLARE_TEST_FN(planes_plane_exit_wfe);
+DECLARE_TEST_FN(planes_plane_exit_wfi);
+DECLARE_TEST_FN(planes_plane_exit_ia_unprotected);
+DECLARE_TEST_FN(planes_plane_exit_da_ia_ripas_empty);
+DECLARE_TEST_FN(planes_plane_exit_da_ia_permission);
+DECLARE_TEST_FN(planes_plane_exit_host_call);
+DECLARE_TEST_FN(planes_rec_exit_da_ia_hipas_unassigned_ripas_ram);
+DECLARE_TEST_FN(planes_rec_exit_da_ia_ripas_destroyed);
+DECLARE_TEST_FN(planes_rec_exit_da_hipas_unassigned_ns);
+DECLARE_TEST_FN(planes_rec_exit_irq);
+DECLARE_TEST_FN(planes_rec_exit_host_call);
+/* Planes test declaration ends here */
 
 #else /* TEST_FUNC_DATABASE */
 /* Add test funcs to the respective host/realm/secure test_list array */
@@ -516,5 +530,46 @@ DECLARE_TEST_FN(pmu_overflow);
 
     #endif /* #if (defined(d_all) || defined(d_memory_management)) */
 #endif /* #if defined(RMM_V_1_0) */
+
+#if defined(RMM_V_1_1)
+    #if (defined(d_all) || defined(d_planes))
+        #if (defined(TEST_COMBINE) || defined(d_planes_plane_exit_smc_hvc))
+        HOST_REALM_TEST(planes, planes_plane_exit_smc_hvc),
+        #endif
+        #if (defined(TEST_COMBINE) || defined(d_planes_plane_exit_wfe))
+        HOST_REALM_TEST(planes, planes_plane_exit_wfe),
+        #endif
+        #if (defined(TEST_COMBINE) || defined(d_planes_plane_exit_wfi))
+        HOST_REALM_TEST(planes, planes_plane_exit_wfi),
+        #endif
+        #if (defined(TEST_COMBINE) || defined(d_planes_plane_exit_ia_unprotected))
+        HOST_REALM_TEST(planes, planes_plane_exit_ia_unprotected),
+        #endif
+        #if (defined(TEST_COMBINE) || defined(d_planes_plane_exit_da_ia_ripas_empty))
+        HOST_REALM_TEST(planes, planes_plane_exit_da_ia_ripas_empty),
+        #endif
+        #if (defined(TEST_COMBINE) || defined(d_planes_plane_exit_da_ia_permission))
+        HOST_REALM_TEST(planes, planes_plane_exit_da_ia_permission),
+        #endif
+        #if (defined(TEST_COMBINE) || defined(d_planes_plane_exit_host_call))
+        HOST_REALM_TEST(planes, planes_plane_exit_host_call),
+        #endif
+        #if (defined(TEST_COMBINE) || defined(d_planes_rec_exit_da_ia_hipas_unassigned_ripas_ram))
+        HOST_REALM_TEST(planes, planes_rec_exit_da_ia_hipas_unassigned_ripas_ram),
+        #endif
+        #if (defined(TEST_COMBINE) || defined(d_planes_rec_exit_da_ia_ripas_destroyed))
+        HOST_REALM_TEST(planes, planes_rec_exit_da_ia_ripas_destroyed),
+        #endif
+        #if (defined(TEST_COMBINE) || defined(d_planes_rec_exit_da_hipas_unassigned_ns))
+        HOST_REALM_TEST(planes, planes_rec_exit_da_hipas_unassigned_ns),
+        #endif
+        #if (defined(TEST_COMBINE) || defined(d_planes_rec_exit_irq))
+        HOST_REALM_TEST(planes, planes_rec_exit_irq),
+        #endif
+        #if (defined(TEST_COMBINE) || defined(d_planes_rec_exit_host_call))
+        HOST_REALM_TEST(planes, planes_rec_exit_host_call),
+        #endif
+    #endif /* #if (defined(d_all) || defined(d_planes) */
+#endif /* #if defined(RMM_V_1_0) || defined(RMM_V_1_1) */
 
 #endif /* TEST_FUNC_DATABASE */
