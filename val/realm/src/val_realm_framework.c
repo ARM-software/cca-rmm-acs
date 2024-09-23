@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023-2024, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -12,10 +12,13 @@
 #include "val_realm_rsi.h"
 #include "val.h"
 #include "val_realm_memory.h"
+#include "val_realm_planes.h"
 
 extern uint64_t realm_ipa_width;
 extern uint64_t val_image_load_offset;
 extern const test_db_t test_list[];
+extern bool realm_in_p0;
+extern bool realm_in_pn;
 
 /**
  *   @brief    Return secondary cpu entry address
@@ -91,12 +94,57 @@ static void val_realm_test_dispatch(void)
 }
 
 /**
+ *   @brief    Check if realm executing in p0
+ *   @param    none
+ *   @return   TRUE/FALSE
+**/
+uint64_t val_realm_in_p0(void)
+{
+    return realm_in_p0;
+}
+
+/**
+ *   @brief    Check if realm executing in pn
+ *   @param    none
+ *   @return   TRUE/FALSE
+**/
+uint64_t val_realm_in_pn(void)
+{
+    return realm_in_pn;
+}
+
+/**
+ *   @brief    Determines the current executing plane inside the realm and sets respective flag.
+ *   @param    none
+ *   @return   SUCCESS/FAILURE
+**/
+static uint64_t val_realm_init(void)
+{
+    val_realm_rsi_version_ts val;
+    uint64_t ret = val_realm_rsi_version(RSI_ABI_VERSION, &val);
+
+    /* Determine the current executing plane based on the return value of RSI ABI */
+    if (ret == RSI_SUCCESS) {
+        realm_in_p0 = true;
+    } else if (ret == VAL_SMC_NOT_SUPPORTED) {
+        realm_in_pn = true;
+    } else {
+        return VAL_ERROR;
+    }
+
+    return VAL_SUCCESS;
+}
+
+/**
  *   @brief    C entry function for endpoint
  *   @param    primary_cpu_boot     - Boolean value for primary cpu boot
  *   @return   void (Never returns)
 **/
 void val_realm_main(bool primary_cpu_boot)
 {
+    if (val_realm_init())
+        goto shutdown;
+
     val_set_running_in_realm_flag();
     val_set_security_state_flag(2);
 
@@ -122,6 +170,7 @@ void val_realm_main(bool primary_cpu_boot)
     /* Ready to run test regression */
     val_realm_test_dispatch();
 
+shutdown:
     LOG(ALWAYS, "REALM : Entering standby.. \n", 0, 0);
     pal_terminate_simulation();
 }

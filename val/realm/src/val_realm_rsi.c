@@ -6,6 +6,7 @@
  */
 #include "val_realm_rsi.h"
 #include "val_realm_framework.h"
+#include "val_realm_planes.h"
 
 __attribute__((aligned (PAGE_SIZE))) static uint8_t realm_config_buff[PAGE_SIZE];
 
@@ -220,8 +221,12 @@ val_smc_param_ts val_realm_rsi_measurement_read(uint64_t index)
 **/
 uint64_t val_realm_get_ipa_width(void)
 {
-    val_realm_rsi_realm_config((uint64_t)realm_config_buff);
-    return (uint64_t)*realm_config_buff;
+    if (val_realm_in_p0()) {
+        val_realm_rsi_realm_config((uint64_t)realm_config_buff);
+        return (uint64_t)*realm_config_buff;
+    } else {
+        return val_realm_psi_realm_config((uint64_t)realm_config_buff);
+    }
 }
 
 /**
