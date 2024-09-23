@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023-2024, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -74,4 +74,37 @@ uint64_t val_host_rmi_rtt_init_ripas(uint64_t rd, uint64_t base,
                     uint64_t top, uint64_t *out_top);
 uint64_t val_host_rmi_rtt_set_ripas(uint64_t rd, uint64_t rec,
                     uint64_t base, uint64_t top, uint64_t *out_top);
+val_smc_param_ts val_host_rmi_rtt_set_s2ap(uint64_t rd, uint64_t rec, uint64_t base, uint64_t top);
+val_smc_param_ts val_host_rmi_rtt_aux_create(uint64_t rd, uint64_t rtt,
+              uint64_t ipa, uint64_t level, uint64_t index);
+val_smc_param_ts val_host_rmi_rtt_aux_destroy(uint64_t rd,
+               uint64_t ipa, uint64_t level, uint64_t index);
+val_smc_param_ts val_host_rmi_rtt_aux_fold(uint64_t rd,
+              uint64_t ipa, uint64_t level, uint64_t index);
+val_smc_param_ts val_host_rmi_rtt_aux_map_protected(uint64_t rd, uint64_t ipa, uint64_t index);
+val_smc_param_ts val_host_rmi_rtt_aux_map_unprotected(uint64_t rd, uint64_t ipa, uint64_t index);
+val_smc_param_ts val_host_rmi_rtt_aux_unmap_protected(uint64_t rd, uint64_t ipa, uint64_t index);
+val_smc_param_ts val_host_rmi_rtt_aux_unmap_unprotected(uint64_t rd, uint64_t ipa, uint64_t index);
+val_smc_param_ts val_host_rmi_granule_io_delegate(uint64_t addr, uint64_t flags);
+val_smc_param_ts val_host_rmi_granule_io_undelegate(uint64_t addr);
+val_smc_param_ts val_host_rmi_io_create(uint64_t rd, uint64_t ipa, uint64_t flags, uint64_t desc);
+val_smc_param_ts val_host_rmi_io_destroy(uint64_t rd, uint64_t ipa);
+val_smc_param_ts val_host_rmi_pdev_abort(uint64_t pdev_ptr);
+val_smc_param_ts val_host_rmi_pdev_communicate(uint64_t pdev_ptr, uint64_t data_ptr);
+val_smc_param_ts val_host_rmi_pdev_create(uint64_t pdev_ptr, uint64_t params_ptr);
+val_smc_param_ts val_host_rmi_pdev_destroy(uint64_t pdev_ptr);
+val_smc_param_ts val_host_rmi_pdev_get_state(uint64_t pdev_ptr);
+val_smc_param_ts val_host_rmi_pdev_ide_reset(uint64_t pdev_ptr);
+val_smc_param_ts val_host_rmi_pdev_notify(uint64_t pdev_ptr, uint64_t ev);
+val_smc_param_ts val_host_rmi_pdev_set_key(uint64_t pdev_ptr, uint64_t key,
+                                               uint64_t len, uint8_t algo);
+val_smc_param_ts val_host_rmi_pdev_stop(uint64_t pdev_ptr);
+val_smc_param_ts val_host_rmi_vdev_abort(uint64_t vdev_ptr);
+val_smc_param_ts val_host_rmi_vdev_communicate(uint64_t vdev_ptr, uint64_t data_ptr);
+val_smc_param_ts val_host_rmi_vdev_create(uint64_t rd, uint64_t pdev_ptr,
+                                  uint64_t vdev_ptr, uint64_t params_ptr);
+val_smc_param_ts val_host_rmi_vdev_destroy(uint64_t vdev_ptr);
+val_smc_param_ts val_host_rmi_vdev_get_state(uint64_t vdev_ptr);
+val_smc_param_ts val_host_rmi_vdev_stop(uint64_t vdev_ptr);
+
 #endif /* _VAL_HOST_RMI_H_ */

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023-2024, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -94,7 +94,6 @@ void *val_host_mem_alloc(size_t alignment, size_t size)
 
   size += alignment - 1;
   addr = mem_alloc(alignment, size);
-  val_host_add_granule(GRANULE_UNDELEGATED, (uint64_t)addr, NULL);
 
   return addr;
 }

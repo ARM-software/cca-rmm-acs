@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023-2024, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -27,38 +27,12 @@ val_host_memory_track_ts mem_track[VAL_HOST_MAX_REALMS] = {
     {.rd = 0x00000000FFFFFFFF}
 };
 
-static uint64_t val_host_rtt_level_mapsize(uint64_t rtt_level)
+uint64_t val_host_rtt_level_mapsize(uint64_t rtt_level)
 {
     if (rtt_level > VAL_RTT_MAX_LEVEL)
         return PAGE_SIZE;
 
     return (1UL << VAL_RTT_LEVEL_SHIFT(rtt_level));
-}
-
-static uint64_t val_host_rtt_create(uint64_t phys,
-                val_host_realm_ts *realm,
-                uint64_t rtt_addr,
-                uint64_t rtt_level
-                )
-{
-    rtt_addr = ADDR_ALIGN_DOWN(rtt_addr, val_host_rtt_level_mapsize(rtt_level - 1));
-    if (rtt_level == 3)
-    {
-        realm->rtt_l3[realm->rtt_l3_count].rtt_addr = phys;
-        realm->rtt_l3[realm->rtt_l3_count].ipa = rtt_addr;
-        realm->rtt_l3_count++;
-    } else if (rtt_level == 2)
-    {
-        realm->rtt_l2[realm->rtt_l2_count].rtt_addr = phys;
-        realm->rtt_l2[realm->rtt_l2_count].ipa = rtt_addr;
-        realm->rtt_l2_count++;
-    } else if (rtt_level == 1)
-    {
-        realm->rtt_l1[realm->rtt_l1_count].rtt_addr = phys;
-        realm->rtt_l1[realm->rtt_l1_count].ipa = rtt_addr;
-        realm->rtt_l1_count++;
-    }
-    return val_host_rmi_rtt_create(realm->rd, phys, rtt_addr, rtt_level);
 }
 
 /**
@@ -76,7 +50,7 @@ uint32_t val_host_create_rtt_levels(val_host_realm_ts *realm,
                    uint64_t rtt_max_level,
                    uint64_t rtt_alignment)
 {
-    uint64_t rtt;
+    uint64_t rtt, rtt_ipa;
 
     if (rtt_level > rtt_max_level)
         return VAL_ERROR;
@@ -94,7 +68,8 @@ uint32_t val_host_create_rtt_levels(val_host_realm_ts *realm,
             return VAL_ERROR;
         }
 
-        if (val_host_rtt_create(rtt, realm, ipa, rtt_level))
+        rtt_ipa = ADDR_ALIGN_DOWN(ipa, val_host_rtt_level_mapsize(rtt_level - 1));
+        if (val_host_rmi_rtt_create(realm->rd, rtt, rtt_ipa, rtt_level))
         {
             LOG(ERROR, "\tRtt create failed, rtt=0x%x\n", rtt, 0);
             val_host_rmi_granule_undelegate(rtt);
@@ -1100,6 +1075,9 @@ void val_host_add_granule(uint32_t state, uint64_t PA, val_host_granule_ts *node
         granule_list->PA = PA;
         granule_list->next = NULL;
         granule_list->is_granule_sliced = 0;
+        granule_list->rtt_tree_idx = 0;
+        for (uint64_t i = 0; i < VAL_MAX_AUX_PLANES; i++)
+            granule_list->has_auxiliary[i] = 0;
     } else
     {
         granule_list = node;
@@ -1147,21 +1125,18 @@ int val_host_get_curr_realm(uint64_t rd)
  *   @return   void
 **/
 void val_host_update_granule_state(uint64_t rd, uint32_t state, uint64_t PA,
-                                               uint64_t ipa, uint64_t rtt_level)
+                                   uint64_t ipa, uint64_t rtt_level, uint64_t rtt_tree_idx)
 {
     val_host_granule_ts *granule_node = NULL;
     int i;
 
     /* Get the current realm index for given realm rd */
-    if (state != GRANULE_DELEGATED)
-    {
-        current_realm = val_host_get_curr_realm(rd);
-    }
+    current_realm = val_host_get_curr_realm(rd);
 
     /* find node from NS mem_track[0] */
     granule_node = val_host_find_granule(PA);
 
-    /* if node is not found add to the NS/VALID_NS list */
+    /* if node is not found add to the VALID_NS list */
     if (granule_node == NULL)
     {
         val_host_granule_ts *granule_list_delegated =
@@ -1172,14 +1147,10 @@ void val_host_update_granule_state(uint64_t rd, uint32_t state, uint64_t PA,
         granule_list_delegated->PA = PA;
         granule_list_delegated->ipa = ipa;
         granule_list_delegated->level = rtt_level;
+        granule_list_delegated->rtt_tree_idx = rtt_tree_idx;
         granule_list_delegated->next = NULL;
-
-        if (state == GRANULE_DELEGATED)
-        {
-            granule_list_delegated->is_granule_sliced = 1;
-            tail->next = granule_list_delegated;
-            tail = tail->next;
-        }
+        for (i = 0; i < VAL_MAX_AUX_PLANES; i++)
+            granule_list_delegated->has_auxiliary[i] = 0;
 
         if (state == GRANULE_UNPROTECTED)
         {
@@ -1204,10 +1175,6 @@ void val_host_update_granule_state(uint64_t rd, uint32_t state, uint64_t PA,
 
     switch (state)
     {
-        case GRANULE_DELEGATED:
-            granule_node->state = state;
-            break;
-
         case GRANULE_RD:
             val_host_remove_granule(&mem_track[0].gran_type.ns, PA);
             granule_node->rd = rd;
@@ -1267,6 +1234,29 @@ void val_host_update_granule_state(uint64_t rd, uint32_t state, uint64_t PA,
             if (current == NULL)
             {
                  mem_track[current_realm].gran_type.rtt = granule_node;
+            } else {
+                while (current->next != NULL)
+                {
+                    current = current->next;
+                }
+                current->next = granule_node;
+            }
+
+            break;
+
+        case GRANULE_RTT_AUX:
+            val_host_remove_granule(&mem_track[0].gran_type.ns, PA);
+            granule_node->rd = rd;
+            granule_node->state = state;
+            granule_node->ipa = ipa;
+            granule_node->level = rtt_level;
+            granule_node->rtt_tree_idx = rtt_tree_idx;
+            granule_node->next = NULL;
+
+            current = mem_track[current_realm].gran_type.rtt_aux;
+            if (current == NULL)
+            {
+                 mem_track[current_realm].gran_type.rtt_aux = granule_node;
             } else {
                 while (current->next != NULL)
                 {
@@ -1417,7 +1407,7 @@ val_host_granule_ts *val_host_remove_granule(val_host_granule_ts **gran_list_hea
 **/
 void val_host_update_destroy_granule_state(uint64_t rd, uint64_t PA,
                                        uint64_t ipa, uint64_t level,
-                           uint32_t state, uint32_t gran_list_state)
+                           uint32_t state, uint32_t gran_list_state, uint64_t rtt_tree_idx)
 {
     val_host_granule_ts *node = NULL;
     int i;
@@ -1452,6 +1442,14 @@ void val_host_update_destroy_granule_state(uint64_t rd, uint64_t PA,
             node->state = state;
             val_host_add_granule(state, node->PA, node);
             break;
+
+        case GRANULE_RTT_AUX:
+            node = val_host_remove_aux_rtt_granule(&mem_track[current_realm].gran_type.rtt_aux,
+                                                                         ipa, level, rtt_tree_idx);
+            node->state = state;
+            val_host_add_granule(state, node->PA, node);
+            break;
+
         case GRANULE_DATA:
             node = val_host_remove_data_granule(&mem_track[current_realm].gran_type.data, ipa);
             node->state = state;
@@ -1607,6 +1605,67 @@ val_host_granule_ts *val_host_remove_rtt_granule(val_host_granule_ts **gran_list
 }
 
 /**
+ *   @brief    Remove data granule from data list and add to the NS mem_track
+ *   @param    gran_list_head      - Data granule which needs to remove from data list
+ *                                   and add to NS mem track
+ *   @param    ipa                 - IPA which needs to remove from data list
+ *   @return   Returns the node from data list
+**/
+val_host_granule_ts *val_host_remove_aux_rtt_granule(val_host_granule_ts **gran_list_head,
+                                                uint64_t ipa, uint64_t level, uint64_t index)
+{
+    val_host_granule_ts *current = *gran_list_head, *prev = NULL, *temp = NULL;
+
+    temp = mem_track[0].gran_type.ns;
+    if ((current != NULL) && (current->level == level) &&
+                             (current->ipa == ipa) && (current->rtt_tree_idx == index))
+    {
+        if (temp == *gran_list_head)
+        {
+            head = current->next;
+            mem_track[0].gran_type.ns = head;
+            current->next = NULL;
+            return current;
+        } else {
+            prev = current;
+            current = current->next;
+            *gran_list_head = current;
+            prev->next = NULL;
+            return prev;
+        }
+    }
+
+    while (NULL != current)
+    {
+        if ((current->level != level) || (current->ipa != ipa) || (current->rtt_tree_idx != index))
+        {
+            prev = current;
+            current = current->next;
+        } else {
+            break;
+        }
+    }
+
+    if (current == NULL)
+        return NULL;
+    else if ((current->level == level) && (current->ipa == ipa) && (current->rtt_tree_idx == index))
+    {
+        prev->next = current->next;
+        if (mem_track[0].gran_type.ns == *gran_list_head)
+        {
+            if (current->next == NULL)
+                tail = prev;
+        }
+        current->next = NULL;
+        return current;
+    } else {
+        return NULL;
+    }
+
+    return NULL;
+}
+
+/**
  *   @brief    Destroy rtt levels
  *   @param    rtt_level      - RTT level to destroy
  *   @param    current_realm  - current realm index in mem track
@@ -1632,6 +1691,50 @@ uint64_t val_host_destroy_rtt_levels(uint64_t rtt_level, int current_realm)
                 LOG(ERROR, "\trealm_rtt_destroy failed, rtt=0x%x, ret=0x%x\n", curr_gran->ipa, ret);
                 return VAL_ERROR;
             }
+            ret = val_host_rmi_granule_undelegate(curr_gran->PA);
+            if (ret)
+            {
+                LOG(ERROR, "\tval_rmi_granule_undelegate failed, rtt=0x%x, ret=0x%x\n",
+                                                                   curr_gran->PA, ret);
+                return VAL_ERROR;
+            }
+
+            curr_gran = next_gran;
+        } else {
+            curr_gran = next_gran;
+        }
+    }
+    return VAL_SUCCESS;
+}
+
+/**
+ *   @brief    Destroy auxiliary rtt levels
+ *   @param    rtt_level      - RTT level to destroy
+ *   @param    current_realm  - current realm index in mem track
+ *   @return   SUCCESS/FAILURE
+**/
+uint64_t val_host_destroy_aux_rtt_levels(uint64_t rtt_level, int current_realm, uint64_t index)
+{
+    val_host_granule_ts *curr_gran = NULL, *next_gran = NULL;
+    uint64_t ret;
+    val_smc_param_ts cmd_ret;
+
+    curr_gran = mem_track[current_realm].gran_type.rtt_aux;
+    while (curr_gran != NULL)
+    {
+        next_gran = curr_gran->next;
+        if ((curr_gran->level == rtt_level) && (curr_gran->rtt_tree_idx == index))
+        {
+
+            cmd_ret = val_host_rmi_rtt_aux_destroy(curr_gran->rd,
+                                           curr_gran->ipa, curr_gran->level, index);
+            if (cmd_ret.x0)
+            {
+                LOG(ERROR, "\trealm_rtt_destroy failed, rtt=0x%x, ret=0x%x\n", curr_gran->ipa,
+                                                                                 cmd_ret.x0);
+                return VAL_ERROR;
+            }
+
             ret = val_host_rmi_granule_undelegate(curr_gran->PA);
             if (ret)
             {
@@ -1727,10 +1830,12 @@ uint64_t val_host_postamble(void)
 uint32_t val_host_realm_destroy(uint64_t rd)
 {
     uint64_t ret;
+    val_smc_param_ts cmd_ret;
     val_host_granule_ts *curr_gran = NULL, *next_gran = NULL;
     val_host_data_destroy_ts data_destroy;
     current_realm = val_host_get_curr_realm(rd);
     uint64_t top;
+    uint64_t i;
 
     /* For each REC - Destroy, undelegate */
     curr_gran = mem_track[current_realm].gran_type.rec;
@@ -1760,6 +1865,22 @@ uint32_t val_host_realm_destroy(uint64_t rd)
         next_gran = curr_gran->next;
         if (curr_gran->is_granule_sliced == 1)
         {
+
+            for (i = 0; i < VAL_MAX_AUX_PLANES; i++)
+            {
+                if (curr_gran->has_auxiliary[i])
+                {
+                    cmd_ret = val_host_rmi_rtt_aux_unmap_protected(curr_gran->rd,
+                                                               curr_gran->ipa, i + 1);
+                    if (cmd_ret.x0)
+                    {
+                        LOG(ERROR, "\tRTT_AUX_UNMAP_PROTECTED failed for ipa=0x%x, ret=0x%x\n",
+                                                                   curr_gran->ipa, cmd_ret.x0);
+                        return VAL_ERROR;
+                    }
+                }
+            }
+
             ret = val_host_rmi_data_destroy(curr_gran->rd, curr_gran->ipa, &data_destroy);
             if (ret)
             {
@@ -1783,6 +1904,22 @@ uint32_t val_host_realm_destroy(uint64_t rd)
         next_gran = curr_gran->next;
         if (curr_gran->is_granule_sliced == 0)
         {
+            /* Destroy mappings in Auxilliary Mapping */
+            for (i = 0; i < VAL_MAX_AUX_PLANES; i++)
+            {
+                if (curr_gran->has_auxiliary[i])
+                {
+                    cmd_ret = val_host_rmi_rtt_aux_unmap_protected(curr_gran->rd,
+                                                               curr_gran->ipa, i + 1);
+                    if (cmd_ret.x0)
+                    {
+                        LOG(ERROR, "\tRTT_AUX_UNMAP_PROTECTED failed for ipa=0x%x, ret=0x%x\n",
+                                                                      curr_gran->ipa, cmd_ret.x0);
+                        return VAL_ERROR;
+                    }
+                }
+            }
+
             ret = val_host_rmi_data_destroy(curr_gran->rd, curr_gran->ipa, &data_destroy);
             if (ret)
             {
@@ -1807,6 +1944,23 @@ uint32_t val_host_realm_destroy(uint64_t rd)
     while (curr_gran != NULL)
     {
         next_gran = curr_gran->next;
+
+        /* Unmap Auxilliary mappings for Unprotected IPA */
+        for (i = 0; i < VAL_MAX_AUX_PLANES; i++)
+        {
+            if (curr_gran->has_auxiliary[i])
+            {
+                cmd_ret = val_host_rmi_rtt_aux_unmap_unprotected(curr_gran->rd,
+                                                             curr_gran->ipa, i + 1);
+                if (cmd_ret.x0)
+                {
+                    LOG(ERROR, "\tval_rmi_rtt_aux_unmap_unprotected failed, ipa=0x%x, ret=0x%x\n",
+                                                                     curr_gran->ipa, cmd_ret.x0);
+                    return VAL_ERROR;
+                }
+            }
+        }
+
         ret = val_host_rmi_rtt_unmap_unprotected(curr_gran->rd, curr_gran->ipa,
                                                        curr_gran->level, &top);
         if (ret)
@@ -1826,6 +1980,22 @@ uint32_t val_host_realm_destroy(uint64_t rd)
     if (val_host_destroy_rtt_levels(1, current_realm))
         return VAL_ERROR;
 
+#ifdef RMM_V_1_1
+    /* Destroy Auxiliary RTTs */
+    if (val_host_rmm_supports_planes())
+    {
+        for (i = 0; i < VAL_MAX_AUX_PLANES; i++)
+        {
+                if (val_host_destroy_aux_rtt_levels(3, current_realm, i + 1))
+                    return VAL_ERROR;
+                if (val_host_destroy_aux_rtt_levels(2, current_realm, i + 1))
+                    return VAL_ERROR;
+                if (val_host_destroy_aux_rtt_levels(1, current_realm, i + 1))
+                    return VAL_ERROR;
+        }
+    }
+#endif
+
     // RD destroy, undelegate and free
     ret = val_host_rmi_realm_destroy(mem_track[current_realm].rd);
     if (ret)
@@ -1836,6 +2006,7 @@ uint32_t val_host_realm_destroy(uint64_t rd)
 
     return VAL_SUCCESS;
 }
+
 /**
  * @brief  Resets the mem_track structure to default
  * @param  none
@@ -1862,3 +2033,50 @@ void val_host_reset_mem_tack(void)
         i++;
     }
 }
+
+/**
+ * @brief  Updates information about live auxiliary entries mapped to primary entries.
+ * @param  gran_state state of the granule whose information is updated.
+ * @param  rd         Realm descriptor
+ * @param  rtt_index  RTT tree index
+ * @param  ipa        Intermediate Physical address of the granule
+ * @param  val        Boolean value indicating presence of auxiliary live entry
+ * @return Returns VAL_SUCCESS/VAL_ERROR
+**/
+uint64_t val_host_update_aux_rtt_info(uint64_t gran_state, uint64_t rd,
+                                      uint64_t rtt_index, uint64_t ipa, bool val)
+{
+    /* Get current realm index from rd */
+    current_realm = val_host_get_curr_realm(rd);
+
+    val_host_granule_ts *current = NULL;
+
+    /* Track the appropriate linked list based on the target granule state */
+    if (gran_state == GRANULE_DATA) {
+        current = mem_track[current_realm].gran_type.data;
+    } else if (gran_state == GRANULE_UNPROTECTED) {
+        current = mem_track[current_realm].gran_type.valid_ns;
+    } else {
+        return VAL_ERROR;
+    }
+
+    /* Linked list cannot be empty*/
+    if (current == NULL)
+        return VAL_ERROR;
+
+    /* Search for the node and update the information */
+    do
+    {
+        if (current->ipa == ipa) {
+            break;
+        } else {
+            current = current->next;
+        }
+    } while (current != NULL);
+
+    current->has_auxiliary[rtt_index - 1] = val;
+
+    return VAL_SUCCESS;
+}
+
+

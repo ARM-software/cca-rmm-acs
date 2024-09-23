@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023-2024, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -238,4 +238,178 @@ uint64_t val_realm_rsi_features(uint64_t index, uint64_t *value)
 
     *value = args.x1;
     return args.x0;
+}
+
+/**
+ *   @brief    Read overlay permission value.
+ *   @param    plane_index    -  Plane index
+ *   @param    perm_index     -  Permission index
+ *   @param    value          -  Pointer to store permission value
+ *   @return   SMC return arguments
+**/
+val_smc_param_ts val_realm_rsi_mem_get_perm_value(uint64_t plane_index, uint64_t perm_index)
+{
+    return val_smc_call(RSI_MEM_GET_PERM_VALUE, plane_index, perm_index, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+/**
+ *   @brief    Set overlay permission index for a specified IPA range.
+ *   @param    base            -  Base of target IPA region.
+ *   @param    top             -  Top of target IPA region.
+ *   @param    perm_index      -  Permission index.
+ *   @param    cookie          -  Cookie value.
+ *   @return   SMC return arguments
+**/
+val_smc_param_ts val_realm_rsi_mem_set_perm_index(uint64_t base, uint64_t top,  uint64_t perm_index,
+                                                                                    uint64_t cookie)
+{
+    return val_smc_call(RSI_MEM_SET_PERM_INDEX, base, top, perm_index, cookie, 0, 0, 0, 0, 0, 0);
+}
+
+/**
+ *   @brief    Set overlay permission value.
+ *   @param    plane_index    -  Plane index
+ *   @param    perm_index     -  Permission index
+ *   @param    value          -  Memory permission value
+ *   @return   SMC return arguments
+**/
+val_smc_param_ts val_realm_rsi_mem_set_perm_value(uint64_t plane_index, uint64_t perm_index,
+                                                                                   uint64_t value)
+{
+    return val_smc_call(RSI_MEM_SET_PERM_VALUE, plane_index, perm_index, value, 0, 0, 0,
+                                                                                0, 0, 0, 0);
+}
+
+/**
+ *   @brief    Enter a plane.
+ *   @param    plane_idx    -  Plane index
+ *   @param    run_ptr        -  Pointer to PlaneRun object.
+ *   @return   SMC return arguments
+**/
+val_smc_param_ts val_realm_rsi_plane_enter(uint64_t plane_idx, uint64_t run_ptr)
+{
+    return val_smc_call(RSI_PLANE_ENTER, plane_idx, run_ptr, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+/**
+ *   @brief    Read a plane register.
+ *   @param    plane_idx    - Plane index
+ *   @param    encoding     - Encoding of target register
+ *   @return   SMC return arguments
+**/
+val_smc_param_ts val_realm_rsi_plane_reg_read(uint64_t plane_idx, uint64_t encoding)
+{
+    return val_smc_call(RSI_PLANE_REG_READ, plane_idx, encoding, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+/**
+ *   @brief    Write a plane register.
+ *   @param    plane_idx    - Plane index
+ *   @param    encoding     - Encoding of target register
+ *   @param    value        - Value to write to target register
+ *   @return   SMC return arguments
+**/
+val_smc_param_ts val_realm_rsi_plane_reg_write(uint64_t plane_idx, uint64_t encoding,
+                                                                             uint64_t value)
+{
+    return val_smc_call(RSI_PLANE_REG_WRITE, plane_idx, encoding, value, 0, 0, 0, 0, 0, 0, 0);
+}
+
+/**
+ *   @brief    Continue an interruptible Realm device operation.
+ *   @param    dev_id    -  Realm device identifier
+ *   @return   SMC return arguments
+**/
+val_smc_param_ts val_realm_rsi_rdev_continue(uint64_t dev_id)
+{
+    return val_smc_call(RSI_RDEV_CONTINUE, dev_id, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+/**
+ *   @brief    Get digests of Realm device attestation evidence.
+ *   @param    dev_id    -  Realm device identifier
+ *   @param    addr      -  IPA of the Granule to which the digests will be written
+ *   @return   SMC return arguments
+**/
+val_smc_param_ts val_realm_rsi_rdev_get_digests(uint64_t dev_id, uint64_t addr)
+{
+    return val_smc_call(RSI_RDEV_GET_DIGESTS, dev_id, addr, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+/**
+ *   @brief    Get Realm device interface report.
+ *   @param    dev_id         -  Realm device identifier
+ *   @param    version_max    -  Maximum TDISP version accepted by caller
+ *   @return   SMC return arguments
+**/
+val_smc_param_ts val_realm_rsi_rdev_get_interface_report(uint64_t dev_id, uint64_t version_max)
+{
+    return val_smc_call(RSI_RDEV_GET_INTERFACE_REPORT, dev_id, version_max, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+/**
+ *   @brief    Get Realm device measurements.
+ *   @param    dev_id      -  Realm device identifier
+ *   @param    params_ptr  -  IPA of measurement parameters
+ *   @return   SMC return arguments
+**/
+val_smc_param_ts val_realm_rsi_rdev_get_measurements(uint64_t dev_id, uint64_t params_ptr)
+{
+    return val_smc_call(RSI_RDEV_GET_MEASUREMENTS, dev_id, params_ptr, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+/**
+ *   @brief    Get state of a Realm device.
+ *   @param    dev_id         -  Realm device identifier
+ *   @return   SMC return arguments
+**/
+val_smc_param_ts val_realm_rsi_rdev_get_state(uint64_t dev_id)
+{
+   return val_smc_call(RSI_RDEV_GET_INTERFACE_REPORT, dev_id, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+/**
+ *   @brief    Lock a Realm device.
+ *   @param    dev_id         -  Realm device identifier
+ *   @return   SMC return arguments
+**/
+val_smc_param_ts val_realm_rsi_rdev_lock(uint64_t dev_id)
+{
+    return val_smc_call(RSI_RDEV_LOCK, dev_id, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+/**
+ *   @brief    Start a Realm device.
+ *   @param    dev_id         -  Realm device identifier
+ *   @return   SMC return arguments
+**/
+val_smc_param_ts val_realm_rsi_rdev_start(uint64_t dev_id)
+{
+    return val_smc_call(RSI_RDEV_START, dev_id, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+/**
+ *   @brief    Stop a Realm device.
+ *   @param    dev_id         -  Realm device identifier
+ *   @return   SMC return arguments
+**/
+val_smc_param_ts val_realm_rsi_rdev_stop(uint64_t dev_id)
+{
+    return val_smc_call(RSI_RDEV_STOP, dev_id, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+/**
+ *   @brief    Validate MMIO mappings for a Realm device.
+ *   @param    dev_id         -  Realm device identifier
+ *   @param    ipa_base       -  Base of target IPA region
+ *   @param    ipa_top        -  Top of target IPA region
+ *   @param    pa_base        -  Base of target PA region
+ *   @param    flags          -  Flags
+ *   @return   SMC return arguments
+**/
+val_smc_param_ts val_realm_rsi_rdev_validate_io(uint64_t dev_id, uint64_t ipa_base,
+                                uint64_t ipa_top, uint64_t pa_base, uint64_t flags)
+{
+    return val_smc_call(RSI_RDEV_VALIDATE_IO, dev_id, ipa_base, ipa_top, pa_base, flags,
+                                                                         0, 0, 0, 0, 0);
 }
