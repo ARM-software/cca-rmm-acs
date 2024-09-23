@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023-2024, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -13,6 +13,7 @@
 
 #define L3_SIZE PAGE_SIZE
 #define L2_SIZE (512 * L3_SIZE)
+#define IPA_AUX_ASSIGNED 7 * PAGE_SIZE
 
 void cmd_rtt_set_ripas_realm(void)
 {
@@ -41,6 +42,18 @@ void cmd_rtt_set_ripas_realm(void)
             val_realm_return_to_host();
         }
 
+#if defined(RMM_V_1_1)
+        ipa_base = IPA_AUX_ASSIGNED;
+        /* Execure RSI_SET_RIPAS again to test aux_live */
+        cmd_ret = val_realm_rsi_ipa_state_set(ipa_base, ipa_base + PAGE_SIZE, RSI_RAM,
+                                                                 RSI_NO_CHANGE_DESTROYED);
+        ret = cmd_ret.x0;
+        if (ret) {
+            LOG(ERROR, "\t IPA_STATE_SET failed with ret value: %d \n", ret, 0);
+            val_realm_return_to_host();
+        }
+#endif
+
         /* Execure RSI_SET_RIPAS again to compare top_gran_align < top_rtt_align */
         cmd_ret = val_realm_rsi_ipa_state_set(L2_SIZE, 3 * L2_SIZE, RSI_RAM,
                                                                  RSI_NO_CHANGE_DESTROYED);
@@ -49,7 +62,6 @@ void cmd_rtt_set_ripas_realm(void)
             LOG(ERROR, "\t IPA_STATE_SET failed with ret value: %d \n", ret, 0);
             val_realm_return_to_host();
         }
-
     }
 
     /* Power on REC[1] for future execution */

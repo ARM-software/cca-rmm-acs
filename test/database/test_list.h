@@ -50,6 +50,20 @@ DECLARE_TEST_FN(cmd_host_call);
 DECLARE_TEST_FN(cmd_rtt_set_ripas);
 DECLARE_TEST_FN(cmd_rtt_fold);
 DECLARE_TEST_FN(cmd_rsi_features);
+DECLARE_TEST_FN(cmd_rtt_set_s2ap);
+DECLARE_TEST_FN(cmd_mem_set_perm_value);
+DECLARE_TEST_FN(cmd_mem_get_perm_value);
+DECLARE_TEST_FN(cmd_mem_set_perm_index);
+DECLARE_TEST_FN(cmd_plane_enter);
+DECLARE_TEST_FN(cmd_rtt_aux_create);
+DECLARE_TEST_FN(cmd_rtt_aux_destroy);
+DECLARE_TEST_FN(cmd_rtt_aux_fold);
+DECLARE_TEST_FN(cmd_rtt_aux_map_protected);
+DECLARE_TEST_FN(cmd_rtt_aux_map_unprotected);
+DECLARE_TEST_FN(cmd_rtt_aux_unmap_protected);
+DECLARE_TEST_FN(cmd_rtt_aux_unmap_unprotected);
+DECLARE_TEST_FN(cmd_plane_reg_read);
+DECLARE_TEST_FN(cmd_plane_reg_write);
 /*command testcase declaration ends here*/
 
 /*val sanity testcase starts here*/
@@ -268,6 +282,51 @@ DECLARE_TEST_FN(pmu_overflow);
         HOST_TEST(command, cmd_rtt_fold),
         #endif
     #endif /* #if (defined(RMM_V_1_0)*/
+
+    #if defined(RMM_V_1_1)
+        #if (defined(TEST_COMBINE) || defined(d_cmd_rtt_set_s2ap))
+        HOST_REALM_TEST(command, cmd_rtt_set_s2ap),
+        #endif
+        #if (defined(TEST_COMBINE) || defined(d_cmd_mem_set_perm_value))
+        HOST_REALM_TEST(command, cmd_mem_set_perm_value),
+        #endif
+        #if (defined(TEST_COMBINE) || defined(d_cmd_mem_get_perm_value))
+        HOST_REALM_TEST(command, cmd_mem_get_perm_value),
+        #endif
+        #if (defined(TEST_COMBINE) || defined(d_cmd_mem_set_perm_index))
+        HOST_REALM_TEST(command, cmd_mem_set_perm_index),
+        #endif
+        #if (defined(TEST_COMBINE) || defined(d_cmd_plane_enter))
+        HOST_REALM_TEST(command, cmd_plane_enter),
+        #endif
+        #if (defined(TEST_COMBINE) || defined(d_cmd_rtt_aux_create))
+        HOST_TEST(command, cmd_rtt_aux_create),
+        #endif
+        #if (defined(TEST_COMBINE) || defined(d_cmd_rtt_aux_destroy))
+        HOST_TEST(command, cmd_rtt_aux_destroy),
+        #endif
+        #if (defined(TEST_COMBINE) || defined(d_cmd_rtt_aux_fold))
+        HOST_TEST(command, cmd_rtt_aux_fold),
+        #endif
+        #if (defined(TEST_COMBINE) || defined(d_cmd_rtt_aux_map_protected))
+        HOST_TEST(command, cmd_rtt_aux_map_protected),
+        #endif
+        #if (defined(TEST_COMBINE) || defined(d_cmd_rtt_aux_map_unprotected))
+        HOST_TEST(command, cmd_rtt_aux_map_unprotected),
+        #endif
+        #if (defined(TEST_COMBINE) || defined(d_cmd_rtt_aux_unmap_protected))
+        HOST_TEST(command, cmd_rtt_aux_unmap_protected),
+        #endif
+        #if (defined(TEST_COMBINE) || defined(d_cmd_rtt_aux_unmap_unprotected))
+        HOST_TEST(command, cmd_rtt_aux_unmap_unprotected),
+        #endif
+        #if (defined(TEST_COMBINE) || defined(d_cmd_plane_reg_read))
+        HOST_REALM_TEST(command, cmd_plane_reg_read),
+        #endif
+        #if (defined(TEST_COMBINE) || defined(d_cmd_plane_reg_write))
+        HOST_REALM_TEST(command, cmd_plane_reg_write),
+        #endif
+    #endif /* #if defined(RMM_V_1_1) */
 
 #endif /* (SUITE == all || SUITE == command) */
 

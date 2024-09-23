@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023-2024, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -22,8 +22,9 @@
 
 #define MAP_LEVEL 3
 
-#define NUM_REALMS 1
+#define NUM_REALMS 2
 #define VALID_REALM 0
+#define AUX_LIVE_REALM 1
 
 /*      Valid Realm memory layout
  *
@@ -70,6 +71,42 @@ struct cmd_output {
     uint64_t top;
     uint64_t data;
 } c_exp_output;
+
+static uint64_t rd_aux_live_prep_sequence(void)
+{
+    val_host_realm_flags1_ts realm_flags;
+
+    val_memset(&realm_test[AUX_LIVE_REALM], 0, sizeof(realm_test[AUX_LIVE_REALM]));
+    val_memset(&realm_flags, 0, sizeof(realm_flags));
+
+    /* Skip the test if implementation does not support RTT tree per plane*/
+    if (!val_host_rmm_supports_rtt_tree_per_plane() ||
+        !val_host_rmm_supports_planes())
+    {
+        LOG(ALWAYS, "\tNo support for RTT tree per plane\n", 0, 0);
+        return VAL_SKIP_CHECK;
+    }
+
+    val_host_realm_params(&realm_test[AUX_LIVE_REALM]);
+
+    realm_test[AUX_LIVE_REALM].s2sz = IPA_WIDTH;
+    realm_test[AUX_LIVE_REALM].s2_starting_level = 0;
+    realm_test[AUX_LIVE_REALM].vmid = AUX_LIVE_REALM;
+    realm_test[AUX_LIVE_REALM].rec_count = 1;
+    realm_test[AUX_LIVE_REALM].num_aux_planes = 1;
+    realm_flags.rtt_tree_pp = RMI_FEATURE_TRUE;
+
+    val_memcpy(&realm_test[AUX_LIVE_REALM].flags1, &realm_flags,
+                             sizeof(realm_test[AUX_LIVE_REALM].flags1));
+
+    if (val_host_realm_create_common(&realm_test[AUX_LIVE_REALM]))
+    {
+        LOG(ERROR, "\tRealm create failed\n", 0, 0);
+        return VAL_TEST_PREP_SEQ_FAILED;
+    }
+
+    return realm_test[AUX_LIVE_REALM].rd;
+}
 
 static uint64_t g_rec_ready_prep_sequence(uint64_t rd)
 {
@@ -263,6 +300,17 @@ static uint64_t intent_to_seq(struct stimulus *test_data, struct arguments *args
                 return VAL_ERROR;
             break;
 
+        case IPA_AUX_LIVE:
+            args->rd = rd_aux_live_prep_sequence();
+            if (args->rd == VAL_TEST_PREP_SEQ_FAILED)
+                return VAL_ERROR;
+            else if (args->rd == VAL_SKIP_CHECK)
+                return VAL_SKIP_CHECK;
+            args->ipa = ipa_protected_aux_assigned_prep_sequence(args->rd, 1);
+            if (args->ipa == VAL_TEST_PREP_SEQ_FAILED)
+                return VAL_ERROR;
+            break;
+
         default:
             LOG(ERROR, "\n\tUnknown intent label encountered\n", 0, 0);
             return VAL_ERROR;
@@ -288,7 +336,14 @@ void cmd_data_destroy_host(void)
         LOG(TEST, test_data[i].msg, 0, 0);
         LOG(TEST, "; intent id : 0x%x \n", test_data[i].label, 0);
 
-        if (intent_to_seq(&test_data[i], &args)) {
+        ret = intent_to_seq(&test_data[i], &args);
+        if (ret == VAL_SKIP_CHECK)
+        {
+            LOG(TEST, "\tSkipping Check %d\n", i + 1, 0);
+            continue;
+        }
+        else if (ret == VAL_ERROR) {
+            LOG(ERROR, "\n\t Intent to sequence failed \n", 0, 0);
             val_set_status(RESULT_FAIL(VAL_ERROR_POINT(2)));
             goto exit;
         }
