@@ -161,6 +161,11 @@ DECLARE_TEST_FN(planes_s2ap_locking);
 DECLARE_TEST_FN(planes_s2ap_unprotected);
 DECLARE_TEST_FN(planes_s2ap_protected);
 DECLARE_TEST_FN(planes_s2ap_enforced_by_p0);
+DECLARE_TEST_FN(planes_rec_entry_no_virt_int);
+DECLARE_TEST_FN(planes_rec_entry_p0_owner_virt_int);
+DECLARE_TEST_FN(planes_rec_entry_pn_owner_virt_int);
+DECLARE_TEST_FN(planes_p0_gic_virt_pn);
+DECLARE_TEST_FN(planes_rec_entry_maint_int);
 /* Planes test declaration ends here */
 
 #else /* TEST_FUNC_DATABASE */
@@ -584,6 +589,21 @@ DECLARE_TEST_FN(planes_s2ap_enforced_by_p0);
         #endif
         #if (defined(TEST_COMBINE) || defined(d_planes_s2ap_enforced_by_p0))
         HOST_REALM_TEST(planes, planes_s2ap_enforced_by_p0),
+        #endif
+        #if (defined(TEST_COMBINE) || defined(d_planes_rec_entry_no_virt_int))
+        HOST_REALM_TEST(planes, planes_rec_entry_no_virt_int),
+        #endif
+        #if (defined(TEST_COMBINE) || defined(d_planes_rec_entry_p0_owner_virt_int))
+        HOST_REALM_TEST(planes, planes_rec_entry_p0_owner_virt_int),
+        #endif
+        #if (defined(TEST_COMBINE) || defined(d_planes_rec_entry_pn_owner_virt_int))
+        HOST_REALM_TEST(planes, planes_rec_entry_pn_owner_virt_int),
+        #endif
+        #if (defined(TEST_COMBINE) || defined(d_planes_p0_gic_virt_pn))
+        HOST_REALM_TEST(planes, planes_p0_gic_virt_pn),
+        #endif
+        #if (defined(TEST_COMBINE) || defined(d_planes_rec_entry_maint_int))
+        HOST_REALM_TEST(planes, planes_rec_entry_maint_int),
         #endif
     #endif /* #if (defined(d_all) || defined(d_planes) */
 #endif /* #if defined(RMM_V_1_0) || defined(RMM_V_1_1) */
