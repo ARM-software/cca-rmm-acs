@@ -157,6 +157,10 @@ DECLARE_TEST_FN(planes_rec_exit_da_ia_ripas_destroyed);
 DECLARE_TEST_FN(planes_rec_exit_da_hipas_unassigned_ns);
 DECLARE_TEST_FN(planes_rec_exit_irq);
 DECLARE_TEST_FN(planes_rec_exit_host_call);
+DECLARE_TEST_FN(planes_s2ap_locking);
+DECLARE_TEST_FN(planes_s2ap_unprotected);
+DECLARE_TEST_FN(planes_s2ap_protected);
+DECLARE_TEST_FN(planes_s2ap_enforced_by_p0);
 /* Planes test declaration ends here */
 
 #else /* TEST_FUNC_DATABASE */
@@ -568,6 +572,18 @@ DECLARE_TEST_FN(planes_rec_exit_host_call);
         #endif
         #if (defined(TEST_COMBINE) || defined(d_planes_rec_exit_host_call))
         HOST_REALM_TEST(planes, planes_rec_exit_host_call),
+        #endif
+        #if (defined(TEST_COMBINE) || defined(d_planes_s2ap_locking))
+        HOST_REALM_TEST(planes, planes_s2ap_locking),
+        #endif
+        #if (defined(TEST_COMBINE) || defined(d_planes_s2ap_unprotected))
+        HOST_REALM_TEST(planes, planes_s2ap_unprotected),
+        #endif
+        #if (defined(TEST_COMBINE) || defined(d_planes_s2ap_protected))
+        HOST_REALM_TEST(planes, planes_s2ap_protected),
+        #endif
+        #if (defined(TEST_COMBINE) || defined(d_planes_s2ap_enforced_by_p0))
+        HOST_REALM_TEST(planes, planes_s2ap_enforced_by_p0),
         #endif
     #endif /* #if (defined(d_all) || defined(d_planes) */
 #endif /* #if defined(RMM_V_1_0) || defined(RMM_V_1_1) */
