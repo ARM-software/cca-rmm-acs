@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023-2024, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -17,7 +17,7 @@
 #define ATTR_NORMAL_NONCACHEABLE (0x0ull << 2)
 #define ATTR_NORMAL_WB_WA_RA      (0x1ull << 2)
 #define ATTR_DEVICE               (0x2ull << 2)
-#define ATTR_NORMAL_WB            (0x1ull << 3)
+#define ATTR_NORMAL_WB            (0x3ull << 3)
 
 /* Stage 1 Inner and Outer Cacheability attribute encoding without TEX remap */
 #define ATTR_S1_NONCACHEABLE  (0x0ull << 2)
@@ -55,6 +55,11 @@
 #define ATTR_PRIV_RO        (0x2ull << 6)
 #define ATTR_USER_RW        (0x1ull << 6)
 #define ATTR_USER_RO        (0x3ull << 6)
+
+#define ATTR_PI_INDEX_0_SHIFT       6
+#define ATTR_PI_INDEX_1_SHIFT       51
+#define ATTR_PI_INDEX_2_SHIFT       53
+#define ATTR_PI_INDEX_3_SHIFT       54
 
 #define ATTR_CODE           (ATTR_S1_WB_WA_RA | ATTR_USER_RO | \
                               ATTR_AF | ATTR_INNER_SHARED)
@@ -137,4 +142,5 @@ void val_setup_mmu(xlat_ctx_t *ctx);
 void val_enable_mmu(xlat_ctx_t *ctx);
 uint64_t val_get_pa_range_supported(void);
 int val_xlat_pgt_create(xlat_ctx_t *ctx, val_memory_region_descriptor_ts *mem_desc);
+uint64_t val_pi_index_to_desc(uint64_t pi_index);
 #endif /* _VAL_MEMORY_H_ */

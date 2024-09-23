@@ -92,12 +92,15 @@ typedef struct {
     uint64_t s2_starting_level;
     uint32_t num_s2_sl_rtts;
     uint64_t rec_count;
+    uint8_t num_aux_planes;
 
     /* Test Input end */
     uint64_t image_pa_base;
+    uint64_t aux_image_pa_base[VAL_MAX_AUX_PLANES];
     uint64_t image_pa_size;
     uint64_t rd;
     uint64_t rtt_l0_addr;
+    uint64_t rtt_aux_l0_addr[VAL_MAX_AUX_PLANES];
     uint64_t granules_mapped_count;
     val_host_granules_mapped_ts granules[VAL_MAX_GRANULES_MAP];
     uint64_t rec[VAL_MAX_REC_COUNT];
@@ -517,7 +520,22 @@ void val_host_realm_params(val_host_realm_ts *realm);
 void val_host_reset_mem_tack(void);
 uint64_t val_host_update_aux_rtt_info(uint64_t gran_state, uint64_t rd, uint64_t rtt_index,
                                                                         uint64_t ipa, bool val);
+uint32_t val_host_aux_map_unprotected(val_host_realm_ts *realm,
+                        uint64_t ipa,
+                        uint64_t rtt_map_size,
+                        uint64_t rtt_alignment,
+                        uint64_t index);
+uint32_t val_host_aux_map_protected_data(val_host_realm_ts *realm, uint64_t ipai, uint64_t index);
+uint32_t val_host_create_aux_rtt_levels(val_host_realm_ts *realm,
+                   uint64_t ipa,
+                   uint64_t rtt_level,
+                   uint64_t rtt_max_level,
+                   uint64_t rtt_alignmenti,
+                   uint64_t index);
 uint64_t val_host_destroy_aux_rtt_levels(uint64_t rtt_level, int current_realm, uint64_t index);
 uint64_t val_host_rtt_level_mapsize(uint64_t rtt_level);
+bool val_host_rmm_supports_planes(void);
+bool val_host_rmm_supports_rtt_tree_single(void);
+bool val_host_rmm_supports_rtt_tree_per_plane(void);
 #endif /* _VAL_HOST_REALM_H_ */
 

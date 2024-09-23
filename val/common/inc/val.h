@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023-2024, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -36,6 +36,7 @@ extern uint64_t security_state;
 #define VAL_INVALID_TEST_NUM 0xFFFFFFFF
 
 #define  VAL_TEST_PREP_SEQ_FAILED            0xFFFFFFFFFFFFFFFF
+#define  VAL_RESERVED           -1ULL
 
 #define VAL_EXTRACT_BITS(data, start, end) ((data >> start) & ((1ul << (end - start + 1)) - 1))
 #define VAL_BIT_MASK(len) ((1 << len) - 1)

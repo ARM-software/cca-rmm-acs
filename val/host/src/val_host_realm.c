@@ -27,6 +27,12 @@ val_host_memory_track_ts mem_track[VAL_HOST_MAX_REALMS] = {
     {.rd = 0x00000000FFFFFFFF}
 };
 
+uint64_t aux_ipa_base[VAL_MAX_AUX_PLANES] = {
+    VAL_PLANE1_IMAGE_BASE_IPA,
+    VAL_PLANE2_IMAGE_BASE_IPA,
+    VAL_RESERVED
+};
+
 uint64_t val_host_rtt_level_mapsize(uint64_t rtt_level)
 {
     if (rtt_level > VAL_RTT_MAX_LEVEL)
@@ -70,6 +76,55 @@ uint32_t val_host_create_rtt_levels(val_host_realm_ts *realm,
 
         rtt_ipa = ADDR_ALIGN_DOWN(ipa, val_host_rtt_level_mapsize(rtt_level - 1));
         if (val_host_rmi_rtt_create(realm->rd, rtt, rtt_ipa, rtt_level))
+        {
+            LOG(ERROR, "\tRtt create failed, rtt=0x%x\n", rtt, 0);
+            val_host_rmi_granule_undelegate(rtt);
+            val_host_mem_free((void *)rtt);
+            return VAL_ERROR;
+        }
+    }
+
+    return VAL_SUCCESS;
+}
+
+/**
+ *   @brief    Create Aux RTT levels
+ *   @param    realm         - Realm strucrure
+ *   @param    ipa           - IPA Address
+ *   @param    rtt_level     - Starting RTT level
+ *   @param    rtt_max_level - Maximum RTT level
+ *   @param    rtt_alignment - RTT Address Alignment
+ *   @return   SUCCESS/FAILURE
+**/
+uint32_t val_host_create_aux_rtt_levels(val_host_realm_ts *realm,
+                   uint64_t ipa,
+                   uint64_t rtt_level,
+                   uint64_t rtt_max_level,
+                   uint64_t rtt_alignment,
+                   uint64_t index)
+{
+    uint64_t rtt, rtt_ipa;
+    val_smc_param_ts cmd_ret;
+
+    if (rtt_level > rtt_max_level)
+        return VAL_ERROR;
+
+    for (; rtt_level++ < rtt_max_level;)
+    {
+        rtt = (uint64_t)val_host_mem_alloc(rtt_alignment, PAGE_SIZE);
+        if (!rtt)
+        {
+            LOG(ERROR, "\tFailed to allocate memory for aux rtt\n", 0, 0);
+            return VAL_ERROR;
+        } else if (val_host_rmi_granule_delegate(rtt))
+        {
+            LOG(ERROR, "\tAUX RTT delegation failed, rtt=0x%x\n", rtt, 0);
+            return VAL_ERROR;
+        }
+
+        rtt_ipa = ADDR_ALIGN_DOWN(ipa, val_host_rtt_level_mapsize(rtt_level - 1));
+        cmd_ret = val_host_rmi_rtt_aux_create(realm->rd, rtt, rtt_ipa, rtt_level, index);
+        if (cmd_ret.x0)
         {
             LOG(ERROR, "\tRtt create failed, rtt=0x%x\n", rtt, 0);
             val_host_rmi_granule_undelegate(rtt);
@@ -292,6 +347,68 @@ error:
 }
 
 /**
+ *   @brief    Maps protected memory into the realm in auxiliary RTT
+ *   @param    realm        - Realm strucrure
+ *   @param    ipa          - IPA Address
+ *   @return   SUCCESS/FAILURE
+**/
+uint32_t val_host_aux_map_protected_data(val_host_realm_ts *realm, uint64_t ipa, uint64_t index)
+{
+    uint64_t rd = realm->rd;
+    uint64_t map_level;
+    uint64_t ret = 0, size = 0;
+    val_smc_param_ts cmd_ret;
+
+    if (!ADDR_IS_ALIGNED(ipa, PAGE_SIZE))
+        return VAL_ERROR;
+
+    map_level = 3;
+
+    while (size < PAGE_SIZE)
+    {
+        cmd_ret = val_host_rmi_rtt_aux_map_protected(rd, ipa, index);
+
+        if (RMI_STATUS(cmd_ret.x0) == RMI_ERROR_RTT_AUX)
+        {
+            /* Create missing RTT levels and retry data create again */
+            ret = val_host_create_aux_rtt_levels(realm, ipa, RMI_INDEX(cmd_ret.x0),
+                                map_level, PAGE_SIZE, index);
+            if (ret)
+            {
+                LOG(ERROR, "\tval_realm_create_rtt_levels failed, ret=0x%x\n", ret, 0);
+                goto error;
+            }
+
+            cmd_ret = val_host_rmi_rtt_aux_map_protected(rd, ipa, index);
+        }
+
+        if (cmd_ret.x0)
+        {
+            LOG(ERROR, "\tRTT_AUX_MAP_PROTECTED failed, ret=0x%x\n", cmd_ret.x0, 0);
+            goto error;
+        }
+
+        ipa += PAGE_SIZE;
+        size += PAGE_SIZE;
+    }
+
+    return VAL_SUCCESS;
+
+error:
+    for (; size > 0;)
+    {
+        cmd_ret = val_host_rmi_rtt_aux_unmap_protected(rd, ipa, index);
+        if (cmd_ret.x0)
+            LOG(ERROR, "\tval_rmi_rtt_aux_unmap_protected failed, ret=0x%x\n", cmd_ret.x0, 0);
+
+        size -= PAGE_SIZE;
+        ipa -= PAGE_SIZE;
+    }
+
+    return VAL_ERROR;
+}
+
+/**
  *   @brief    Creates a mapping from an Unprotected IPA to a Non-secure PA
  *   @param    realm            - Realm strucrure
  *   @param    ns_pa            - Non secure Physical Address
@@ -309,8 +426,22 @@ uint32_t val_host_map_unprotected(val_host_realm_ts *realm,
     uint64_t rd = realm->rd;
     uint64_t map_level, rtt_level;
     uint64_t ret = 0;
-    uint64_t mem_desc = ns_pa | ATTR_NORMAL_WB | ATTR_STAGE2_MASK | ATTR_INNER_SHARED;
+    uint64_t mem_desc;
+    uint64_t rtt_tree_pp;
     val_host_rtt_entry_ts rtte;
+
+    mem_desc = ns_pa | ATTR_NORMAL_WB | ATTR_INNER_SHARED;
+
+    /* Check if RMM supports shared RTT tree support for planes and
+     * Check whether realm is configured to use RTT tree perm plane */
+    rtt_tree_pp = VAL_EXTRACT_BITS(realm->flags1, 0, 0);
+
+    /* If RMM supports shared RTT tree configuration and realm is configured
+     * to use shared RTT, use S2AP base index, else set S2AP[0:1] = RW */
+    if (!rtt_tree_pp && val_host_rmm_supports_rtt_tree_single() && realm->num_aux_planes > 0)
+        mem_desc |= val_pi_index_to_desc(RMI_UNPROTECTED_S2AP_RW);
+    else
+        mem_desc |= ATTR_STAGE2_AP_RW;
 
     if (!ADDR_IS_ALIGNED(ipa, rtt_map_size))
         return VAL_ERROR;
@@ -357,6 +488,64 @@ uint32_t val_host_map_unprotected(val_host_realm_ts *realm,
     if (ret)
     {
         LOG(ERROR, "\tval_rmi_rtt_map_unprotected failed, ret=0x%x\n", ret, 0);
+        return VAL_ERROR;
+    }
+
+    return VAL_SUCCESS;
+}
+
+/**
+ *   @brief    Creates a auxiliary mapping from an Unprotected IPA to a Non-secure PA
+ *   @param    realm            - Realm strucrure
+ *   @param    ns_pa            - Non secure Physical Address
+ *   @param    ipa              - IPA Address
+ *   @param    rtt_map_size     - size of memory to be mapped
+ *   @param    rtt_alignment    - RTT Address Alignment
+ *   @return   SUCCESS/FAILURE
+**/
+uint32_t val_host_aux_map_unprotected(val_host_realm_ts *realm,
+                        uint64_t ipa,
+                        uint64_t rtt_map_size,
+                        uint64_t rtt_alignment,
+                        uint64_t index)
+{
+    uint64_t rd = realm->rd;
+    uint64_t map_level;
+    uint64_t ret = 0;
+    val_smc_param_ts cmd_ret;
+
+    if (!ADDR_IS_ALIGNED(ipa, rtt_map_size))
+        return VAL_ERROR;
+
+    if (rtt_map_size == PAGE_SIZE)
+        map_level = 3;
+    else if (rtt_map_size == VAL_RTT_L2_BLOCK_SIZE)
+        map_level = 2;
+    else
+    {
+        LOG(ERROR, "\tUnknown rtt_map_size=0x%x\n", rtt_map_size, 0);
+        return VAL_ERROR;
+    }
+
+    cmd_ret = val_host_rmi_rtt_aux_map_unprotected(rd, ipa, index);
+
+    if (RMI_STATUS(cmd_ret.x0) == RMI_ERROR_RTT_AUX)
+    {
+        /* Create missing RTT levels and retry map unprotected again */
+        ret = val_host_create_aux_rtt_levels(realm, ipa, RMI_INDEX(cmd_ret.x0),
+                                               map_level, rtt_alignment, index);
+        if (ret)
+        {
+            LOG(ERROR, "\tval_realm_create_rtt_levels failed, ret=0x%x\n", ret, 0);
+            return VAL_ERROR;
+        }
+
+        cmd_ret = val_host_rmi_rtt_aux_map_unprotected(rd, ipa, index);
+    }
+
+    if (cmd_ret.x0)
+    {
+        LOG(ERROR, "\tval_rmi_rtt_map_unprotected failed, ret=0x%x\n", cmd_ret.x0, 0);
         return VAL_ERROR;
     }
 
@@ -443,13 +632,13 @@ uint32_t val_host_map_unprotected_attr(val_host_realm_ts *realm,
 uint32_t val_host_realm_create(val_host_realm_ts *realm)
 {
     val_host_realm_params_ts *params;
-    uint64_t ret, i;
+    uint64_t ret, i, j;
 
     realm->image_pa_size = PLATFORM_REALM_IMAGE_SIZE;
 
     realm->state = REALM_STATE_NULL;
 
-    /* Allocate memory for realm image. Granule delegation
+    /* Allocate memory for P0 image. Granule delegation
      * for it will be performed during rtt creation.  */
     realm->image_pa_base = (uint64_t)val_host_mem_alloc(PAGE_SIZE, realm->image_pa_size);
     if (!realm->image_pa_base)
@@ -459,11 +648,21 @@ uint32_t val_host_realm_create(val_host_realm_ts *realm)
         return VAL_ERROR;
     }
 
+    /* Allocate memory for images of auxiliary planes */
+    for (i = 0; i < realm->num_aux_planes; i++)
+    {
+        realm->aux_image_pa_base[i] = (uint64_t)val_host_mem_alloc(PAGE_SIZE, realm->image_pa_size);
+        if (!realm->aux_image_pa_base[i])
+        {
+            LOG(ERROR, "\tval_host_mem_alloc failed, base=0x%x, size=0x%x\n",
+                 realm->aux_image_pa_base[i], realm->image_pa_size);
+            return VAL_ERROR;
+        }
+    }
 
     /* Allocate and delegate RTT */
     realm->rtt_l0_addr = (uint64_t)val_host_mem_alloc((realm->num_s2_sl_rtts * PAGE_SIZE),
                                                     (realm->num_s2_sl_rtts * PAGE_SIZE));
-
     if (!realm->rtt_l0_addr)
     {
         LOG(ERROR, "\tFailed to allocate memory for rtt_addr\n", 0, 0);
@@ -477,6 +676,34 @@ uint32_t val_host_realm_create(val_host_realm_ts *realm)
                 LOG(ERROR, "\trtt delegation failed, rtt_addr=0x%x, ret=0x%x\n",
                     realm->rtt_l0_addr, ret);
                 goto free_rtt;
+            }
+        }
+    }
+
+    /* If realm is configured to use RTT tree per plane, Allocate and delegate
+     * auxiliary RTTs */
+    if (VAL_EXTRACT_BITS(realm->flags1, 0, 0) && realm->num_aux_planes > 0)
+    {
+        for (i = 0; i < realm->num_aux_planes; i++)
+        {
+            realm->rtt_aux_l0_addr[i] = (uint64_t)val_host_mem_alloc(
+           (realm->num_s2_sl_rtts * PAGE_SIZE), (realm->num_s2_sl_rtts * PAGE_SIZE));
+            if (!realm->rtt_aux_l0_addr[i])
+            {
+                LOG(ERROR, "\tFailed to allocate memory for rtt_addr\n", 0, 0);
+                goto undelegate_rd;
+            } else {
+                for (j = 0; j < realm->num_s2_sl_rtts; j++)
+                {
+                    ret = val_host_rmi_granule_delegate(realm->rtt_aux_l0_addr[i]
+                                                                     + (j * PAGE_SIZE));
+                    if (ret)
+                    {
+                        LOG(ERROR, "\trtt delegation failed, rtt_addr=0x%x, ret=0x%x\n",
+                        realm->rtt_aux_l0_addr[i], ret);
+                        goto free_rtt;
+                    }
+                }
             }
         }
     }
@@ -508,6 +735,7 @@ uint32_t val_host_realm_create(val_host_realm_ts *realm)
 
     /* Populate params */
     params->flags = realm->flags;
+    params->flags1 = realm->flags1;
     params->pmu_num_ctrs = realm->pmu_num_ctrs;
     params->s2sz = realm->s2sz;
     params->rtt_base = realm->rtt_l0_addr;
@@ -515,7 +743,18 @@ uint32_t val_host_realm_create(val_host_realm_ts *realm)
     params->rtt_level_start = realm->s2_starting_level;
     params->rtt_num_start = realm->num_s2_sl_rtts;
     params->vmid = realm->vmid;
+    for (i = 0; i < realm->num_aux_planes; i++)
+        params->aux_vmid[i] = realm->vmid + i + 1;
+    params->num_aux_planes = realm->num_aux_planes;
+    for (i = 0; i < realm->num_aux_planes; i++)
+        params->aux_rtt_base[i] = realm->rtt_aux_l0_addr[i];
+
     val_memcpy(&params->rpv, &realm->rpv, sizeof(realm->rpv));
+
+#ifdef RMM_V_1_1
+    if (realm->num_aux_planes == 0)
+        params->flags1 |= VAL_REALM_FLAG_RTT_TREE_PP;
+#endif
 
     /* Create realm */
     if (val_host_rmi_realm_create(realm->rd, (uint64_t)params))
@@ -540,8 +779,27 @@ undelegate_rtt:
         LOG(WARN, "\trtt undelegation failed, rtt_addr=0x%x, ret=0x%x\n", realm->rtt_l0_addr, ret);
     }
 
+    if (VAL_EXTRACT_BITS(realm->flags1, 0, 0) && realm->num_aux_planes > 0)
+    {
+        for (i = 0; i < realm->num_aux_planes; i++)
+        {
+            ret = val_host_rmi_granule_undelegate(realm->rtt_aux_l0_addr[i]);
+            if (ret)
+            {
+                LOG(WARN, "\t Aux RTT undelegation failed, rtt_addr=0x%x, ret=0x%x\n",
+                                                                   realm->rtt_aux_l0_addr[i], ret);
+            }
+        }
+    }
+
 free_rtt:
-     val_host_mem_free((void *)realm->rtt_l0_addr);
+    val_host_mem_free((void *)realm->rtt_l0_addr);
+
+    if (VAL_EXTRACT_BITS(realm->flags1, 0, 0) && realm->num_aux_planes > 0)
+    {
+        for (uint64_t i = 0; i < realm->num_aux_planes; i++)
+            val_host_mem_free((void *)realm->rtt_aux_l0_addr[i]);
+    }
 
 undelegate_rd:
     ret = val_host_rmi_granule_undelegate(realm->rd);
@@ -550,10 +808,12 @@ undelegate_rd:
         LOG(WARN, "\trd undelegation failed, rd=0x%x, ret=0x%x\n", realm->rd, ret);
     }
 free_rd:
-     val_host_mem_free((void *)realm->rd);
+    val_host_mem_free((void *)realm->rd);
 
 free_par:
-     val_host_mem_free((void *)realm->image_pa_base);
+    val_host_mem_free((void *)realm->image_pa_base);
+    for (uint64_t i = 0; i < realm->num_aux_planes; i++)
+        val_host_mem_free((void *)realm->aux_image_pa_base[i]);
 
     return VAL_ERROR;
 }
@@ -614,40 +874,55 @@ int val_host_ripas_init(val_host_realm_ts *realm, uint64_t base,
  *   @param    realm            - Realm strucrure
  *   @return   SUCCESS/FAILURE
 **/
-static uint32_t val_host_image_map(val_host_realm_ts *realm)
+static uint32_t val_host_image_map(val_host_realm_ts *realm, uint64_t ipa_base, uint64_t pa_base)
 {
     uint64_t src_pa = PLATFORM_REALM_IMAGE_BASE;
-    uint32_t i = 0;
+    uint32_t i = 0, j = 0;
 
     if (val_host_ripas_init(realm,
-            VAL_REALM_IMAGE_BASE_IPA,
-            VAL_REALM_IMAGE_BASE_IPA + realm->image_pa_size,
+            ipa_base,
+            ipa_base + realm->image_pa_size,
             VAL_RTT_MAX_LEVEL, PAGE_SIZE))
     {
         LOG(ERROR, "\trealm_init_ipa_state failed, ipa=0x%x\n",
-                realm->image_pa_base + i * PAGE_SIZE, 0);
+                ipa_base + i * PAGE_SIZE, 0);
         return VAL_ERROR;
     }
     /* MAP image regions */
     while (i < (realm->image_pa_size/PAGE_SIZE))
     {
         if (val_host_map_protected_data(realm,
-                realm->image_pa_base + i * PAGE_SIZE,
-                VAL_REALM_IMAGE_BASE_IPA + i * PAGE_SIZE,
+                pa_base + i * PAGE_SIZE,
+                ipa_base + i * PAGE_SIZE,
                 PAGE_SIZE,
                 src_pa + i * PAGE_SIZE
                 ))
         {
             LOG(ERROR, "\tval_realm_map_protected_data failed, par_base=0x%x\n",
-                    realm->image_pa_base, 0);
+                    pa_base, 0);
             return VAL_ERROR;
         }
+
+        /* If Realm is configured to use RTT tree per plane, map auxillary RTTs as well */
+        if (VAL_EXTRACT_BITS(realm->flags1, 0, 0) && realm->num_aux_planes > 0)
+        {
+            for (j = 0; j < realm->num_aux_planes ; j++)
+            {
+                if (val_host_aux_map_protected_data(realm, ipa_base + i * PAGE_SIZE, j + 1))
+                {
+                    LOG(ERROR, "\tval_realm_aux_map_protected_data failed, ipa=0x%x\n",
+                                                             ipa_base + i * PAGE_SIZE, 0);
+                    return VAL_ERROR;
+                }
+            }
+        }
+
         i++;
     }
-    realm->granules[realm->granules_mapped_count].ipa = VAL_REALM_IMAGE_BASE_IPA;
+    realm->granules[realm->granules_mapped_count].ipa = ipa_base;
     realm->granules[realm->granules_mapped_count].size = realm->image_pa_size;
     realm->granules[realm->granules_mapped_count].level = VAL_RTT_MAX_LEVEL;
-    realm->granules[realm->granules_mapped_count].pa = realm->image_pa_base;
+    realm->granules[realm->granules_mapped_count].pa = pa_base;
     realm->granules_mapped_count++;
     return VAL_SUCCESS;
 }
@@ -660,7 +935,7 @@ static uint32_t val_host_image_map(val_host_realm_ts *realm)
 uint32_t val_host_map_protected_data_to_realm(val_host_realm_ts *realm,
                                             val_data_create_ts *data_create)
 {
-    uint32_t i = 0;
+    uint32_t i = 0, j;
 
     if (val_host_ripas_init(realm,
             data_create->ipa,
@@ -685,6 +960,21 @@ uint32_t val_host_map_protected_data_to_realm(val_host_realm_ts *realm,
                     data_create->target_pa, 0);
             return VAL_ERROR;
         }
+
+        /* If Realm is configured to use RTT tree per plane, map auxillary RTTs as well */
+        if (VAL_EXTRACT_BITS(realm->flags1, 0, 0) && realm->num_aux_planes > 0)
+        {
+            for (j = 0; j < realm->num_aux_planes ; j++)
+            {
+                if (val_host_aux_map_protected_data(realm, data_create->ipa + i * PAGE_SIZE, j + 1))
+                {
+                    LOG(ERROR, "\tval_realm_aux_map_protected_data failed, ipa=0x%x\n",
+                                                             data_create->ipa + i * PAGE_SIZE, 0);
+                    return VAL_ERROR;
+                }
+            }
+        }
+
         i++;
     }
 
@@ -703,7 +993,7 @@ uint32_t val_host_map_protected_data_to_realm(val_host_realm_ts *realm,
 **/
 static uint32_t val_host_map_shared_region(val_host_realm_ts *realm)
 {
-    uint32_t i = 0;
+    uint32_t i = 0, j = 0;
     uint64_t ns_shared_base_pa = (uint64_t)val_get_shared_region_base_pa();
     uint64_t ns_shared_base_ipa =
                             (uint64_t)val_get_shared_region_base_ipa(realm->s2sz & 0xff);
@@ -720,6 +1010,22 @@ static uint32_t val_host_map_shared_region(val_host_realm_ts *realm)
             LOG(ERROR, "\tval_realm_map_unprotected_data failed\n", 0, 0);
             return VAL_ERROR;
         }
+
+        /* If Realm is configured to use RTT tree per plane, map auxillary RTTs as well */
+        if (VAL_EXTRACT_BITS(realm->flags1, 0, 0) && realm->num_aux_planes > 0)
+        {
+            for (j = 0; j < realm->num_aux_planes; j++)
+            {
+                if (val_host_aux_map_unprotected(realm,
+                    ns_shared_base_ipa + i * PAGE_SIZE,
+                    PAGE_SIZE, PAGE_SIZE, j + 1))
+                {
+                    LOG(ERROR, "\tval_realm_aux_map_unprotected_data failed\n", 0, 0);
+                    return VAL_ERROR;
+                }
+            }
+        }
+
         i++;
     }
     realm->granules[realm->granules_mapped_count].ipa = ns_shared_base_ipa;
@@ -827,7 +1133,7 @@ uint32_t val_host_rec_create(val_host_realm_ts *realm)
         rec_params->gprs[i] = 0x0;
     }
 
-    rec_params->pc = VAL_REALM_IMAGE_BASE_IPA;
+    rec_params->pc = VAL_PLANE0_IMAGE_BASE_IPA;
     rec_create_flags.runnable = RMI_RUNNABLE;
 
     for (i = 0; i < realm->rec_count; i++, mpidr++)
@@ -958,6 +1264,8 @@ uint32_t val_host_realm_activate(val_host_realm_ts *realm)
 **/
 uint32_t val_host_realm_setup(val_host_realm_ts *realm, bool activate)
 {
+    uint64_t i;
+
     /* Create realm */
     if (val_host_realm_create(realm))
     {
@@ -972,11 +1280,21 @@ uint32_t val_host_realm_setup(val_host_realm_ts *realm, bool activate)
         return VAL_ERROR;
     }
 
-    /* RTT map realm image */
-    if (val_host_image_map(realm))
+    /* RTT map Plane-0 image */
+    if (val_host_image_map(realm, VAL_PLANE0_IMAGE_BASE_IPA, realm->image_pa_base))
     {
-        LOG(ERROR, "\tRealm image mapping failed\n", 0, 0);
+        LOG(ERROR, "\tPlane 0 image mapping failed\n", 0, 0);
         return VAL_ERROR;
+    }
+
+    /* If Realm is created with auxiliary planes, map images at S2 */
+    for (i = 0; i < realm->num_aux_planes; i++)
+    {
+        if (val_host_image_map(realm, aux_ipa_base[i], realm->aux_image_pa_base[i]))
+        {
+            LOG(ERROR, "\tAuxilliary plane %d image mapping failed\n", i, 0);
+            return VAL_ERROR;
+        }
     }
 
      /* RTT map shared_ns */
@@ -2079,4 +2397,56 @@ uint64_t val_host_update_aux_rtt_info(uint64_t gran_state, uint64_t rd,
     return VAL_SUCCESS;
 }
 
+/* Checks RMM support for multi plane realms
+ * @param  none
+ * @return Returns true or false
+**/
+bool val_host_rmm_supports_planes(void)
+{
+    uint64_t featreg0, max_num_aux_planes;
+
+    val_host_rmi_features(0, &featreg0);
+
+    max_num_aux_planes =  VAL_EXTRACT_BITS(featreg0, 45, 48);
+    if (max_num_aux_planes > 0)
+        return true;
+
+    return false;
+}
+
+/**
+ * @brief  Checks if RMM supports for single RTT tree usage model
+ * @param  none
+ * @return Returns true or false
+**/
+bool val_host_rmm_supports_rtt_tree_single(void)
+{
+    uint64_t featreg0, rtt_tree_single;
+
+    val_host_rmi_features(0, &featreg0);
+
+    rtt_tree_single =  VAL_EXTRACT_BITS(featreg0, 43, 44);
+    if (rtt_tree_single == RMI_PLANE_RTT_SINGLE || rtt_tree_single == RMI_PLANE_RTT_AUX_SINGLE)
+        return true;
+
+    return false;
+}
+
+/**
+ * @brief  Checks if RMM supports for RTT tree per plane usage model
+ * @param  none
+ * @return Returns true or false
+**/
+bool val_host_rmm_supports_rtt_tree_per_plane(void)
+{
+    uint64_t featreg0, rtt_tree_single;
+
+    val_host_rmi_features(0, &featreg0);
+
+    rtt_tree_single =  VAL_EXTRACT_BITS(featreg0, 43, 44);
+    if (rtt_tree_single == RMI_PLANE_RTT_AUX || rtt_tree_single == RMI_PLANE_RTT_AUX_SINGLE)
+        return true;
+
+    return false;
+}
 

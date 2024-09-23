@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023-2024, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -78,18 +78,9 @@ acs_realm_entry:
    cmp xzr, x1
    b.ne 1b
 
-#if 0
    /* Relocate symbols */
-pie_fixup:
-   ldr    x0, =acs_realm_entry
-   mov    x1, #PLATFORM_REALM_IMAGE_SIZE
-   add    x1, x1, x0
    bl    val_fixup_symbol_table
 
-   /* Set Image offset variable */
-   adr   x1, val_image_load_offset
-   str   x0, [x1]
-#endif
    b  0f
 
 secondary_cpu_entry:

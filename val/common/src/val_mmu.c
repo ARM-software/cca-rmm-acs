@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023-2024, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -123,4 +123,17 @@ int val_xlat_pgt_create(xlat_ctx_t *ctx, val_memory_region_descriptor_ts *mem_de
                                                  mem_desc->length, mem_desc->attributes);
 
     return mmap_add_dynamic_region_ctx(ctx, &dynamic_region);
+}
+
+/**
+ * @brief Converts raw index value into PIIndex[0:3] according to VMSAv8-64 format.
+ * @param pi_index 4bit permision indirection index.
+ * @return Page table descriptor with PIIndex[0:3] fields set.
+**/
+uint64_t val_pi_index_to_desc(uint64_t pi_index)
+{
+    return  INPLACE(ATTR_PI_INDEX_0, pi_index & 1) |
+        INPLACE(ATTR_PI_INDEX_1, (pi_index >> 1) & 1) |
+        INPLACE(ATTR_PI_INDEX_2, (pi_index >> 2) & 1) |
+        INPLACE(ATTR_PI_INDEX_3, (pi_index >> 3) & 1);
 }
