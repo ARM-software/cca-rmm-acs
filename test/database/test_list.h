@@ -166,6 +166,8 @@ DECLARE_TEST_FN(planes_rec_entry_p0_owner_virt_int);
 DECLARE_TEST_FN(planes_rec_entry_pn_owner_virt_int);
 DECLARE_TEST_FN(planes_p0_gic_virt_pn);
 DECLARE_TEST_FN(planes_rec_entry_maint_int);
+DECLARE_TEST_FN(planes_el1_timer_trig);
+DECLARE_TEST_FN(planes_timer_state_rec_exit);
 /* Planes test declaration ends here */
 
 #else /* TEST_FUNC_DATABASE */
@@ -604,6 +606,12 @@ DECLARE_TEST_FN(planes_rec_entry_maint_int);
         #endif
         #if (defined(TEST_COMBINE) || defined(d_planes_rec_entry_maint_int))
         HOST_REALM_TEST(planes, planes_rec_entry_maint_int),
+        #endif
+        #if (defined(TEST_COMBINE) || defined(d_planes_el1_timer_trig))
+        HOST_REALM_TEST(planes, planes_el1_timer_trig),
+        #endif
+        #if (defined(TEST_COMBINE) || defined(d_planes_timer_state_rec_exit))
+        HOST_REALM_TEST(planes, planes_timer_state_rec_exit),
         #endif
     #endif /* #if (defined(d_all) || defined(d_planes) */
 #endif /* #if defined(RMM_V_1_0) || defined(RMM_V_1_1) */
