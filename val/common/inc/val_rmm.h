@@ -232,7 +232,11 @@
 
 /* RSI SMC FID */
 #define RSI_VERSION                           (0xC4000190)
+#ifdef RMM_V_1_1
+#define RSI_REALM_CONFIG                      (0xC40001AD)
+#elif defined(RMM_V_1_0)
 #define RSI_REALM_CONFIG                      (0xC4000196)
+#endif
 #define RSI_MEASUREMENT_READ                  (0xC4000192)
 #define RSI_MEASUREMENT_EXTEND                (0xC4000193)
 #define RSI_IPA_STATE_GET                     (0xC4000198)

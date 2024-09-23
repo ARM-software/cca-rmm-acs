@@ -1,5 +1,5 @@
 #-------------------------------------------------------------------------------
-# Copyright (c) 2023, Arm Limited or its affiliates. All rights reserved.
+# Copyright (c) 2023-2024, Arm Limited or its affiliates. All rights reserved.
 #
 # SPDX-License-Identifier: BSD-3-Clause
 #
@@ -34,6 +34,7 @@ add_definitions(-DQCBOR_DISABLE_FLOAT_HW_USE)
 include(${ROOT_DIR}/tools/cmake/toolchain/utils.cmake)
 include(${ROOT_DIR}/tools/cmake/toolchain/default.cmake)
 include(${ROOT_DIR}/tools/cmake/common/CMakeExternal.cmake)
+include(${ROOT_DIR}/tools/cmake/common/CMakeHelpers.cmake)
 ####
 
 
@@ -80,6 +81,8 @@ if(NOT DEFINED SUITE)
 else()
     set(SUITE ${SUITE} CACHE INTERNAL "SUITE is set to ${SUITE}" FORCE)
 endif()
+
+add_definitions(-DSUITE="${SUITE}")
 
 list(APPEND SUITE_LIST all)
 if(NOT ${SUITE} IN_LIST SUITE_LIST)
@@ -187,6 +190,14 @@ if((${SUITE} STREQUAL "attestation_measurement") OR (${SUITE} STREQUAL "all"))
     set(RMM_ACS_TARGET_QCBOR		${CMAKE_CURRENT_BINARY_DIR}/rmm_acs_qcbor	CACHE PATH "Location of Q_CBOR sources.")
     set(RMM_ACS_QCBOR_INCLUDE_PATH      ${RMM_ACS_TARGET_QCBOR}/inc)
 endif()
+
+#Check if RMM_SPEC_VER is set, if not default it to ALL
+if(NOT DEFINED RMM_SPEC_VER)
+    set(RMM_SPEC_VER "ALL")
+endif()
+
+#Check if RMM_SPEC_VER is set correctly and add definitions accordingly
+CheckSpecVersionAndAddDefinitions(${RMM_SPEC_VER})
 
 if(((${SUITE} STREQUAL "attestation_measurement") OR (${SUITE} STREQUAL "all")) AND (NOT EXISTS ${RMM_ACS_TARGET_QCBOR}))
 execute_process(COMMAND ${GIT_EXECUTABLE} clone ${QCBOR_GIT_REPO_LINK} ${RMM_ACS_TARGET_QCBOR}
