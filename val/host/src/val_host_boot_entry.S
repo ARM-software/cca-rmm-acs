@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023-2024, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -57,7 +57,8 @@ primary_cpu_entry:
      * prior bootloader stages.
      */
     adr x0, __RODATA_START__
-    adr x1, __BSS_END__
+    adrp x1, __BSS_END__
+    add x1, x1, :lo12:__BSS_END__
     sub x1, x1, x0
     bl  val_inv_dcache_range
 #endif
@@ -74,8 +75,10 @@ primary_cpu_entry:
     str x0, [x18]
 
    /* Clear BSS */
-   adr x0, __BSS_START__
-   adr x1, __BSS_END__
+   adrp x0, __BSS_START__
+   add x0, x0, :lo12:__BSS_END__
+   adrp x1, __BSS_END__
+   add x1, x1, :lo12:__BSS_END__
    sub x1, x1, x0
 1:
    stp xzr, xzr, [x0]
@@ -97,7 +100,8 @@ secondary_cpu_entry:
 
 0:
    /* Setup the dummy stack to call val_get_cpuid C fn */
-    adr  x1, dummy_stack_end
+    adrp  x1, dummy_stack_end
+    add x1, x1, :lo12:dummy_stack_end
     mov  sp, x1
 
     mrs  x0, mpidr_el1
@@ -106,7 +110,8 @@ secondary_cpu_entry:
     /* Now setup the stack pointer with actual stack addr
      * for the logic cpuid return by val_get_cpuid
      */
-    adr  x1, stacks_end
+    adrp  x1, stacks_end
+    add x1, x1, :lo12:stacks_end
     mov  x2, #STACK_SIZE
     mul  x2, x0, x2
     sub  sp, x1, x2

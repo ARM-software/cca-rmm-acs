@@ -1,23 +1,22 @@
 /*
- * Copyright (c) 2023, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023-2024, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
 #include "val_def.h"
 
-IMAGE_BASE = VAL_REALM_IMAGE_BASE_IPA;
 OUTPUT_FORMAT(elf64-littleaarch64)
 OUTPUT_ARCH(aarch64)
 ENTRY(acs_realm_entry)
 
 MEMORY {
-    RAM (rwx): ORIGIN = IMAGE_BASE, LENGTH = PLATFORM_REALM_IMAGE_SIZE
+    RAM (rwx): ORIGIN = 0x0, LENGTH = PLATFORM_REALM_IMAGE_SIZE
 }
 
 SECTIONS
 {
-    . = IMAGE_BASE;
+    __ACS_IMAGE_BASE__ = .;
 
     ASSERT(. == ALIGN(PAGE_SIZE),
            "TEXT_START address is not aligned to PAGE_SIZE.")
@@ -45,13 +44,23 @@ SECTIONS
         *(.data*)
 
         . = ALIGN(8);
-        __GOT_START__ = .;
+        __ACS_GOT_START__ = .;
         *(.got)
-        __GOT_END__ = .;
+        __ACS_GOT_END__ = .;
 
         . = NEXT(PAGE_SIZE);
         __DATA_END__ = .;
     }
+
+    /*
+     * .rela.dyn needs to come after .data for the read-elf utility to
+     * parse this section correctly.
+     */
+    .rela.dyn ALIGN(8) : {
+        __ACS_RELA_START__ = .;
+        *(.rela*)
+        __ACS_RELA_END__ = .;
+    } >RAM
 
     .bss (NOLOAD) : {
         . = ALIGN(PAGE_SIZE);
@@ -59,10 +68,12 @@ SECTIONS
         *(SORT_BY_ALIGNMENT(.bss*))
         *(COMMON)
         . = NEXT(PAGE_SIZE);
-   } >RAM
+    } >RAM
 
     pgt_entries ALIGN(PAGE_SIZE) : {
             *(xlat_static_tables)
     } >RAM
-        __BSS_END__ = .;
+    __BSS_END__ = .;
+
+    __ACS_IMAGE_END__ = .;
 }

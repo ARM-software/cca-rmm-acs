@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023-2024, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -25,7 +25,7 @@ typedef struct {
     uint64_t x10;
 } val_smc_param_ts;
 
-#define VAL_SMC_NOT_SUPPORTED    (-1)
+#define VAL_SMC_NOT_SUPPORTED    UL(-1)
 
 val_smc_param_ts val_smc_call(uint64_t x0, uint64_t x1, uint64_t x2,
                          uint64_t x3, uint64_t x4, uint64_t x5,

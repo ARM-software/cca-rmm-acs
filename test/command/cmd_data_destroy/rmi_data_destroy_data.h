@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023-2024, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -22,7 +22,8 @@ enum test_intent {
     IPA_NOT_MAPPED = 0XB,
     RTTE_STATE_UNASSIGNED = 0XC,
     IPA_UNPROTECTED_NOT_MAPPED = 0XD,
-    IPA_UNPROTECTED_RTTE_UNASSIGNED = 0XE
+    IPA_UNPROTECTED_RTTE_UNASSIGNED = 0XE,
+    IPA_AUX_LIVE = 0xF
 };
 
 struct stimulus {
@@ -108,5 +109,12 @@ static struct stimulus test_data[] = {
     .abi = RMI_DATA_DESTROY,
     .label = IPA_UNPROTECTED_RTTE_UNASSIGNED,
     .status = RMI_ERROR_INPUT,
+    .index = 0},
+#ifdef RMM_V_1_1
+    {.msg = "aux_live",
+    .abi = RMI_DATA_DESTROY,
+    .label = IPA_AUX_LIVE,
+    .status = RMI_ERROR_RTT_AUX,
     .index = 0}
+#endif
 };

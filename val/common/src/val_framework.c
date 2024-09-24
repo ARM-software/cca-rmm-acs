@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023-2024, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -9,11 +9,14 @@
 #include "val_libc.h"
 #include "val_rmm.h"
 #include "val_smc.h"
+#include "val_hvc.h"
 
 uint64_t security_state;
 static uint64_t realm_thread;
 uint64_t realm_ipa_width;
 uint64_t skip_for_val_logs = 0;
+bool realm_in_p0 = false;
+bool realm_in_pn = false;
 
 /**
  *   @brief    set the security state
@@ -171,9 +174,12 @@ void val_common_printf(const char *msg, uint64_t data1, uint64_t data2)
         *(uint64_t *)(val_get_shared_region_base() + REALM_PRINTF_DATA2_OFFSET) = (uint64_t)data2;
 
         /* Print from realm through RSI_HOST_CALL */
-
+    if (realm_in_p0) {
         realm_print.imm = VAL_REALM_PRINT_MSG;
         val_smc_call(RSI_HOST_CALL, (uint64_t)&realm_print, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    } else {
+        val_hvc_call(PSI_PRINT_MSG, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    }
 
     }
     else {

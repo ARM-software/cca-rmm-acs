@@ -1,5 +1,5 @@
 #-------------------------------------------------------------------------------
-# Copyright (c) 2023, Arm Limited or its affiliates. All rights reserved.
+# Copyright (c) 2023-2024, Arm Limited or its affiliates. All rights reserved.
 #
 # SPDX-License-Identifier: BSD-3-Clause
 #
@@ -46,6 +46,7 @@ if(${SUITE} STREQUAL "all")
 file(GLOB TEST_SRC
     "${ROOT_DIR}/test/*/*/*_host.c"
     "${ROOT_DIR}/test/*/*/*_host.S"
+    "${ROOT_DIR}/test/planes/*/*/*_host.c"
     "${ROOT_DIR}/test/*/common/*_host.c"
     "${ROOT_DIR}/test/common/*_host.c"
 )
@@ -53,6 +54,7 @@ else()
 file(GLOB TEST_SRC
     "${ROOT_DIR}/test/${SUITE}/*/*_host.c"
     "${ROOT_DIR}/test/${SUITE}/*/*_host.S"
+    "${ROOT_DIR}/test/${SUITE}/*/*/*_host.c"
     "${ROOT_DIR}/test/${SUITE}/common/*_host.c"
     "${ROOT_DIR}/test/common/*_host.c"
 )
@@ -90,10 +92,17 @@ endif()
 foreach(SUITE ${SUITE_LIST})
     #message(STATUS "[ACS] : Compiling sources from ${SUITE} suite")
     # Get all the test folders from a given test component
-    _get_sub_dir_list(TEST_LIST ${TEST_SOURCE_DIR}/${SUITE})
+    if(${SUITE} STREQUAL "planes")
+        _get_sub_dir_list(TEST_LIST ${TEST_SOURCE_DIR}/${SUITE}/*/)
+    else()      
+        _get_sub_dir_list(TEST_LIST ${TEST_SOURCE_DIR}/${SUITE})
+    endif()
     foreach(TEST ${TEST_LIST})
         #message(STATUS "[ACS] : Compiling sources from ${TEST} Test")
         set(TEST_SRC "${TEST_SOURCE_DIR}/${SUITE}/${TEST}/${TEST}_host.c")
+        if(${SUITE} STREQUAL "planes")
+            list(APPEND TEST_SRC ${TEST_SOURCE_DIR}/${SUITE}/*/${TEST}/${TEST}_host.c)
+        endif()
         list(APPEND TEST_SRC ${TEST_SOURCE_DIR}/database/test_database_host.c)
         file(GLOB TEST_COMMON_FILE ${TEST_SOURCE_DIR}/common/*_host.c)
         foreach(COMMON_FILE1 ${TEST_COMMON_FILE})

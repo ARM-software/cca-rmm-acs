@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023-2024, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -40,12 +40,17 @@ typedef enum {
     PARAMS_LPA2_UNSUPPORTED,
     PARAMS_BPS_UNSUPPORTED,
     PARAMS_WPS_UNSUPPORTED,
-    PARAMS_RTT_UNALLIGNED,
+    PARAMS_RTT_UNALIGNED,
     PARAMS_INVALID_S2SZ,
     PARAMS_INVALID_RTT_START,
     PARAMS_RTT_UNDELEGATED,
     PARAMS_VMID_INVALID,
-    PARAMS_VMID_USED
+    PARAMS_VMID_USED,
+    PARAMS_PLANES_UNSUPPORTED,
+    PARAMS_AUX_RTT_UNALIGNED,
+    PARAMS_AUX_RTT_UNDELEGATED,
+    PARAMS_AUX_VMID_INVALID,
+    PARAMS_AUX_VMID_USED
 } params_prep_seq_type;
 
 static uint64_t rd_valid_prep_sequence(void)
@@ -171,7 +176,7 @@ static uint64_t g_params_prep_sequence(params_prep_seq_type type)
         break;
 
     /* Select a unalligned address for rtt */
-    case PARAMS_RTT_UNALLIGNED:
+    case PARAMS_RTT_UNALIGNED:
         params->rtt_base = g_unaligned_prep_sequence(rtt_base);
         break;
 
@@ -229,6 +234,48 @@ static uint64_t g_params_prep_sequence(params_prep_seq_type type)
         params->vmid = 1;
         break;
 
+    case PARAMS_PLANES_UNSUPPORTED:
+
+        val_host_rmi_features(0, &featreg0);
+
+        params->num_aux_planes |= (uint8_t)(VAL_EXTRACT_BITS(featreg0, 45, 48) + 1);
+        break;
+
+    /* Select a unalligned address for rtt */
+    case PARAMS_AUX_RTT_UNALIGNED:
+        params->num_aux_planes = 1;
+        params->aux_rtt_base[0] = g_unaligned_prep_sequence(rtt_base);
+        break;
+
+    /* Select a undelegated granule for rtt */
+    case PARAMS_AUX_RTT_UNDELEGATED:
+        params->num_aux_planes = 1;
+        params->aux_rtt_base[0] = g_undelegated_prep_sequence();
+        if (params->rtt_base == VAL_TEST_PREP_SEQ_FAILED)
+            return VAL_TEST_PREP_SEQ_FAILED;
+        break;
+
+    case PARAMS_AUX_VMID_INVALID:
+
+        vmidbits = VAL_EXTRACT_BITS(val_id_aa64mmfr1_el1_read(), 4, 7);
+
+        if (vmidbits == 0x1)
+        {
+            params->num_aux_planes = 1;
+            params->aux_vmid[0] = 0xFF00;
+        }
+        else
+        {
+            LOG(TEST, "\n\tCouldn't create VMID Invalid sequence", 0, 0);
+            return VAL_SKIP_CHECK;
+        }
+        break;
+
+    case PARAMS_AUX_VMID_USED:
+        params->num_aux_planes = 1;
+        params->vmid = 1;
+        break;
+
     default:
         LOG(ERROR, "\n\t INVALID PREP_SEQUENCE \n", 0, 0);
         return VAL_TEST_PREP_SEQ_FAILED;
@@ -254,6 +301,10 @@ static uint64_t params_valid_prep_sequence(void)
     params->rtt_level_start = 0;
     params->vmid = REALM_VALID;
     params->rtt_base = rtt0;
+
+#ifdef RMM_V_1_1
+    params->flags1 |= VAL_REALM_FLAG_RTT_TREE_PP;
+#endif
 
     return (uint64_t)params;
 }
@@ -467,7 +518,7 @@ static uint64_t intent_to_seq(struct stimulus *test_data, struct arguments *args
 
         case RTT_UNALIGNED:
             args->rd = c_args.rd_valid;
-            args->params_ptr = g_params_prep_sequence(PARAMS_RTT_UNALLIGNED);
+            args->params_ptr = g_params_prep_sequence(PARAMS_RTT_UNALIGNED);
             if (args->params_ptr == VAL_TEST_PREP_SEQ_FAILED)
                 return VAL_ERROR;
             break;
@@ -500,6 +551,39 @@ static uint64_t intent_to_seq(struct stimulus *test_data, struct arguments *args
             args->params_ptr = g_params_prep_sequence(PARAMS_VMID_USED);
             if (args->params_ptr == VAL_TEST_PREP_SEQ_FAILED)
                 return VAL_ERROR;
+            break;
+
+        case NUM_AUX_PLANES_INVALID:
+            args->rd = c_args.rd_valid;
+            args->params_ptr = g_params_prep_sequence(PARAMS_PLANES_UNSUPPORTED);
+            break;
+
+        case AUX_RTT_UNALIGNED:
+            args->rd = c_args.rd_valid;
+            args->params_ptr = g_params_prep_sequence(PARAMS_AUX_RTT_UNALIGNED);
+            if (args->params_ptr == VAL_TEST_PREP_SEQ_FAILED)
+                return VAL_ERROR;
+            break;
+
+        case AUX_RTT_BASE_UNDELEGATED:
+            args->rd = c_args.rd_valid;
+            args->params_ptr = g_params_prep_sequence(PARAMS_AUX_RTT_UNDELEGATED);
+            if (args->params_ptr == VAL_TEST_PREP_SEQ_FAILED)
+                return VAL_ERROR;
+            break;
+
+        case AUX_VMID_INVALID:
+            args->rd = c_args.rd_valid;
+            args->params_ptr = g_params_prep_sequence(PARAMS_AUX_VMID_INVALID);
+            if (args->params_ptr == VAL_TEST_PREP_SEQ_FAILED)
+                return VAL_ERROR;
+            else if (args->params_ptr == VAL_SKIP_CHECK)
+                return VAL_SKIP_CHECK;
+            break;
+
+        case AUX_VMID_USED:
+            args->rd = c_args.rd_valid;
+            args->params_ptr = g_params_prep_sequence(PARAMS_AUX_VMID_USED);
             break;
 
         default:

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023-2024, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -28,16 +28,27 @@
 #define ESR_EL2_ISS_WIDTH 25
 #define ESR_EL2_ISS_MASK  MASK(ESR_EL2_ISS)
 
-#define ESR_EL2_EC_WFX        INPLACE(ESR_EL2_EC, 1)
-#define ESR_EL2_EC_SVC        INPLACE(ESR_EL2_EC, 21)
-#define ESR_EL2_EC_HVC        INPLACE(ESR_EL2_EC, 22)
-#define ESR_EL2_EC_SMC        INPLACE(ESR_EL2_EC, 23)
-#define ESR_EL2_EC_SYSREG    INPLACE(ESR_EL2_EC, 24)
-#define ESR_EL2_EC_INST_ABORT    INPLACE(ESR_EL2_EC, 32)
-#define ESR_EL2_EC_DATA_ABORT    INPLACE(ESR_EL2_EC, 36)
-#define ESR_EL2_EC_DATA_ABORT_SEL    INPLACE(ESR_EL2_EC, 37)
-#define ESR_EL2_EC_FPU        INPLACE(ESR_EL2_EC, 0x7)
+#define ESR_EL2_EC(val) (val & MASK(ESR_EL2_EC))
 
+#define ESR_EL2_EC_WFX                  INPLACE(ESR_EL2_EC, 1)
+#define ESR_EL2_EC_SVC                  INPLACE(ESR_EL2_EC, 21)
+#define ESR_EL2_EC_HVC                  INPLACE(ESR_EL2_EC, 22)
+#define ESR_EL2_EC_SMC                  INPLACE(ESR_EL2_EC, 23)
+#define ESR_EL2_EC_SYSREG               INPLACE(ESR_EL2_EC, 24)
+#define ESR_EL2_EC_INST_ABORT           INPLACE(ESR_EL2_EC, 32)
+#define ESR_EL2_EC_DATA_ABORT           INPLACE(ESR_EL2_EC, 36)
+#define ESR_EL2_EC_DATA_ABORT_SEL       INPLACE(ESR_EL2_EC, 37)
+#define ESR_EL2_EC_FPU                  INPLACE(ESR_EL2_EC, 0x7)
+
+#define ESR_EL2_WFX_TI(val) (val & MASK(ESR_EL2_WFX_TI))
+#define ESR_EL2_ABORT_FSC(val) (val & MASK(ESR_EL2_ABORT_FSC))
+
+#define ESR_EL2_WFX_TI_WFI      INPLACE(ESR_EL2_WFX_TI, 0x0)
+#define ESR_EL2_WFX_TI_WFE      INPLACE(ESR_EL2_WFX_TI, 0x1)
+
+
+#define ESR_EL2_WFX_TI_SHIFT  0
+#define ESR_EL2_WFX_TI_WIDTH  2
 
 /* Data/Instruction Abort ESR fields */
 #define ESR_EL2_ABORT_ISV_BIT        (1UL << 24)
@@ -64,8 +75,9 @@
 #define ESR_EL2_ABORT_FSC_WIDTH        6
 #define ESR_EL2_ABORT_FSC_MASK        MASK(ESR_EL2_ABORT_FSC)
 
-#define ESR_EL2_ABORT_FSC_TRANSLATION_FAULT    0x04
-#define ESR_EL2_ABORT_FSC_PERMISSION_FAULT    0x0c
+#define ESR_EL2_ABORT_FSC_TRANSLATION_FAULT      0x04
+#define ESR_EL2_ABORT_FSC_PERMISSION_FAULT       0x0c
+#define ESR_EL2_ABORT_FSC_PERMISSION_FAULT_L3    0x0f
 #define ESR_EL2_ABORT_FSC_LEVEL_SHIFT        0
 #define ESR_EL2_ABORT_FSC_LEVEL_WIDTH        2
 #define ESR_EL2_ABORT_FSC_LEVEL_MASK        MASK(ESR_EL2_ABORT_FSC_LEVEL)
@@ -102,4 +114,24 @@
 #define ESR_EL2_xVC_IMM_SHIFT        0
 #define ESR_EL2_xVC_IMM_WIDTH        16
 #define ESR_EL2_xVC_IMM_MASK        MASK(ESR_EL2_xVC_IMM)
+
+/* System Register encodings */
+#define SYSREG_ID_OP0_SHIFT	19
+#define SYSREG_ID_OP1_SHIFT	16
+#define SYSREG_ID_CRN_SHIFT	12
+#define SYSREG_ID_CRM_SHIFT	8
+#define SYSREG_ID_OP2_SHIFT	5
+
+#define SYSREG_ID(op0, op1, crn, crm, op2) \
+		((UL(op0) << SYSREG_ID_OP0_SHIFT) | \
+		 (UL(op1) << SYSREG_ID_OP1_SHIFT) | \
+		 (UL(crn) << SYSREG_ID_CRN_SHIFT) | \
+		 (UL(crm) << SYSREG_ID_CRM_SHIFT) | \
+		 (UL(op2) << SYSREG_ID_OP2_SHIFT))
+
+#define SYSREG_SCTLR_EL1			SYSREG_ID(3, 0, 1, 0, 0)
+#define SYSREG_SCTLR_EL3			SYSREG_ID(3, 3, 1, 0, 0)
+#define SYSREG_PMCR_EL0      		SYSREG_ID(3, 3, 9, 12, 0)
+
+
 #endif /* _VAL_ARCH_H_ */

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023-2024, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -276,6 +276,10 @@ void cmd_realm_destroy_host(void)
     params->rtt_level_start = realm[VALID_REALM].s2_starting_level;
     params->rtt_num_start = realm[VALID_REALM].num_s2_sl_rtts;
     params->vmid = realm[VALID_REALM].vmid;
+
+#ifdef RMM_V_1_1
+    params->flags1 |= VAL_REALM_FLAG_RTT_TREE_PP;
+#endif
 
     if (val_host_rmi_realm_create(c_args.rd_valid, (uint64_t)params))
     {

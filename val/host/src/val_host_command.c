@@ -1,5 +1,5 @@
  /*
- * Copyright (c) 2023, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023-2024, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -123,3 +123,53 @@ uint64_t val_host_undelegate_granule(void)
     return (uint64_t)gran;
 }
 
+uint64_t val_host_create_aux_mapping(uint64_t rd, uint64_t ipa, uint64_t index)
+{
+    val_smc_param_ts cmd_ret;
+    uint64_t rtt, rtt_ipa, level;
+
+    rtt = val_host_delegate_granule();
+    if (rtt == VAL_ERROR)
+        return VAL_ERROR;
+
+    rtt_ipa = ADDR_ALIGN_DOWN(ipa, val_host_rtt_level_mapsize(VAL_RTT_MAX_LEVEL - 1));
+
+    cmd_ret = val_host_rmi_rtt_aux_create(rd, rtt, rtt_ipa, VAL_RTT_MAX_LEVEL, index);
+
+    if (RMI_STATUS(cmd_ret.x0) == RMI_SUCCESS)
+        return VAL_SUCCESS;
+
+    if (RMI_STATUS(cmd_ret.x0) == RMI_ERROR_INPUT)
+    {
+        LOG(ERROR, "\tRTT_AUX_CREATE failed with ret=0x%x\n", cmd_ret.x0, 0);
+        return VAL_ERROR;
+    }
+
+    level = RMI_INDEX(cmd_ret.x0) + 1;
+
+    if (level == VAL_RTT_MAX_LEVEL)
+        return VAL_SUCCESS;
+
+    while (level <= VAL_RTT_MAX_LEVEL)
+    {
+        if (!cmd_ret.x0)
+        {
+            rtt = val_host_delegate_granule();
+            if (rtt == VAL_ERROR)
+                return VAL_ERROR;
+        }
+
+        rtt_ipa = ADDR_ALIGN_DOWN(ipa, val_host_rtt_level_mapsize(level - 1));
+        cmd_ret = val_host_rmi_rtt_aux_create(rd, rtt, rtt_ipa, level, index);
+
+        if (cmd_ret.x0)
+        {
+            LOG(ERROR, "\tRTT_AUX_CREATE failed with ret=0x%x\n", cmd_ret.x0, 0);
+            return VAL_ERROR;
+        }
+
+        level++;
+    }
+
+    return VAL_SUCCESS;
+}

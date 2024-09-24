@@ -1,5 +1,5 @@
  /*
- * Copyright (c) 2023, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023-2024, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -22,11 +22,12 @@
 #define IPA_ADDR_DESTROYED (2 * PAGE_SIZE)
 #define IPA_ADDR_UNPROTECTED (1UL << (IPA_WIDTH - 1))
 #define IPA_ADDR_UNPROTECTED_UNASSIGNED (IPA_ADDR_UNPROTECTED + PAGE_SIZE)
+#define IPA_ADDR_PROTECTED_AUX_ASSIGNED (7 * PAGE_SIZE)
 
 uint32_t val_host_realm_create_common(val_host_realm_ts *realm)
 {
     val_host_realm_params_ts *params;
-    uint64_t ret;
+    uint64_t ret, i, j;
 
     /* Allocate and delegate RD */
     realm->rd = (uint64_t)val_host_mem_alloc(PAGE_SIZE, PAGE_SIZE);
@@ -58,6 +59,35 @@ uint32_t val_host_realm_create_common(val_host_realm_ts *realm)
         }
     }
 
+    /* If realm is configured to use RTT tree per plane, Allocate and delegate
+     * auxiliary RTTs */
+    if (VAL_EXTRACT_BITS(realm->flags1, 0, 0) && realm->num_aux_planes > 0)
+    {
+        for (i = 0; i < realm->num_aux_planes; i++)
+        {
+            realm->rtt_aux_l0_addr[i] = (uint64_t)val_host_mem_alloc(
+           (realm->num_s2_sl_rtts * PAGE_SIZE), (realm->num_s2_sl_rtts * PAGE_SIZE));
+            if (!realm->rtt_aux_l0_addr[i])
+            {
+                LOG(ERROR, "\tFailed to allocate memory for rtt_addr\n", 0, 0);
+                goto undelegate_rd;
+            } else {
+                for (j = 0; j < realm->num_s2_sl_rtts; j++)
+                {
+                    ret = val_host_rmi_granule_delegate(realm->rtt_aux_l0_addr[i]
+                                                                     + (j * PAGE_SIZE));
+                    if (ret)
+                    {
+                        LOG(ERROR, "\trtt delegation failed, rtt_addr=0x%x, ret=0x%x\n",
+                        realm->rtt_aux_l0_addr[i], ret);
+                        goto free_rtt;
+                    }
+                }
+            }
+        }
+    }
+
+
     /* Allocate memory for params */
     params = val_host_mem_alloc(PAGE_SIZE, PAGE_SIZE);
     if (params == NULL)
@@ -75,6 +105,18 @@ uint32_t val_host_realm_create_common(val_host_realm_ts *realm)
     params->rtt_level_start = realm->s2_starting_level;
     params->rtt_num_start = realm->num_s2_sl_rtts;
     params->vmid = realm->vmid;
+    params->num_aux_planes = realm->num_aux_planes;
+    params->flags = realm->flags;
+    params->flags1 = realm->flags1;
+    for (i = 0; i < realm->num_aux_planes; i++)
+        params->aux_vmid[i] = realm->vmid + i + 1;
+    for (i = 0; i < realm->num_aux_planes; i++)
+        params->aux_rtt_base[i] = realm->rtt_aux_l0_addr[i];
+
+#ifdef RMM_V_1_1
+    if (realm->num_aux_planes == 0)
+        params->flags1 |= VAL_REALM_FLAG_RTT_TREE_PP;
+#endif
 
     /* Create realm */
     if (val_host_rmi_realm_create(realm->rd, (uint64_t)params))
@@ -481,3 +523,44 @@ uint64_t ipa_protected_unassigned_empty_prep_sequence(uint64_t rd)
     }
     return IPA_ADDR_PROTECTED_UNASSIGNED_EMPTY;
 }
+
+uint64_t ipa_protected_aux_assigned_prep_sequence(uint64_t rd, uint64_t rtt_index)
+{
+    /* Pick an address that has rtte.state = ASSIGNED */
+    if (create_mapping(IPA_ADDR_PROTECTED_AUX_ASSIGNED, true, rd))
+    {
+        LOG(ERROR, "\tRTT creation failed\n", 0, 0);
+        return VAL_TEST_PREP_SEQ_FAILED;
+    }
+
+    uint64_t data = g_delegated_prep_sequence();
+    if (data == VAL_TEST_PREP_SEQ_FAILED)
+        return VAL_TEST_PREP_SEQ_FAILED;
+
+    uint64_t src = g_undelegated_prep_sequence();
+    if (src == VAL_TEST_PREP_SEQ_FAILED)
+        return VAL_TEST_PREP_SEQ_FAILED;
+
+    uint64_t flags = RMI_NO_MEASURE_CONTENT;
+
+    if (val_host_rmi_data_create(rd, data, IPA_ADDR_PROTECTED_AUX_ASSIGNED, src, flags))
+    {
+        LOG(ERROR, "\tDATA CREATE failed\n", 0, 0);
+        return VAL_TEST_PREP_SEQ_FAILED;
+    }
+
+    if (val_host_create_aux_mapping(rd, IPA_ADDR_PROTECTED_AUX_ASSIGNED, rtt_index))
+    {
+        LOG(ERROR, "\tCouldn't create the assigned protected mapping\n", 0, 0);
+        return VAL_TEST_PREP_SEQ_FAILED;
+    }
+
+    if (val_host_rmi_rtt_aux_map_protected(rd, IPA_ADDR_PROTECTED_AUX_ASSIGNED, rtt_index).x0)
+    {
+        LOG(ERROR, "\tAUX MAP PROTECTED failed\n", 0, 0);
+        return VAL_TEST_PREP_SEQ_FAILED;
+    }
+
+    return IPA_ADDR_PROTECTED_AUX_ASSIGNED;
+}
+

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023-2024, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -10,6 +10,9 @@
 
 /* To enable WFI test */
 #define TEST_WFI_TRAP
+
+/* Defines the number of iterations WFX will be executed in loop for WFX tests */
+#define WFX_ITERATIONS  10
 
 
 /* Total number of CPUs(PEs) in system. ACS requires minimum of 2 CPUs.
@@ -166,6 +169,9 @@
 #define IRQ_VIRT_TIMER_EL1          27
 /* Non-secure EL2 physical timer interrupt */
 #define IRQ_PHY_TIMER_EL2           26
+
+/* Need to be adjusted based on platform */
+#define ITERATIONS_PER_MS 10000
 
 #define IPA_WIDTH_DEFAULT   32
 
