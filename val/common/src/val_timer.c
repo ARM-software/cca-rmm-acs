@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023-2024, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -144,3 +144,67 @@ void val_timer_set_phy_el2(uint64_t timeout)
     write_cnthp_ctl_el2(timer_ctrl_reg);
 }
 
+/**
+ *   @brief   This API Executes software loop based wait for ms.
+ *   @param   ms   - wait loop timeout value
+ *   @return  void
+**/
+static inline void val_wait_loop(uint64_t ms)
+{
+    uint64_t timeout = ms * ITERATIONS_PER_MS;
+    uint64_t loop;
+    volatile uint64_t count = 0; /* to prevent optimization*/
+
+    for (loop = 0; loop < timeout; loop++) {
+        /* Wait */
+        count++;
+    }
+}
+
+/**
+ *   @brief   This API Executes software loop based wait for ms.
+ *   @param   ms   - wait loop timeout value
+ *   @return  void
+**/
+void val_sp_sleep(uint64_t ms)
+{
+    val_wait_loop(ms);
+}
+
+/**
+ *   @brief   This API reads the system counter value.
+ *   @param   none.
+ *   @return  counter value.
+**/
+uint64_t val_read_cntpct_el0(void)
+{
+    return syscounter_read();
+}
+
+/**
+ *   @brief   This API reads the system counter frequency.
+ *   @param   none.
+ *   @return  counter frequency value.
+**/
+uint64_t val_read_cntfrq_el0(void)
+{
+    return read_cntfrq_el0();
+}
+
+/**
+ *   @brief   This API reads waits for ms using the arch timer.
+ *   @param   ms   - wait time in milli seconds.
+ *   @return  returns the wait time as read from system counter.
+**/
+uint64_t val_sleep_elapsed_time(uint64_t ms)
+{
+    uint64_t timer_freq = read_cntfrq_el0();
+    uint64_t time1 = virtualcounter_read();
+    volatile uint64_t time2 = time1;
+
+    while ((time2 - time1) < ((ms * timer_freq) / 1000U)) {
+        time2 = virtualcounter_read();
+    }
+
+    return ((time2 - time1) * 1000) / timer_freq;
+}

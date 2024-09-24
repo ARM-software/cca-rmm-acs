@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023-2024, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -34,7 +34,12 @@ enum test_intent {
     RTT_START_INVALID = 0X17,
     RTT_BASE_UNDELEGATED = 0X18,
     VMID_INVALID = 0X19,
-    VMID_USED = 0X1A
+    VMID_USED = 0X1A,
+    NUM_AUX_PLANES_INVALID = 0x1B,
+    AUX_RTT_UNALIGNED = 0x1C,
+    AUX_RTT_BASE_UNDELEGATED = 0x1D,
+    AUX_VMID_INVALID = 0x1E,
+    AUX_VMID_USED = 0x1F
 };
 
 struct stimulus {
@@ -111,6 +116,13 @@ static struct stimulus test_data[] = {
     .label = WPS_UNSUPPORTED,
     .status = RMI_ERROR_INPUT,
     .index = 0},
+#ifdef RMM_V_1_1
+    {.msg = "params_supp",
+    .abi = RMI_REALM_CREATE,
+    .label = NUM_AUX_PLANES_INVALID,
+    .status = RMI_ERROR_INPUT,
+    .index = 0},
+#endif
     {.msg = "alias",
     .abi = RMI_REALM_CREATE,
     .label = RTT_BASE_RD_ALIASED,
@@ -161,6 +173,13 @@ static struct stimulus test_data[] = {
     .label = RTT_UNALIGNED,
     .status = RMI_ERROR_INPUT,
     .index = 0},
+#ifdef RMM_V_1_1
+    {.msg = "rtt_align",
+    .abi = RMI_REALM_CREATE,
+    .label = AUX_RTT_UNALIGNED,
+    .status = RMI_ERROR_INPUT,
+    .index = 0},
+#endif
     {.msg = "rtt_num_level",
     .abi = RMI_REALM_CREATE,
     .label = RTT_START_INVALID,
@@ -171,6 +190,23 @@ static struct stimulus test_data[] = {
     .label = RTT_BASE_UNDELEGATED,
     .status = RMI_ERROR_INPUT,
     .index = 0},
+#ifdef RMM_V_1_1
+    {.msg = "rtt_state",
+    .abi = RMI_REALM_CREATE,
+    .label = AUX_RTT_BASE_UNDELEGATED,
+    .status = RMI_ERROR_INPUT,
+    .index = 0},
+    {.msg = "vmid_valid",
+    .abi = RMI_REALM_CREATE,
+    .label = AUX_VMID_INVALID,
+    .status = RMI_ERROR_INPUT,
+    .index = 0},
+    {.msg = "vmid_valid",
+    .abi = RMI_REALM_CREATE,
+    .label = AUX_VMID_USED,
+    .status = RMI_ERROR_INPUT,
+    .index = 0},
+#endif
     {.msg = "vmid_valid",
     .abi = RMI_REALM_CREATE,
     .label = VMID_INVALID,
@@ -181,4 +217,5 @@ static struct stimulus test_data[] = {
     .label = VMID_USED,
     .status = RMI_ERROR_INPUT,
     .index = 0}
+
 };

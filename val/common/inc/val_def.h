@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023-2024, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -10,6 +10,9 @@
 
 #include "pal_config_def.h"
 #include "val_arch.h"
+
+#define R_AARCH64_NONE      0
+#define R_AARCH64_RELATIVE  1027
 
 /* ACS Version Info */
 #define ACS_MAJOR_VERSION   1
@@ -72,26 +75,30 @@
  *
  * Protected Space - Base: 0x0
  * 0x000000 - 0x3fffff  Test use
- * 0x400000 - 0x4fffff  Realm Image regions
- * 0x500000 - 0x8fffff  Reserved
+ * 0x400000 - 0x4fffff  Plane 0 Image regions
+ * 0x500000 - 0x5fffff  Plane 1 Image regions
+ * 0x600000 - 0x6fffff  Plane 2 Image regions
+ * 0x700000 - 0x9fffff  Reserved
  * 0x900000 - (2^(ipa_width - 1) - 1) Test use
  *
  * Unprotected Space - Base: 2^(ipa_width - 1)
  * 0x000000 - 0x3fffff  Test use
- * 0x400000 - 0x4fffff  Reserved
- * 0x500000 - 0x5fffff  Shared NS region
- * 0x600000 - 0x8fffff  Reserved
+ * 0x400000 - 0x6fffff  Reserved
+ * 0x700000 - 0x7fffff  Shared NS region
+ * 0x800000 - 0x8fffff  Reserved
  * 0x900000 - ((2^ipa_width) - 1) Test use
  *
  * */
 
 //MSB=0
-#define VAL_REALM_IMAGE_BASE_IPA 0x400000
+#define VAL_PLANE0_IMAGE_BASE_IPA 0x400000
+#define VAL_PLANE1_IMAGE_BASE_IPA 0x500000
+#define VAL_PLANE2_IMAGE_BASE_IPA 0x600000
 
 /* Use this macro for test use IPA */
 #define VAL_TEST_USE_IPA 0x0
 
 //MSB is set at runtime based on ipa_width selected
-#define VAL_NS_SHARED_REGION_IPA_OFFSET 0x600000
+#define VAL_NS_SHARED_REGION_IPA_OFFSET 0x700000
 
 #endif /* _VAL_DEF_H_ */

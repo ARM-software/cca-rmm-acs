@@ -280,10 +280,9 @@ static void val_host_test_exit(void)
 static void val_host_print_acs_header(void)
 {
    LOG(ALWAYS, "\n\n", 0, 0);
-   LOG(ALWAYS,
-   "***** RMM ACS Version %d.%d *****\n\n",
-   ACS_MAJOR_VERSION,
-   ACS_MINOR_VERSION);
+   LOG(ALWAYS, "********* RMM v1.1 ACS **********\n\n", 0, 0)
+   LOG(ALWAYS, " 1. Planes - BETA \n\n", 0, 0)
+   LOG(ALWAYS, "*********************************\n\n", 0, 0)
 }
 
 /**

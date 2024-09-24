@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023-2024, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -31,8 +31,9 @@ enum test_intent {
     BASE_UNALIGNED = 0X14,
     TOP_GRAN_UNALIGNED = 0X15,
     TOP_RTT_UNALIGNED = 0X16,
-    BASE_MISMATCH_BASE_UNALIGNED = 0X17,
-    TOP_GRAN_UNALIGNED_TOP_RTT_UNALIGNED = 0X18
+    IPA_AUX_LIVE = 0X17,
+    BASE_MISMATCH_BASE_UNALIGNED = 0X18,
+    TOP_GRAN_UNALIGNED_TOP_RTT_UNALIGNED = 0X19
 };
 
 struct stimulus {
@@ -159,6 +160,13 @@ static struct stimulus test_data[] = {
     .label = TOP_RTT_UNALIGNED,
     .status = RMI_ERROR_RTT,
     .index = 2},
+#if defined(RMM_V_1_1)
+    {.msg = "aux_live",
+    .abi = RMI_RTT_SET_RIPAS,
+    .label = IPA_AUX_LIVE,
+    .status = RMI_ERROR_RTT_AUX,
+    .index = 3},
+#endif
     {.msg = "base_bound_compare_base_align",
     .abi = RMI_RTT_SET_RIPAS,
     .label = BASE_MISMATCH_BASE_UNALIGNED,

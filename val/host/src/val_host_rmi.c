@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023-2024, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -79,7 +79,7 @@ uint64_t val_host_rmi_data_create(uint64_t rd, uint64_t data,
     {
         return ret;
     }
-    val_host_update_granule_state(rd, GRANULE_DATA, data, ipa, 0);
+    val_host_update_granule_state(rd, GRANULE_DATA, data, ipa, 0, 0);
     return ret;
 
 }
@@ -101,7 +101,7 @@ uint64_t val_host_rmi_data_create_unknown(uint64_t rd,
     {
         return ret;
     }
-    val_host_update_granule_state(rd, GRANULE_DATA, data, ipa, 0);
+    val_host_update_granule_state(rd, GRANULE_DATA, data, ipa, 0, 0);
     return ret;
 
 }
@@ -120,7 +120,9 @@ uint64_t val_host_rmi_granule_delegate(uint64_t addr)
     {
         return ret;
     }
-    val_host_update_granule_state(0, GRANULE_DELEGATED, addr, 0, 0);
+
+    val_host_add_granule(GRANULE_DELEGATED, addr, NULL);
+
     return ret;
 }
 
@@ -138,7 +140,7 @@ uint64_t val_host_rmi_granule_undelegate(uint64_t addr)
     {
         return ret;
     }
-    val_host_update_destroy_granule_state(0, addr, 0, 0, GRANULE_UNDELEGATED, 0);
+    val_host_update_destroy_granule_state(0, addr, 0, 0, GRANULE_UNDELEGATED, 0, 0);
     return ret;
 }
 
@@ -182,7 +184,7 @@ uint64_t val_host_rmi_realm_create(uint64_t rd, uint64_t params_ptr)
     {
         return ret;
     }
-    val_host_update_granule_state(rd, GRANULE_RD, rd, 0, 0);
+    val_host_update_granule_state(rd, GRANULE_RD, rd, 0, 0, 0);
     return ret;
 }
 
@@ -200,7 +202,7 @@ uint64_t val_host_rmi_realm_destroy(uint64_t rd)
     {
         return ret;
     }
-    val_host_update_destroy_granule_state(rd, rd, 0, 0, GRANULE_DELEGATED, GRANULE_RD);
+    val_host_update_destroy_granule_state(rd, rd, 0, 0, GRANULE_DELEGATED, GRANULE_RD, 0);
     return ret;
 }
 
@@ -224,7 +226,7 @@ uint64_t val_host_rmi_data_destroy(uint64_t rd, uint64_t ipa,
     {
         return args.x0;
     }
-    val_host_update_destroy_granule_state(rd, 0, ipa, 0, GRANULE_DELEGATED, GRANULE_DATA);
+    val_host_update_destroy_granule_state(rd, 0, ipa, 0, GRANULE_DELEGATED, GRANULE_DATA, 0);
     return args.x0;
 }
 
@@ -245,7 +247,7 @@ uint64_t val_host_rmi_rec_create(uint64_t rd, uint64_t rec,
     {
         return ret;
     }
-    val_host_update_granule_state(rd, GRANULE_REC, rec, 0, 0);
+    val_host_update_granule_state(rd, GRANULE_REC, rec, 0, 0, 0);
     return ret;
 }
 
@@ -263,7 +265,7 @@ uint64_t val_host_rmi_rec_destroy(uint64_t rec)
     {
         return ret;
     }
-    val_host_update_destroy_granule_state(0, rec, 0, 0, GRANULE_DELEGATED, GRANULE_REC);
+    val_host_update_destroy_granule_state(0, rec, 0, 0, GRANULE_DELEGATED, GRANULE_REC, 0);
     return ret;
 }
 
@@ -299,6 +301,20 @@ rec_enter:
 
     return ret;
 }
+/**
+ *   @brief    Handles Relam S2 Permission change request
+ *   @param    rd              -  PA of the RD for the target Realm
+ *   @param    rec             -  PA of the target REC
+ *   @param    base            -  Base IPA
+ *   @param    top             -  Top IPA
+ *   @param    *progress_addr  -  Pointer to progress address
+ *   @param    *rtt_tree       -  Pointr to RTT tree
+ *   @return   SMC return arguments
+**/
+val_smc_param_ts val_host_rmi_rtt_set_s2ap(uint64_t rd, uint64_t rec, uint64_t base, uint64_t top)
+{
+    return val_smc_call(RMI_RTT_SET_S2AP, rd, rec, base, top, 0, 0, 0, 0, 0, 0);
+}
 
 /**
  *   @brief    Creates an RTT
@@ -318,7 +334,7 @@ uint64_t val_host_rmi_rtt_create(uint64_t rd, uint64_t rtt,
     {
         return ret;
     }
-    val_host_update_granule_state(rd, GRANULE_RTT, rtt, ipa, level);
+    val_host_update_granule_state(rd, GRANULE_RTT, rtt, ipa, level, 0);
     return ret;
 }
 
@@ -343,7 +359,7 @@ uint64_t val_host_rmi_rtt_fold(uint64_t rd,
 
     *rtt = args.x1;
 
-    val_host_update_destroy_granule_state(rd, 0, ipa, level, GRANULE_DELEGATED, GRANULE_RTT);
+    val_host_update_destroy_granule_state(rd, 0, ipa, level, GRANULE_DELEGATED, GRANULE_RTT, 0);
     return args.x0;
 }
 
@@ -369,7 +385,7 @@ uint64_t val_host_rmi_rtt_destroy(uint64_t rd,
         return args.x0;
     }
 
-    val_host_update_destroy_granule_state(rd, 0, ipa, level, GRANULE_DELEGATED, GRANULE_RTT);
+    val_host_update_destroy_granule_state(rd, 0, ipa, level, GRANULE_DELEGATED, GRANULE_RTT, 0);
     return args.x0;
 }
 
@@ -391,7 +407,7 @@ uint64_t val_host_rmi_rtt_map_unprotected(uint64_t rd, uint64_t ipa,
     {
         return ret;
     }
-    val_host_update_granule_state(rd, GRANULE_UNPROTECTED, ipa, ipa, level);
+    val_host_update_granule_state(rd, GRANULE_UNPROTECTED, ipa, ipa, level, 0);
     return ret;
 }
 
@@ -439,7 +455,8 @@ uint64_t val_host_rmi_rtt_unmap_unprotected(uint64_t rd, uint64_t ipa,
     {
         return args.x0;
     }
-    val_host_update_destroy_granule_state(rd, ipa, 0, 0, GRANULE_UNPROTECTED, GRANULE_UNPROTECTED);
+    val_host_update_destroy_granule_state(rd, ipa, 0, 0, GRANULE_UNPROTECTED,
+                                                         GRANULE_UNPROTECTED, 0);
     return args.x0;
 }
 
@@ -480,4 +497,373 @@ uint64_t val_host_rmi_rtt_set_ripas(uint64_t rd, uint64_t rec,
 
     *out_top = args.x1;
     return args.x0;
+}
+
+/**
+ *   @brief    Creates an Auxiliary RTT
+ *   @param    rd           -  PA of the RD for the target Realm
+ *   @param    rtt          -  PA of the target RTT
+ *   @param    ipa          -  Base of the IPA range described by the RTT
+ *   @param    level        -  RTT level
+ *   @param    index        -  RTT index
+ *   @return   SMC return arguments
+**/
+val_smc_param_ts val_host_rmi_rtt_aux_create(uint64_t rd, uint64_t rtt,
+              uint64_t ipa, uint64_t level, uint64_t index)
+{
+    val_smc_param_ts args;
+
+    args = val_smc_call(RMI_RTT_AUX_CREATE, rd, rtt, ipa, level, index, 0, 0, 0, 0, 0);
+
+    if (args.x0)
+        return args;
+
+    val_host_update_granule_state(rd, GRANULE_RTT_AUX, rtt, ipa, level, index);
+
+    return args;
+}
+
+/**
+ *   @brief    Destroys an Auxiliary RTT
+ *   @param    rd           -  PA of the RD for the target Realm
+ *   @param    ipa          -  Base of the IPA range described by the RTT
+ *   @param    level        -  RTT level
+ *   @param    index        -  RTT index
+ *   @param    rtt_destroy  -  Pointer to store output values for given ABI
+ *   @return   SMC return arguments
+**/
+val_smc_param_ts val_host_rmi_rtt_aux_destroy(uint64_t rd,
+                            uint64_t ipa, uint64_t level, uint64_t index)
+{
+    val_smc_param_ts args;
+
+    args = val_smc_call(RMI_RTT_AUX_DESTROY, rd, ipa, level, index, 0, 0, 0, 0, 0, 0);
+
+    if (args.x0)
+        return args;
+
+    val_host_update_destroy_granule_state(rd, 0, ipa, level, GRANULE_DELEGATED,
+                                                             GRANULE_RTT_AUX, index);
+
+    return args;
+}
+
+/**
+ *   @brief    Destroys a homogeneous auxiliary RTT
+ *   @param    rd           -  PA of the RD for the target Realm
+ *   @param    ipa          -  Base of the IPA range described by the RTT
+ *   @param    level        -  RTT level
+ *   @param    index        -  RTT index
+ *   @param    rtt          -  Pointer to store PA of the RTT which was destroyed
+ *   @return   SMC return arguments
+**/
+val_smc_param_ts val_host_rmi_rtt_aux_fold(uint64_t rd,
+                                uint64_t ipa, uint64_t level, uint64_t index)
+{
+    val_smc_param_ts args;
+
+    args = val_smc_call(RMI_RTT_AUX_FOLD, rd, ipa, level, index, 0, 0, 0, 0, 0, 0);
+
+    if (args.x0)
+        return args;
+
+    val_host_update_destroy_granule_state(rd, 0, ipa, level, GRANULE_DELEGATED,
+                                                             GRANULE_RTT_AUX, index);
+    return args;
+}
+
+/**
+ *   @brief    Creates a auxiliary mapping from an Protected IPA to a Non-secure PA
+ *   @param    rd           -  PA of the RD for the target Realm
+ *   @param    ipa          -  IPA at which the Granule will be mapped in the target Realm
+ *   @param    index        -  RTT index
+ *   @return   SMC return arguments
+**/
+val_smc_param_ts val_host_rmi_rtt_aux_map_protected(uint64_t rd, uint64_t ipa, uint64_t index)
+{
+    val_smc_param_ts args;
+
+    args = val_smc_call(RMI_RTT_AUX_MAP_PROTECTED, rd, ipa, index, 0, 0, 0, 0, 0, 0, 0);
+
+    if (args.x0)
+        return args;
+
+    val_host_update_aux_rtt_info(GRANULE_DATA, rd, index, ipa, true);
+
+    return args;
+}
+
+/**
+ *   @brief    Creates a auxiliary mapping from an Unprotected IPA to a Non-secure PA
+ *   @param    rd           -  PA of the RD for the target Realm
+ *   @param    ipa          -  IPA at which the Granule will be mapped in the target Realm
+ *   @param    index        -  RTT index
+ *   @return   Returns command return status
+**/
+val_smc_param_ts val_host_rmi_rtt_aux_map_unprotected(uint64_t rd, uint64_t ipa, uint64_t index)
+{
+    val_smc_param_ts args;
+
+    args = val_smc_call(RMI_RTT_AUX_MAP_UNPROTECTED, rd, ipa, index, 0, 0, 0, 0, 0, 0, 0);
+
+    if (args.x0)
+        return args;
+
+    val_host_update_aux_rtt_info(GRANULE_UNPROTECTED, rd, index, ipa, true);
+
+    return args;
+}
+
+/**
+ *   @brief    Removes a auxiliary mapping at an protected IPA
+ *   @param    rd           -  PA of the RD for the target Realm
+ *   @param    ipa          -  IPA at which the Granule is mapped in the target Realm
+ *   @param    index        -  RTT index
+ *   @param    top          -  Pointer to store Top IPA of non-live RTT entries,
+ *                             from entry at which the RTT walk terminated
+ *   @return   SMC return arguments
+**/
+val_smc_param_ts val_host_rmi_rtt_aux_unmap_protected(uint64_t rd, uint64_t ipa, uint64_t index)
+{
+    val_smc_param_ts args;
+
+    args = val_smc_call(RMI_RTT_AUX_UNMAP_PROTECTED, rd, ipa, index, 0, 0, 0, 0, 0, 0, 0);
+
+    if (args.x0)
+        return args;
+
+    val_host_update_aux_rtt_info(GRANULE_DATA, rd, index, ipa, false);
+
+    return args;
+}
+
+/**
+ *   @brief    Removes a mapping at an Unprotected IPA
+ *   @param    rd           -  PA of the RD for the target Realm
+ *   @param    ipa          -  IPA at which the Granule is mapped in the target Realm
+ *   @param    level        -  RTT level
+ *   @param    top          -  Pointer to store Top IPA of non-live RTT entries,
+ *                             from entry at which the RTT walk terminated
+ *   @return   SMC return arguments
+**/
+val_smc_param_ts val_host_rmi_rtt_aux_unmap_unprotected(uint64_t rd, uint64_t ipa, uint64_t index)
+{
+    val_smc_param_ts args;
+
+    args = val_smc_call(RMI_RTT_AUX_UNMAP_UNPROTECTED, rd, ipa, index, 0, 0, 0, 0, 0, 0, 0);
+
+    if (args.x0)
+        return args;
+
+    val_host_update_aux_rtt_info(GRANULE_UNPROTECTED, rd, index, ipa, false);
+
+    return args;
+}
+
+/**
+ *   @brief    Delegate an IO Granule.
+ *   @param    addr         -  PA of the target Granule
+ *   @param    flags        -  Flags
+ *   @return   SMC return arguments
+**/
+val_smc_param_ts val_host_rmi_granule_io_delegate(uint64_t addr, uint64_t flags)
+{
+    return val_smc_call(RMI_GRANULE_IO_DELEGATE, addr, flags, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+/**
+ *   @brief    Undelegate an IO Granule.
+ *   @param    addr         -  PA of the target Granule
+ *   @return   SMC return arguments
+**/
+val_smc_param_ts val_host_rmi_granule_io_undelegate(uint64_t addr)
+{
+    return val_smc_call(RMI_GRANULE_IO_UNDELEGATE, addr, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+/**
+ *   @brief    Creates an IO Granule.
+ *   @param    rd         -  PA of the RD for the target Realm
+ *   @param    ipa        -  IPA at which the Granule will be mapped in the target Realm
+ *   @param    flags      -  Flags
+ *   @param    desc       -  RTTE descriptor
+ *   @return   SMC return arguments
+**/
+val_smc_param_ts val_host_rmi_io_create(uint64_t rd, uint64_t ipa, uint64_t flags, uint64_t desc)
+{
+    return val_smc_call(RMI_IO_CREATE, rd, ipa, flags, desc, 0, 0, 0, 0, 0, 0);
+}
+
+/**
+ *   @brief    Destroys an IO Granule.
+ *   @param    rd         -  PA of the RD which owns the target IO Granule
+ *   @param    ipa        -  IPA at which the Granule is mapped in the target Realm
+ *   @return   SMC return arguments
+**/
+val_smc_param_ts val_host_rmi_io_destroy(uint64_t rd, uint64_t ipa)
+{
+    return val_smc_call(RMI_IO_DESTROY, rd, ipa, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+/**
+ *   @brief    Abort device communication associated with a PDEV.
+ *   @param    pdev_ptr         -  PA of the PDEV
+ *   @return   SMC return arguments
+**/
+val_smc_param_ts val_host_rmi_pdev_abort(uint64_t pdev_ptr)
+{
+    return val_smc_call(RMI_PDEV_ABORT, pdev_ptr, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+/**
+ *   @brief    Perform device communication associated with a PDEV.
+ *   @param    pdev_ptr         -  PA of the PDEV
+ *   @param    data_ptr         -  PA of the communication data structure
+ *   @return   SMC return arguments
+**/
+val_smc_param_ts val_host_rmi_pdev_communicate(uint64_t pdev_ptr, uint64_t data_ptr)
+{
+    return val_smc_call(RMI_PDEV_COMMUNICATE, pdev_ptr, data_ptr, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+/**
+ *   @brief    Create a PDEV.
+ *   @param    pdev_ptr         -  PA of the PDEV
+ *   @param    params_ptr       -  PA of PDEV parameters
+ *   @return   SMC return arguments
+**/
+val_smc_param_ts val_host_rmi_pdev_create(uint64_t pdev_ptr, uint64_t params_ptr)
+{
+    return val_smc_call(RMI_PDEV_CREATE, pdev_ptr, params_ptr, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+/**
+ *   @brief    Destroy a PDEV
+ *   @param    pdev_ptr         -  PA of the PDEV
+ *   @return   SMC return arguments
+**/
+val_smc_param_ts val_host_rmi_pdev_destroy(uint64_t pdev_ptr)
+{
+    return val_smc_call(RMI_PDEV_DESTROY, pdev_ptr, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+/**
+ *   @brief    Get state of a PDEV
+ *   @param    pdev_ptr         -  PA of the PDEV
+ *   @return   SMC return arguments
+**/
+val_smc_param_ts val_host_rmi_pdev_get_state(uint64_t pdev_ptr)
+{
+    return val_smc_call(RMI_PDEV_GET_STATE, pdev_ptr, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+/**
+ *   @brief    Reset the IDE link of a PDEV.
+ *   @param    pdev_ptr         -  PA of the PDEV
+ *   @return   SMC return arguments
+**/
+val_smc_param_ts val_host_rmi_pdev_ide_reset(uint64_t pdev_ptr)
+{
+    return val_smc_call(RMI_PDEV_IDE_RESET, pdev_ptr, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+/**
+ *   @brief    Notify the RMM of an event related to a PDEV.
+ *   @param    pdev_ptr    -  PA of the PDEV
+ *   @param    ev          -  Event type
+ *   @return   SMC return arguments
+**/
+val_smc_param_ts val_host_rmi_pdev_notify(uint64_t pdev_ptr, uint64_t ev)
+{
+    return val_smc_call(RMI_PDEV_NOTIFY, pdev_ptr, ev, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+/**
+ *   @brief    Provide public key associated with a PDEV.
+ *   @param    pdev_ptr         -  PA of the PDEV
+ *   @param    key              -  PA of the key
+ *   @param    len              -  Length of the key in bytes
+ *   @param    algo             -  Signature algorithm
+ *   @return   SMC return arguments
+**/
+val_smc_param_ts val_host_rmi_pdev_set_key(uint64_t pdev_ptr, uint64_t key,
+                                                uint64_t len, uint8_t algo)
+{
+    return val_smc_call(RMI_PDEV_SET_KEY, pdev_ptr, key, len, algo, 0, 0, 0, 0, 0, 0);
+}
+
+/**
+ *   @brief    Stop a PDEV.
+ *   @param    pdev_ptr         -  PA of the PDEV
+ *   @return   SMC return arguments
+**/
+val_smc_param_ts val_host_rmi_pdev_stop(uint64_t pdev_ptr)
+{
+    return val_smc_call(RMI_PDEV_STOP, pdev_ptr, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+/**
+ *   @brief    Abort device communication associated with a VDEV.
+ *   @param    vdev_ptr         -  PA of the VDEV
+ *   @return   SMC return arguments
+**/
+val_smc_param_ts val_host_rmi_vdev_abort(uint64_t vdev_ptr)
+{
+    return val_smc_call(RMI_VDEV_ABORT, vdev_ptr, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+/**
+ *   @brief    Perform device communication associated with a VDEV.
+ *   @param    vdev_ptr         -  PA of the VDEV
+ *   @param    data_ptr         -  PA of the communication data structure
+ *   @return   SMC return arguments
+**/
+val_smc_param_ts val_host_rmi_vdev_communicate(uint64_t vdev_ptr, uint64_t data_ptr)
+{
+    return val_smc_call(RMI_VDEV_COMMUNICATE, vdev_ptr, data_ptr, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+/**
+ *   @brief    Create a VDEV.
+ *   @param    rd               -  PA of the RD
+ *   @param    pdev_ptr         -  PA of the PDEV
+ *   @param    vdev_ptr         -  PA of the VDEV
+ *   @param    params_ptr       -  PA of VDEV parameters
+ *   @return   SMC return arguments
+**/
+val_smc_param_ts val_host_rmi_vdev_create(uint64_t rd, uint64_t pdev_ptr,
+                                  uint64_t vdev_ptr, uint64_t params_ptr)
+{
+    return val_smc_call(RMI_VDEV_CREATE, rd, pdev_ptr, vdev_ptr, params_ptr, 0, 0, 0, 0, 0, 0);
+}
+
+/**
+ *   @brief    Destroy a VDEV.
+ *   @param    vdev_ptr         -  PA of the VDEV
+ *   @return   SMC return arguments
+**/
+val_smc_param_ts val_host_rmi_vdev_destroy(uint64_t vdev_ptr)
+{
+    return val_smc_call(RMI_VDEV_DESTROY, vdev_ptr, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+/**
+ *   @brief    Get state of a VDEV.
+ *   @param    vdev_ptr         -  PA of the VDEV
+ *   @return   SMC return arguments
+ *                     X1 state  - VDEV state
+**/
+val_smc_param_ts val_host_rmi_vdev_get_state(uint64_t vdev_ptr)
+{
+    return val_smc_call(RMI_VDEV_GET_STATE, vdev_ptr, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+/**
+ *   @brief    Stop a VDEV.
+ *   @param    vdev_ptr         -  PA of the VDEV
+ *   @return   SMC return arguments
+**/
+val_smc_param_ts val_host_rmi_vdev_stop(uint64_t vdev_ptr)
+{
+    return val_smc_call(RMI_VDEV_STOP, vdev_ptr, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }

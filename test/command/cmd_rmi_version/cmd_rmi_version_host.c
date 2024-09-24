@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023-2024, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -7,7 +7,6 @@
 
 #include "test_database.h"
 #include "val_host_rmi.h"
-#include "rmi_version.h"
 
 #define VER(maj, min) (((uint64_t)(maj << 16)) | ((uint64_t)min))
 

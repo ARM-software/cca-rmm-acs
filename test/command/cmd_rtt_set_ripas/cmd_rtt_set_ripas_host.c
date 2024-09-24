@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023-2024, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -48,6 +48,9 @@ static uint64_t g_rec_other_owner_prep_sequence(void)
     realm[INVALID_REALM].s2_starting_level = 0;
     realm[INVALID_REALM].num_s2_sl_rtts = 1;
     realm[INVALID_REALM].vmid = 1;
+#if defined(RMM_V_1_1)
+    realm[INVALID_REALM].vmid = 2;
+#endif
     realm[INVALID_REALM].rec_count = 1;
 
     rec_params.pc = 0;
@@ -73,18 +76,38 @@ static uint64_t g_rec_other_owner_prep_sequence(void)
 static uint64_t rd_valid_prep_sequence(void)
 {
     uint64_t ret, ipa_base;
+    val_host_realm_flags1_ts realm_flags;
 
     val_memset(&realm[VALID_REALM], 0, sizeof(realm[VALID_REALM]));
+    val_memset(&realm_flags, 0, sizeof(realm_flags));
 
     val_host_realm_params(&realm[VALID_REALM]);
 
     realm[VALID_REALM].vmid = VALID_REALM;
     realm[VALID_REALM].rec_count = 2;
 
+#if defined(RMM_V_1_1)
+    realm[VALID_REALM].num_aux_planes = 1;
+    realm_flags.rtt_tree_pp = RMI_FEATURE_TRUE;
+    val_memcpy(&realm[VALID_REALM].flags1, &realm_flags, sizeof(realm[VALID_REALM].flags1));
+#endif
+
     /* Populate realm with two RECs*/
-    if (val_host_realm_setup(&realm[VALID_REALM], 1))
+    if (val_host_realm_setup(&realm[VALID_REALM], false))
     {
         LOG(ERROR, "\tRealm setup failed\n", 0, 0);
+        return VAL_TEST_PREP_SEQ_FAILED;
+    }
+
+#if defined(RMM_V_1_1)
+    if (ipa_protected_aux_assigned_prep_sequence(realm[VALID_REALM].rd, 1)
+                                                     == VAL_TEST_PREP_SEQ_FAILED)
+        return VAL_TEST_PREP_SEQ_FAILED;
+#endif
+
+    if (val_host_realm_activate(&realm[VALID_REALM]))
+    {
+        LOG(ERROR, "\tRealm Activate Failed\n", 0, 0);
         return VAL_TEST_PREP_SEQ_FAILED;
     }
 
@@ -161,6 +184,13 @@ static uint64_t top_rtt_unaligned_prep_sequence(void)
 {
     uint64_t ret;
 
+    if (!val_host_rmm_supports_rtt_tree_per_plane() ||
+        !val_host_rmm_supports_planes())
+    {
+        LOG(ALWAYS, "\tNo support for RTT tree per plane\n", 0, 0);
+        return VAL_SKIP_CHECK;
+    }
+
     ret = val_host_rmi_rec_enter(realm[VALID_REALM].rec[1], realm[VALID_REALM].run[1]);
     if (ret)
     {
@@ -178,6 +208,26 @@ static uint64_t top_rtt_unaligned_prep_sequence(void)
     return rec_exit->ripas_base;
 }
 
+static uint64_t ipa_aux_live_prep_sequence(void)
+{
+    uint64_t ret;
+
+    ret = val_host_rmi_rec_enter(realm[VALID_REALM].rec[1], realm[VALID_REALM].run[1]);
+    if (ret)
+    {
+        LOG(ERROR, "\tREC_ENTER failed with ret value: %d\n", ret, 0);
+        return VAL_TEST_PREP_SEQ_FAILED;
+    } else if (val_host_check_realm_exit_ripas_change(
+                                    (val_host_rec_run_ts *)realm[VALID_REALM].run[1]))
+    {
+        LOG(ERROR, "\tRipas change req failed\n", 0, 0);
+        return VAL_TEST_PREP_SEQ_FAILED;
+    }
+
+    rec_exit =  &(((val_host_rec_run_ts *)realm[VALID_REALM].run[1])->exit);
+
+    return rec_exit->ripas_base;
+}
 
 static uint64_t valid_input_args_prep_sequence(void)
 {
@@ -373,6 +423,17 @@ static uint64_t intent_to_seq(struct stimulus *test_data, struct arguments *args
             args->top = args->base + L2_SIZE + L3_SIZE;
             break;
 
+        case IPA_AUX_LIVE:
+            args->rd = c_args.rd_valid;
+            args->rec = realm[VALID_REALM].rec[1];
+            args->base = ipa_aux_live_prep_sequence();
+            if (args->base == VAL_TEST_PREP_SEQ_FAILED)
+                return VAL_ERROR;
+            else if (args->base == VAL_SKIP_CHECK)
+                return VAL_SKIP_CHECK;
+            args->top = args->base + PAGE_SIZE;
+            break;
+
         case BASE_MISMATCH_BASE_UNALIGNED:
             args->rd = c_args.rd_valid;
             args->rec = c_args.rec_valid;
@@ -412,7 +473,14 @@ void cmd_rtt_set_ripas_host(void)
         LOG(TEST, test_data[i].msg, 0, 0);
         LOG(TEST, "; intent id : 0x%x \n", test_data[i].label, 0);
 
-        if (intent_to_seq(&test_data[i], &args)) {
+        ret = intent_to_seq(&test_data[i], &args);
+        if (ret == VAL_SKIP_CHECK)
+        {
+            LOG(TEST, "\tSkipping Check %d\n", i + 1, 0);
+            continue;
+        }
+        else if (ret == VAL_ERROR) {
+            LOG(ERROR, "\n\t Intent to sequence failed \n", 0, 0);
             val_set_status(RESULT_FAIL(VAL_ERROR_POINT(2)));
             goto exit;
         }

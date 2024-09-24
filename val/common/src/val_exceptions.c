@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023-2024, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -31,7 +31,7 @@ bool val_irq_current(void)
 static bool default_sync_current_exception(void)
 {
     uint64_t esr = 0, elr = 0, far = 0, ec;
-    uint64_t current_el = val_read_current_el();
+    uint64_t current_el = (val_read_current_el() & 0xc) >> 2;
 
     if (current_el == EL2)
     {
