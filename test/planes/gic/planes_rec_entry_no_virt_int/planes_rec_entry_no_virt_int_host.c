@@ -17,10 +17,8 @@ void planes_rec_entry_no_virt_int_host(void)
     static val_host_realm_ts realm;
     val_host_realm_flags1_ts realm_flags;
     uint64_t ret;
-    val_smc_param_ts cmd_ret;
     val_host_rec_exit_ts *rec_exit = NULL;
     val_host_rec_enter_ts *rec_enter = NULL;
-    uint64_t s2ap_ipa_base, s2ap_ipa_top;
     uint64_t phys;
 
     /* Skip if RMM do not support planes */
@@ -111,85 +109,10 @@ void planes_rec_entry_no_virt_int_host(void)
         goto destroy_realm;
     }
 
-    s2ap_ipa_base = rec_exit->s2ap_base;
-    s2ap_ipa_top =  rec_exit->s2ap_top;
-
-    while (s2ap_ipa_base != s2ap_ipa_top) {
-        cmd_ret = val_host_rmi_rtt_set_s2ap(realm.rd, realm.rec[0], s2ap_ipa_base, s2ap_ipa_top);
-        if (cmd_ret.x0) {
-            LOG(ERROR, "\nRMI_SET_S2AP failed with ret= 0x%x\n", cmd_ret.x0, 0);
-            goto destroy_realm;
-        }
-        s2ap_ipa_base = cmd_ret.x1;
-    }
-
-    rec_enter->flags = 0x0;
-
-    /* Enter REC[0]  */
-    ret = val_host_rmi_rec_enter(realm.rec[0], realm.run[0]);
-    if (ret)
+    /* Update S2AP for the requested memory range */
+    if (val_host_set_s2ap(&realm))
     {
-        LOG(ERROR, "\tRec enter failed, ret=%x\n", ret, 0);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(8)));
-        goto destroy_realm;
-    }
-
-    /* Check that REC exit was due S2AP change request */
-    if (rec_exit->exit_reason != RMI_EXIT_S2AP_CHANGE) {
-        LOG(ERROR, "\tUnexpected REC exit, %d. ESR: %lx \n", rec_exit->exit_reason, rec_exit->esr);
-        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(9)));
-        goto destroy_realm;
-    }
-
-    s2ap_ipa_base = rec_exit->s2ap_base;
-    s2ap_ipa_top =  rec_exit->s2ap_top;
-
-    while (s2ap_ipa_base != s2ap_ipa_top) {
-        cmd_ret = val_host_rmi_rtt_set_s2ap(realm.rd, realm.rec[0], s2ap_ipa_base, s2ap_ipa_top);
-
-        /* RTT_SET_S2AP requires all RTTs to be create when running in RTT per plane
-         * configuration */
-        if (RMI_STATUS(cmd_ret.x0) == RMI_ERROR_RTT)
-        {
-                if (create_mapping(s2ap_ipa_base, false, realm.rd))
-                {
-                    LOG(ERROR, "\tRTT_AUX_CREATE failed\n", 0, 0);
-                    val_set_status(RESULT_FAIL(VAL_ERROR_POINT(10)));
-                    goto destroy_realm;
-                }
-            continue;
-        }
-        else if (RMI_STATUS(cmd_ret.x0) == RMI_ERROR_RTT_AUX)
-        {
-            for (uint64_t i = 0; i < realm.num_aux_planes; i++)
-            {
-                if (val_host_create_aux_mapping(realm.rd, s2ap_ipa_base, i + 1))
-                {
-                    LOG(ERROR, "\tRTT_AUX_CREATE failed\n", 0, 0);
-                    val_set_status(RESULT_FAIL(VAL_ERROR_POINT(11)));
-                    goto destroy_realm;
-                }
-            }
-
-            continue;
-        }
-        else if (RMI_STATUS(cmd_ret.x0) == RMI_ERROR_INPUT) {
-            LOG(ERROR, "\nRMI_SET_S2AP failed with ret= 0x%x\n", cmd_ret.x0, 0);
-            val_set_status(RESULT_FAIL(VAL_ERROR_POINT(12)));
-            goto destroy_realm;
-        }
-
-        s2ap_ipa_base = cmd_ret.x1;
-    }
-
-    rec_enter->flags = 0x0;
-
-    /* Enter REC[0]  */
-    ret = val_host_rmi_rec_enter(realm.rec[0], realm.run[0]);
-    if (ret)
-    {
-        LOG(ERROR, "\tRec enter failed, ret=%x\n", ret, 0);
-        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(13)));
         goto destroy_realm;
     }
 
@@ -199,7 +122,7 @@ void planes_rec_entry_no_virt_int_host(void)
                                 NON_EMULATABLE_DA, ESR_WnR_WRITE))
     {
         LOG(ERROR, "\tREC exit DA: params mismatch\n", 0, 0);
-        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(14)));
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(11)));
         goto destroy_realm;
     }
 
@@ -208,7 +131,7 @@ void planes_rec_entry_no_virt_int_host(void)
     if (!phys)
     {
         LOG(ERROR, "\tval_host_mem_alloc failed\n", 0, 0);
-        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(16)));
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(12)));
         goto destroy_realm;
     }
 
@@ -216,7 +139,7 @@ void planes_rec_entry_no_virt_int_host(void)
     if (ret)
     {
         LOG(ERROR, "\tDATA_CREATE_UNKNOWN failed, ret = %d \n", ret, 0);
-        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(17)));
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(13)));
         goto destroy_realm;
     }
 
@@ -229,14 +152,14 @@ void planes_rec_entry_no_virt_int_host(void)
     if (ret)
     {
         LOG(ERROR, "\tRec enter failed, ret=%x\n", ret, 0);
-        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(18)));
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(14)));
         goto destroy_realm;
     }
 
     /* Check that REC exit was due to Host call form P0 after completing test */
     if (rec_exit->exit_reason != RMI_EXIT_HOST_CALL) {
         LOG(ERROR, "\tUnexpected REC exit, %d. ESR: %lx \n", rec_exit->exit_reason, rec_exit->esr);
-        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(19)));
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(15)));
         goto destroy_realm;
     }
 

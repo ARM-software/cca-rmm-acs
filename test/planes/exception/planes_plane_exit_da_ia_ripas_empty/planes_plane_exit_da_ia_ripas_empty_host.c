@@ -6,6 +6,7 @@
  */
 #include "test_database.h"
 #include "val_host_rmi.h"
+#include "val_host_helpers.h"
 
 #define PROTECTED_IPA 0x1000
 
@@ -17,7 +18,6 @@ void planes_plane_exit_da_ia_ripas_empty_host(void)
     val_smc_param_ts cmd_ret;
     val_host_rec_exit_ts *rec_exit = NULL;
     val_host_rec_enter_ts *rec_enter = NULL;
-    uint64_t s2ap_ipa_base, s2ap_ipa_top;
     val_data_create_ts data_create;
     uint64_t ripas_ipa, ripas_size, out_top;
     uint64_t ipa_base, ipa_top;
@@ -186,64 +186,17 @@ void planes_plane_exit_da_ia_ripas_empty_host(void)
         goto destroy_realm;
     }
 
-    s2ap_ipa_base = rec_exit->s2ap_base;
-    s2ap_ipa_top =  rec_exit->s2ap_top;
-
-    while (s2ap_ipa_base != s2ap_ipa_top) {
-        cmd_ret = val_host_rmi_rtt_set_s2ap(realm.rd, realm.rec[0], s2ap_ipa_base, s2ap_ipa_top);
-        if (cmd_ret.x0) {
-            LOG(ERROR, "\nRMI_SET_S2AP failed with ret= 0x%x\n", cmd_ret.x0, 0);
-            goto destroy_realm;
-        }
-        s2ap_ipa_base = cmd_ret.x1;
-    }
-
-    rec_enter->flags = 0x0;
-
-    /* Enter REC[0]  */
-    ret = val_host_rmi_rec_enter(realm.rec[0], realm.run[0]);
-    if (ret)
+    /* Update S2AP for the requested memory range */
+    if (val_host_set_s2ap(&realm))
     {
-        LOG(ERROR, "\tRec enter failed, ret=%x\n", ret, 0);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(14)));
         goto destroy_realm;
     }
 
-    /* Check that REC exit was due S2AP change request */
-    if (rec_exit->exit_reason != RMI_EXIT_S2AP_CHANGE) {
-        LOG(ERROR, "\tUnexpected REC exit, %d. ESR: %lx \n", rec_exit->exit_reason, rec_exit->esr);
-        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(15)));
-        goto destroy_realm;
-    }
-
-    s2ap_ipa_base = rec_exit->s2ap_base;
-    s2ap_ipa_top =  rec_exit->s2ap_top;
-
-    while (s2ap_ipa_base != s2ap_ipa_top) {
-        cmd_ret = val_host_rmi_rtt_set_s2ap(realm.rd, realm.rec[0], s2ap_ipa_base, s2ap_ipa_top);
-        if (cmd_ret.x0) {
-            LOG(ERROR, "\nRMI_SET_S2AP failed with ret= 0x%x\n", cmd_ret.x0, 0);
-            goto destroy_realm;
-        }
-        s2ap_ipa_base = cmd_ret.x1;
-    }
-
-    rec_enter->flags = 0x0;
-
-    /* Enter REC[0]  */
-    ret = val_host_rmi_rec_enter(realm.rec[0], realm.run[0]);
-    if (ret)
-    {
-        LOG(ERROR, "\tRec enter failed, ret=%x\n", ret, 0);
-        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(16)));
-        goto destroy_realm;
-    }
-
-
     /* Check that REC exit was due to Host call form P0 after completing test */
     if (rec_exit->exit_reason != RMI_EXIT_HOST_CALL) {
         LOG(ERROR, "\tUnexpected REC exit, %d. ESR: %lx \n", rec_exit->exit_reason, rec_exit->esr);
-        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(17)));
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(15)));
         goto destroy_realm;
     }
 

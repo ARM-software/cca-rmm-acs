@@ -8,6 +8,7 @@
 #include "val_host_rmi.h"
 #include "val_irq.h"
 #include "val_timer.h"
+#include "val_host_helpers.h"
 
 static volatile int handler_flag;
 
@@ -24,10 +25,8 @@ void planes_rec_exit_irq_host(void)
     static val_host_realm_ts realm;
     val_host_realm_flags1_ts realm_flags;
     uint64_t ret;
-    val_smc_param_ts cmd_ret;
     val_host_rec_exit_ts *rec_exit = NULL;
     val_host_rec_enter_ts *rec_enter = NULL;
-    uint64_t s2ap_ipa_base, s2ap_ipa_top;
     uint64_t cnt_val1, cnt_val2, cnt_frq, boot_time_ms;
 
     /* Skip if RMM do not support planes */
@@ -82,34 +81,17 @@ void planes_rec_exit_irq_host(void)
         goto destroy_realm;
     }
 
-    s2ap_ipa_base = rec_exit->s2ap_base;
-    s2ap_ipa_top =  rec_exit->s2ap_top;
-
-    while (s2ap_ipa_base != s2ap_ipa_top) {
-        cmd_ret = val_host_rmi_rtt_set_s2ap(realm.rd, realm.rec[0], s2ap_ipa_base, s2ap_ipa_top);
-        if (cmd_ret.x0) {
-            LOG(ERROR, "\nRMI_SET_S2AP failed with ret= 0x%x\n", cmd_ret.x0, 0);
-            val_set_status(RESULT_FAIL(VAL_ERROR_POINT(4)));
-            goto destroy_realm;
-        }
-        s2ap_ipa_base = cmd_ret.x1;
-    }
-
-    rec_enter->flags = 0x0;
-
-    /* Enter REC[0]  */
-    ret = val_host_rmi_rec_enter(realm.rec[0], realm.run[0]);
-    if (ret)
+    /* Update S2AP for the requested memory range */
+    if (val_host_set_s2ap(&realm))
     {
-        LOG(ERROR, "\tRec enter failed, ret=%x\n", ret, 0);
-        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(5)));
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(4)));
         goto destroy_realm;
     }
 
     /* Check that REC exit was due to host call for P0 and P1 is initialized */
     if (rec_exit->exit_reason != RMI_EXIT_HOST_CALL) {
         LOG(ERROR, "\tUnexpected REC exit, %d. ESR: %lx \n", rec_exit->exit_reason, rec_exit->esr);
-        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(6)));
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(5)));
         goto destroy_realm;
     }
 
@@ -117,7 +99,7 @@ void planes_rec_exit_irq_host(void)
     if (val_irq_register_handler(IRQ_PHY_TIMER_EL2, timer_handler))
     {
         LOG(ERROR, "\tEL2 PHY timer interrupt register failed\n", 0, 0);
-        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(7)));
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(6)));
         goto destroy_realm;
     }
 
@@ -138,14 +120,14 @@ void planes_rec_exit_irq_host(void)
     if (ret)
     {
         LOG(ERROR, "\tRec enter failed, ret=%x\n", ret, 0);
-        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(8)));
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(7)));
         goto free_irq;
     }
 
     /* Check that REC exit was due to IRQ */
     if (rec_exit->exit_reason != RMI_EXIT_IRQ) {
         LOG(ERROR, "\tUnexpected REC exit, %d. ESR: %lx \n", rec_exit->exit_reason, rec_exit->esr);
-        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(9)));
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(8)));
         goto free_irq;
     }
 
@@ -154,7 +136,7 @@ void planes_rec_exit_irq_host(void)
         LOG(ALWAYS, "\tEL2 PHY Interrupt triggered\n", 0, 0);
     } else {
         LOG(ERROR, "\tEL2 PHY interrupt not triggered\n", 0, 0);
-        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(10)));
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(9)));
         goto free_irq;
     }
 
@@ -166,7 +148,7 @@ free_irq:
     if (val_irq_unregister_handler(IRQ_PHY_TIMER_EL2))
     {
         LOG(ERROR, "\tEL2 PHY interrupt unregister failed\n", 0, 0);
-        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(11)));
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(10)));
     }
 
     /* Free test resources */

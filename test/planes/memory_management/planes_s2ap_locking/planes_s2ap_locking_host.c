@@ -6,16 +6,14 @@
  */
 #include "test_database.h"
 #include "val_host_rmi.h"
+#include "val_host_helpers.h"
 
 void planes_s2ap_locking_host(void)
 {
     static val_host_realm_ts realm;
     val_host_realm_flags1_ts realm_flags;
     uint64_t ret;
-    val_smc_param_ts cmd_ret;
     val_host_rec_exit_ts *rec_exit = NULL;
-    val_host_rec_enter_ts *rec_enter = NULL;
-    uint64_t s2ap_ipa_base, s2ap_ipa_top;
 
     /* Skip if RMM do not support planes */
     if (!val_host_rmm_supports_planes())
@@ -57,7 +55,6 @@ void planes_s2ap_locking_host(void)
         goto destroy_realm;
     }
 
-    rec_enter = &(((val_host_rec_run_ts *)realm.run[0])->enter);
     rec_exit = &(((val_host_rec_run_ts *)realm.run[0])->exit);
 
     /* Check that REC exit was due S2AP change request */
@@ -67,34 +64,17 @@ void planes_s2ap_locking_host(void)
         goto destroy_realm;
     }
 
-    s2ap_ipa_base = rec_exit->s2ap_base;
-    s2ap_ipa_top =  rec_exit->s2ap_top;
-
-    while (s2ap_ipa_base != s2ap_ipa_top) {
-        cmd_ret = val_host_rmi_rtt_set_s2ap(realm.rd, realm.rec[0], s2ap_ipa_base, s2ap_ipa_top);
-        if (cmd_ret.x0) {
-            LOG(ERROR, "\nRMI_SET_S2AP failed with ret= 0x%x\n", cmd_ret.x0, 0);
-            val_set_status(RESULT_FAIL(VAL_ERROR_POINT(4)));
-            goto destroy_realm;
-        }
-        s2ap_ipa_base = cmd_ret.x1;
-    }
-
-    rec_enter->flags = 0x0;
-
-    /* Enter REC[0]  */
-    ret = val_host_rmi_rec_enter(realm.rec[0], realm.run[0]);
-    if (ret)
+    /* Update S2AP for the requested memory range */
+    if (val_host_set_s2ap(&realm))
     {
-        LOG(ERROR, "\tRec enter failed, ret=%x\n", ret, 0);
-        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(5)));
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(4)));
         goto destroy_realm;
     }
 
     /* Check that REC exit was due to Host call form P0 after completing test */
     if (rec_exit->exit_reason != RMI_EXIT_HOST_CALL) {
         LOG(ERROR, "\tUnexpected REC exit, %d \n", rec_exit->exit_reason, 0);
-        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(6)));
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(5)));
         goto destroy_realm;
     }
 

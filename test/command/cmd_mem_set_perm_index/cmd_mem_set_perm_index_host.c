@@ -92,7 +92,6 @@ void cmd_mem_set_perm_index_host(void)
         goto destroy_realm;
     }
 
-
     /* Check that REC exit was due S2AP change request */
     if (rec_exit->exit_reason != RMI_EXIT_S2AP_CHANGE) {
         LOG(ERROR, "\tUnexpected REC exit, %d. ESR: %lx \n", rec_exit->exit_reason, rec_exit->esr);
