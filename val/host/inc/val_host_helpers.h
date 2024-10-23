@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023-2024, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -24,6 +24,7 @@ uint32_t validate_rec_exit_da(val_host_rec_exit_ts *rec_exit, uint64_t hpfar,
                             uint32_t dfsc, exception_da_abort_type_te abort_type, uint32_t wnr);
 uint32_t validate_rec_exit_ia(val_host_rec_exit_ts *rec_exit, uint64_t hpfar);
 uint64_t val_host_addr_align_to_level(uint64_t addr, uint64_t level);
+uint64_t val_host_set_s2ap(val_host_realm_ts *realm);
 
 #endif /* #ifndef __VAL_HOST_HELPERS__ */
 
