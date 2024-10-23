@@ -744,7 +744,7 @@ uint32_t val_host_realm_create(val_host_realm_ts *realm)
     params->rtt_num_start = realm->num_s2_sl_rtts;
     params->vmid = realm->vmid;
     for (i = 0; i < realm->num_aux_planes; i++)
-        params->aux_vmid[i] = realm->vmid + i + 1;
+        params->aux_vmid[i] = (uint16_t)(realm->vmid + i + 1);
     params->num_aux_planes = realm->num_aux_planes;
     for (i = 0; i < realm->num_aux_planes; i++)
         params->aux_rtt_base[i] = realm->rtt_aux_l0_addr[i];

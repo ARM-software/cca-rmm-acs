@@ -144,7 +144,7 @@ typedef struct {
     SET_MEMBER_RMI(
     /* Virtual Machine Identifier of the auxiliary contexts.
      * The host must provide @num_aux_planes entries */
-            unsigned long aux_vmid[VAL_MAX_AUX_PLANES];         /* 0x820 */
+            unsigned short aux_vmid[VAL_MAX_AUX_PLANES];         /* 0xF00 */
             , 0xF00, 0xF80);
     SET_MEMBER_RMI(
     /* Base addresses of root level tables for auxiliary RTT trees.
