@@ -28,7 +28,6 @@ list(APPEND TEST_INCLUDE
     ${ROOT_DIR}/plat/driver/src/
     ${ROOT_DIR}/test/database/
     ${ROOT_DIR}/test/common/
-    ${ROOT_DIR}/val/common/xlat_tables_v2/include/
     ${RMM_ACS_QCBOR_INCLUDE_PATH}
 )
 
@@ -73,6 +72,8 @@ list(APPEND TEST_SRC
 
 # Create TEST library
 add_library(${TEST_LIB} STATIC ${TEST_SRC})
+
+target_link_libraries(${TEST_LIB} PUBLIC ${XLAT-LIB})
 
 #Create compile list files
 list(APPEND COMPILE_LIST ${TEST_SRC})
@@ -134,6 +135,7 @@ foreach(SUITE ${SUITE_LIST})
         add_library(${TEST_LIB} STATIC ${TEST_SRC})
         target_compile_definitions(${TEST_LIB} PRIVATE d_${TEST})
         target_include_directories(${TEST_LIB} PRIVATE ${TEST_INCLUDE})
+        target_link_libraries(${TEST_LIB} PUBLIC ${XLAT-LIB})
         file(MAKE_DIRECTORY ${BUILD}/output/${SUITE}/${TEST})
         create_executable(${EXE_NAME} ${BUILD}/output/${SUITE}/${TEST} ${TEST})
         remove_definitions(-Dd_${TEST})

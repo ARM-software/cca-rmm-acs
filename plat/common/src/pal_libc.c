@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023-2024, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -11,7 +11,6 @@ void *memcpy(void *dst, const void *src, size_t len);
 void *memset(void *dst, int val, size_t count);
 int memcmp(void *s1, void *s2, size_t len);
 void *memmove(void *dst, const void *src, size_t len);
-size_t strlen(char *start);
 
 int pal_memcmp(void *src, void *dest, size_t len)
 {
@@ -31,7 +30,14 @@ void *pal_memset(void *dst, int val, size_t count)
 
 size_t pal_strlen(char *str)
 {
-  return strlen(str);
+  size_t length = 0;
+
+  while (str[length] != '\0')
+  {
+    ++length;
+  }
+
+  return length;
 }
 
 /* Libc functions definition */
@@ -95,13 +101,24 @@ void *memmove(void *dst, const void *src, size_t len)
         return dst;
 }
 
-size_t strlen(char *str)
+/**
+ * @brief Platform abstraction to handle assertion failures.
+ *
+ * This function handles the assertion failure by logging the error message, assertion condition,
+ * line number, and file name where the assertion failed, disable watchdog and put the PE into
+ * standby mode.
+ *
+ * @param e The  assertion condition.
+ * @param line The line number where the assertion is made.
+ * @param file The name of the file where the assertion is made.
+ */
+void pal_assert(const char *e, uint64_t line, const char *file)
 {
-   size_t length = 0;
-
-  while (str[length] != '\0')
-  {
-    ++length;
-  }
-  return length;
+   pal_printf("ASSERT: ", 0, 0); \
+   pal_printf(file, 0, 0); \
+   pal_printf(" ,line:%d) ", line, 0); \
+   pal_printf(e, 0, 0); \
+   pal_printf("\n", 0, 0); \
+   pal_watchdog_disable(); \
+   pal_terminate_simulation(); \
 }

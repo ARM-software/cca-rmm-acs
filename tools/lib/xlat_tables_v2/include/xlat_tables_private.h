@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023-2024, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -20,7 +20,7 @@
  * Private shifts and masks to access fields of an mmap attribute
  */
 /* Dynamic or static */
-#define MT_DYN_SHIFT		U(31)
+#define MT_DYN_SHIFT        U(31)
 
 /*
  * Memory mapping private attributes
@@ -35,8 +35,8 @@
  *
  * Static regions can overlap each other, dynamic regions can't.
  */
-#define MT_STATIC	(U(0) << MT_DYN_SHIFT)
-#define MT_DYNAMIC	(U(1) << MT_DYN_SHIFT)
+#define MT_STATIC    (U(0) << MT_DYN_SHIFT)
+#define MT_DYNAMIC    (U(1) << MT_DYN_SHIFT)
 
 #endif /* PLAT_XLAT_TABLES_DYNAMIC */
 
@@ -83,7 +83,7 @@ void xlat_tables_print(xlat_ctx_t *ctx);
  * Returns a block/page table descriptor for the given level and attributes.
  */
 uint64_t xlat_desc(const xlat_ctx_t *ctx, uint32_t attr,
-		   unsigned long long addr_pa, unsigned int level);
+           unsigned long long addr_pa, unsigned int level);
 
 /*
  * Architecture-specific initialization code.

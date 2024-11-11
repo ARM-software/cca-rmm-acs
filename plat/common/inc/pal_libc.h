@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023-2024, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -10,20 +10,10 @@
 #ifndef _PAL_LIBC_H_
 #define _PAL_LIBC_H_
 
-#define __assert(e) ({ \
-                  pal_printf("ASSERT: ", 0, 0); \
-                  pal_printf(__FILE__, 0, 0); \
-                  pal_printf(" ,line:%d) ", __LINE__, 0); \
-                  pal_printf(#e, 0, 0); \
-                  pal_printf("\n", 0, 0); \
-                  pal_watchdog_disable(); \
-                  pal_terminate_simulation(); \
-                })
+#define assert(e)   ((e) ? (void)0 : pal_assert(#e, __LINE__, __FILE__))
 
-#define assert(e)   ((e) ? (void)0 : __assert(e))
-
-#define CASSERT(cond, msg)	\
-	typedef char msg[(cond) ? 1 : -1] __unused
+#define CASSERT(cond, msg)    \
+    typedef char msg[(cond) ? 1 : -1] __unused
 
 /**
  * @brief        - Compare the two input buffer content
@@ -54,4 +44,5 @@ void *pal_memcpy(void *dst, const void *src, size_t len);
 
 size_t pal_strlen(char *str);
 
+void pal_assert(const char *e, uint64_t line, const char *file);
 #endif

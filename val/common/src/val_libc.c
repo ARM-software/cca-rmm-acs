@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023-2024, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -118,4 +118,18 @@ int val_strcmp(char *str1, char *str2)
 size_t val_strlen(char *str)
 {
   return pal_strlen(str);
+}
+
+/**
+ * @brief VAL abstraction to handle assertion failures.
+ *
+ * This function forwards the assertions to Platform Abstraction Layer.
+ *
+ * @param e The  assertion condition.
+ * @param line The line number where the assertion is made.
+ * @param file The name of the file where the assertion is made.
+ */
+void val_assert(const char *e, uint64_t line, const char *file)
+{
+    pal_assert(e, line, file);
 }

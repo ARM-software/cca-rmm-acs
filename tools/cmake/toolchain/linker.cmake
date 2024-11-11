@@ -1,5 +1,5 @@
 #-------------------------------------------------------------------------------
-# Copyright (c) 2023, Arm Limited or its affiliates. All rights reserved.
+# Copyright (c) 2023-2024, Arm Limited or its affiliates. All rights reserved.
 #
 # SPDX-License-Identifier: BSD-3-Clause
 #
@@ -57,7 +57,7 @@ function (create_executable EXE_NAME OUTPUT_DIR TEST)
 
     # Link the objects
     add_custom_command(OUTPUT ${EXE_NAME}${TEST}.elf
-                    COMMAND ${GNUARM_LINKER} ${CMAKE_LINKER_FLAGS} ${GNUARM_LINKER_FLAGS} -T ${SCATTER_OUTPUT_FILE} -o ${OUTPUT_DIR}/${EXE_NAME}.elf ${VAL_LIB}.a ${PAL_LIB}.a ${TEST_LIB}.a ${VAL_LIB}.a ${PAL_LIB}.a ${PAL_OBJ_LIST}
+                    COMMAND ${GNUARM_LINKER} ${CMAKE_LINKER_FLAGS} ${GNUARM_LINKER_FLAGS} -T ${SCATTER_OUTPUT_FILE} -o ${OUTPUT_DIR}/${EXE_NAME}.elf ${VAL_LIB}.a ${PAL_LIB}.a ${TEST_LIB}.a ${VAL_LIB}.a ${PAL_LIB}.a ${PAL_OBJ_LIST} ${XLAT_BUILD_DIR}/${XLAT-LIB}.a
                     DEPENDS CPP-LD-${EXE_NAME}${TEST})
     add_custom_target(${EXE_NAME}${TEST}_elf ALL DEPENDS ${EXE_NAME}${TEST}.elf)
 
