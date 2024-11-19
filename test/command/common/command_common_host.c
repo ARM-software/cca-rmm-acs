@@ -112,6 +112,9 @@ uint32_t val_host_realm_create_common(val_host_realm_ts *realm)
         params->aux_vmid[i] = (uint16_t)(realm->vmid + i + 1);
     for (i = 0; i < realm->num_aux_planes; i++)
         params->aux_rtt_base[i] = realm->rtt_aux_l0_addr[i];
+    /* RealmParams strucurue takes the number of breakpoints, minus one */
+    params->num_bps = realm->num_bps + 1;
+    params->num_wps = realm->num_wps + 1;
 
 #ifdef RMM_V_1_1
     if (realm->num_aux_planes == 0)
