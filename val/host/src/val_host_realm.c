@@ -430,7 +430,7 @@ uint32_t val_host_map_unprotected(val_host_realm_ts *realm,
     uint64_t rtt_tree_pp;
     val_host_rtt_entry_ts rtte;
 
-    mem_desc = ns_pa | ATTR_NORMAL_WB | ATTR_INNER_SHARED;
+    mem_desc = ns_pa | ATTR_NORMAL_WB;
 
     /* Check if RMM supports shared RTT tree support for planes and
      * Check whether realm is configured to use RTT tree perm plane */

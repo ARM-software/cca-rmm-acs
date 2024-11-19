@@ -75,7 +75,7 @@ void planes_rec_exit_da_hipas_unassigned_ns_host(void)
         goto destroy_realm;
     }
 
-    mem_desc = ATTR_NORMAL_WB | ATTR_INNER_SHARED;
+    mem_desc = ATTR_NORMAL_WB;
 
     /* If RMM supports shared RTT tree configuration and realm is configured
      * to use shared RTT, use S2AP base index, else set S2AP[0:1] = RW */

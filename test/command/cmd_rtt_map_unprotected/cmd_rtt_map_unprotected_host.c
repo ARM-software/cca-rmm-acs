@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023-2024, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -115,7 +115,7 @@ static uint64_t desc_valid_prep_sequence(void)
     if (ns == VAL_TEST_PREP_SEQ_FAILED)
         return VAL_TEST_PREP_SEQ_FAILED;
 
-    return (ns | ATTR_NORMAL_WB_WA_RA | ATTR_STAGE2_AP_RW | ATTR_INNER_SHARED);
+    return (ns | ATTR_NORMAL_WB_WA_RA | ATTR_STAGE2_AP_RW);
 }
 
 
@@ -150,7 +150,7 @@ static uint64_t desc_addr_unaligned_prep_sequence(void)
 
     ns = ns + (L3_SIZE / 2);
 
-    return (ns | ATTR_NORMAL_WB_WA_RA | ATTR_STAGE2_AP_RW | ATTR_INNER_SHARED);
+    return (ns | ATTR_NORMAL_WB_WA_RA | ATTR_STAGE2_AP_RW);
 }
 
 static uint64_t g_rec_ready_prep_sequence(uint64_t rd)

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023-2024, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -351,7 +351,7 @@ void cmd_rtt_read_entry_host(void)
         goto exit;
     }
 
-    uint64_t desc = (ns | ATTR_NORMAL_WB_WA_RA | ATTR_STAGE2_AP_RW | ATTR_INNER_SHARED);
+    uint64_t desc = (ns | ATTR_NORMAL_WB_WA_RA | ATTR_STAGE2_AP_RW);
     if (val_host_rmi_rtt_map_unprotected(c_args.rd_valid, IPA_ADDR_UNPROTECTED,
                                                          VAL_RTT_MAX_LEVEL, desc))
     {

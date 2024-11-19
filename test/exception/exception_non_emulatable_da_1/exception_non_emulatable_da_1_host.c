@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023-2024, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -43,7 +43,7 @@ void exception_non_emulatable_da_1_host(void)
         goto destroy_realm;
     }
 
-    mem_attr = ATTR_NORMAL_WB | ATTR_STAGE2_MASK | ATTR_INNER_SHARED;
+    mem_attr = ATTR_NORMAL_WB | ATTR_STAGE2_MASK;
     index = val_host_map_ns_shared_region(&realm, PAGE_SIZE, mem_attr);
     if (!index)
     {
