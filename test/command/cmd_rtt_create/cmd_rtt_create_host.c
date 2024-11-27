@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023-2024, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -321,6 +321,13 @@ static uint64_t intent_to_seq(struct stimulus *test_data, struct arguments *args
             args->rtt = g_data_prep_sequence(c_args.rd_valid, IPA_ADDR_DATA_1);
             if (args->rtt == VAL_TEST_PREP_SEQ_FAILED)
                 return VAL_ERROR;
+            args->ipa = c_args.ipa_valid;
+            args->level = c_args.level_valid;
+            break;
+
+        case RTT_LPA2_PA:
+            args->rd = c_args.rd_valid;
+            args->rtt = g_pa_in_lpa2_range_prep_sequence();
             args->ipa = c_args.ipa_valid;
             args->level = c_args.level_valid;
             break;

@@ -28,5 +28,5 @@ uint64_t ipa_unprotected_unassigned_prep_sequence(uint64_t rd);
 uint64_t ipa_protected_unassigned_ram_prep_sequence(uint64_t rd);
 uint64_t ipa_protected_unassigned_empty_prep_sequence(uint64_t rd);
 uint64_t ipa_protected_aux_assigned_prep_sequence(uint64_t rd, uint64_t rtt_index);
-
+uint64_t g_pa_in_lpa2_range_prep_sequence(void);
 #endif /* _CMD_COMMON_HOST_H */

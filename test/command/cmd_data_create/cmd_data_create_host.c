@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023-2024, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -345,9 +345,9 @@ static uint64_t intent_to_seq(struct stimulus *test_data, struct arguments *args
             args->flags = c_args.flags_valid;
             break;
 
-        case DATA_PAS_SECURE:
+        case DATA_LPA2_PA:
             args->rd = c_args.rd_valid;
-            args->data = g_secure_prep_sequence();
+            args->data = g_pa_in_lpa2_range_prep_sequence();
             args->ipa = c_args.ipa_valid;
             args->src = c_args.src_valid;
             args->flags = c_args.flags_valid;

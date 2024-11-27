@@ -153,6 +153,11 @@ static uint64_t desc_addr_unaligned_prep_sequence(void)
     return (ns | ATTR_NORMAL_WB_WA_RA | ATTR_STAGE2_AP_RW);
 }
 
+static uint64_t desc_addr_in_lpa2_range_prep_sequence(void)
+{
+    return ((1ULL << 48) | ATTR_NORMAL_WB_WA_RA | ATTR_STAGE2_AP_RW);
+}
+
 static uint64_t g_rec_ready_prep_sequence(uint64_t rd)
 {
     val_host_realm_ts realm;
@@ -295,6 +300,13 @@ static uint64_t intent_to_seq(struct stimulus *test_data, struct arguments *args
             args->level = c_args.level_valid;
             args->desc = desc_addr_unaligned_prep_sequence();
             break;
+
+        case ADDR_LPA2_PA:
+            args->rd = c_args.rd_valid;
+            args->ipa = c_args.ipa_valid;
+            args->level = c_args.level_valid;
+            args->desc = desc_addr_in_lpa2_range_prep_sequence();
+           break;
 
         case IPA_UNALIGNED:
             args->rd = c_args.rd_valid;

@@ -567,3 +567,8 @@ uint64_t ipa_protected_aux_assigned_prep_sequence(uint64_t rd, uint64_t rtt_inde
     return IPA_ADDR_PROTECTED_AUX_ASSIGNED;
 }
 
+uint64_t g_pa_in_lpa2_range_prep_sequence(void)
+{
+    return (0x1ULL << 48) + PAGE_SIZE;
+}
+
