@@ -25,14 +25,14 @@ static val_host_rec_exit_ts *rec_exit;
 
 static struct argument_store {
     uint64_t rd_valid;
-    uint64_t rec_valid;
+    uint64_t rec_ptr_valid;
     uint64_t base_valid;
     uint64_t top_valid;
 } c_args;
 
 struct arguments {
     uint64_t rd;
-    uint64_t rec;
+    uint64_t rec_ptr;
     uint64_t base;
     uint64_t top;
 };
@@ -235,7 +235,7 @@ static uint64_t valid_input_args_prep_sequence(void)
     if (c_args.rd_valid == VAL_TEST_PREP_SEQ_FAILED)
         return VAL_TEST_PREP_SEQ_FAILED;
 
-    c_args.rec_valid = realm[VALID_REALM].rec[0];
+    c_args.rec_ptr_valid = realm[VALID_REALM].rec[0];
 
     c_args.base_valid = rec_exit->ripas_base;
 
@@ -252,21 +252,21 @@ static uint64_t intent_to_seq(struct stimulus *test_data, struct arguments *args
     {
         case RD_UNALIGNED:
             args->rd = g_unaligned_prep_sequence(c_args.rd_valid);
-            args->rec = c_args.rec_valid;
+            args->rec_ptr = c_args.rec_ptr_valid;
             args->base = c_args.base_valid;
             args->top = c_args.top_valid;
             break;
 
         case RD_OUTSIDE_OF_PERMITTED_PA:
             args->rd = g_outside_of_permitted_pa_prep_sequence();
-            args->rec = c_args.rec_valid;
+            args->rec_ptr = c_args.rec_ptr_valid;
             args->base = c_args.base_valid;
             args->top = c_args.top_valid;
             break;
 
         case RD_DEV_MEM:
             args->rd = g_dev_mem_prep_sequence();
-            args->rec = c_args.rec_valid;
+            args->rec_ptr = c_args.rec_ptr_valid;
             args->base = c_args.base_valid;
             args->top = c_args.top_valid;
             break;
@@ -275,7 +275,7 @@ static uint64_t intent_to_seq(struct stimulus *test_data, struct arguments *args
             args->rd = g_undelegated_prep_sequence();
             if (args->rd == VAL_TEST_PREP_SEQ_FAILED)
                 return VAL_ERROR;
-            args->rec = c_args.rec_valid;
+            args->rec_ptr = c_args.rec_ptr_valid;
             args->base = c_args.base_valid;
             args->top = c_args.top_valid;
             break;
@@ -284,57 +284,57 @@ static uint64_t intent_to_seq(struct stimulus *test_data, struct arguments *args
             args->rd = g_delegated_prep_sequence();
             if (args->rd == VAL_TEST_PREP_SEQ_FAILED)
                 return VAL_ERROR;
-            args->rec = c_args.rec_valid;
+            args->rec_ptr = c_args.rec_ptr_valid;
             args->base = c_args.base_valid;
             args->top = c_args.top_valid;
             break;
 
         case RD_STATE_REC:
             args->rd = realm[VALID_REALM].rec[0];
-            args->rec = c_args.rec_valid;
+            args->rec_ptr = c_args.rec_ptr_valid;
             args->base = c_args.base_valid;
             args->top = c_args.top_valid;
             break;
 
         case RD_STATE_RTT:
             args->rd = realm[VALID_REALM].rtt_l0_addr;
-            args->rec = c_args.rec_valid;
+            args->rec_ptr = c_args.rec_ptr_valid;
             args->base = c_args.base_valid;
             args->top = c_args.top_valid;
             break;
 
         case RD_STATE_DATA:
             args->rd = realm[VALID_REALM].image_pa_base;
-            args->rec = c_args.rec_valid;
+            args->rec_ptr = c_args.rec_ptr_valid;
             args->base = c_args.base_valid;
             args->top = c_args.top_valid;
             break;
 
         case REC_UNALIGNED:
             args->rd = c_args.rd_valid;
-            args->rec = g_unaligned_prep_sequence(c_args.rec_valid);
+            args->rec_ptr = g_unaligned_prep_sequence(c_args.rec_ptr_valid);
             args->base = c_args.base_valid;
             args->top = c_args.top_valid;
             break;
 
         case REC_OUTSIDE_OF_PERMITTED_PA:
             args->rd = c_args.rd_valid;
-            args->rec = g_outside_of_permitted_pa_prep_sequence();
+            args->rec_ptr = g_outside_of_permitted_pa_prep_sequence();
             args->base = c_args.base_valid;
             args->top = c_args.top_valid;
             break;
 
         case REC_DEV_MEM:
             args->rd = c_args.rd_valid;
-            args->rec = g_dev_mem_prep_sequence();
+            args->rec_ptr = g_dev_mem_prep_sequence();
             args->base = c_args.base_valid;
             args->top = c_args.top_valid;
             break;
 
         case REC_GRAN_STATE_UNDELEGATED:
             args->rd = c_args.rd_valid;
-            args->rec = g_undelegated_prep_sequence();
-            if (args->rec == VAL_TEST_PREP_SEQ_FAILED)
+            args->rec_ptr = g_undelegated_prep_sequence();
+            if (args->rec_ptr == VAL_TEST_PREP_SEQ_FAILED)
                 return VAL_ERROR;
             args->base = c_args.base_valid;
             args->top = c_args.top_valid;
@@ -342,8 +342,8 @@ static uint64_t intent_to_seq(struct stimulus *test_data, struct arguments *args
 
         case REC_GRAN_STATE_DELEGATED:
             args->rd = c_args.rd_valid;
-            args->rec = g_delegated_prep_sequence();
-            if (args->rec == VAL_TEST_PREP_SEQ_FAILED)
+            args->rec_ptr = g_delegated_prep_sequence();
+            if (args->rec_ptr == VAL_TEST_PREP_SEQ_FAILED)
                 return VAL_ERROR;
             args->base = c_args.base_valid;
             args->top = c_args.top_valid;
@@ -351,29 +351,29 @@ static uint64_t intent_to_seq(struct stimulus *test_data, struct arguments *args
 
         case REC_GRAN_STATE_RD:
             args->rd = c_args.rd_valid;
-            args->rec = c_args.rd_valid;
+            args->rec_ptr = c_args.rd_valid;
             args->base = c_args.base_valid;
             args->top = c_args.top_valid;
             break;
 
         case REC_GRAN_STATE_RTT:
             args->rd = c_args.rd_valid;
-            args->rec = realm[VALID_REALM].rtt_l0_addr;
+            args->rec_ptr = realm[VALID_REALM].rtt_l0_addr;
             args->base = c_args.base_valid;
             args->top = c_args.top_valid;
             break;
 
         case REc_GRAN_STATE_DATA:
             args->rd = c_args.rd_valid;
-            args->rec = realm[VALID_REALM].image_pa_base;
+            args->rec_ptr = realm[VALID_REALM].image_pa_base;
             args->base = c_args.base_valid;
             args->top = c_args.top_valid;
             break;
 
         case REC_OTHER_OWNER:
             args->rd = c_args.rd_valid;
-            args->rec = g_rec_other_owner_prep_sequence();
-            if (args->rec == VAL_TEST_PREP_SEQ_FAILED)
+            args->rec_ptr = g_rec_other_owner_prep_sequence();
+            if (args->rec_ptr == VAL_TEST_PREP_SEQ_FAILED)
                 return VAL_ERROR;
             args->base = c_args.base_valid;
             args->top = c_args.top_valid;
@@ -381,28 +381,28 @@ static uint64_t intent_to_seq(struct stimulus *test_data, struct arguments *args
 
         case INVALID_SIZE:
             args->rd = c_args.rd_valid;
-            args->rec = c_args.rec_valid;
+            args->rec_ptr = c_args.rec_ptr_valid;
             args->base = c_args.base_valid;
             args->top = c_args.base_valid;
             break;
 
         case BASE_MISMATCH:
             args->rd = c_args.rd_valid;
-            args->rec = c_args.rec_valid;
+            args->rec_ptr = c_args.rec_ptr_valid;
             args->base = c_args.base_valid + 1;
             args->top = c_args.top_valid;
             break;
 
         case TOP_OUT_OF_BOUND:
             args->rd = c_args.rd_valid;
-            args->rec = c_args.rec_valid;
+            args->rec_ptr = c_args.rec_ptr_valid;
             args->base = c_args.base_valid;
             args->top = c_args.top_valid + PAGE_SIZE;
             break;
 
         case BASE_UNALIGNED:
             args->rd = c_args.rd_valid;
-            args->rec = realm[VALID_REALM].rec[1];
+            args->rec_ptr = realm[VALID_REALM].rec[1];
             args->base = base_unaligned_prep_sequence();
             if (args->base == VAL_TEST_PREP_SEQ_FAILED)
                 return VAL_ERROR;
@@ -411,21 +411,21 @@ static uint64_t intent_to_seq(struct stimulus *test_data, struct arguments *args
 
         case TOP_GRAN_UNALIGNED:
             args->rd = c_args.rd_valid;
-            args->rec = c_args.rec_valid;
+            args->rec_ptr = c_args.rec_ptr_valid;
             args->base = c_args.base_valid;
             args->top = c_args.top_valid - PAGE_SIZE / 2;
             break;
 
         case TOP_RTT_UNALIGNED:
             args->rd = c_args.rd_valid;
-            args->rec = realm[VALID_REALM].rec[1];
+            args->rec_ptr = realm[VALID_REALM].rec[1];
             args->base = top_rtt_unaligned_prep_sequence();
             args->top = args->base + L2_SIZE + L3_SIZE;
             break;
 
         case IPA_AUX_LIVE:
             args->rd = c_args.rd_valid;
-            args->rec = realm[VALID_REALM].rec[1];
+            args->rec_ptr = realm[VALID_REALM].rec[1];
             args->base = ipa_aux_live_prep_sequence();
             if (args->base == VAL_TEST_PREP_SEQ_FAILED)
                 return VAL_ERROR;
@@ -436,14 +436,14 @@ static uint64_t intent_to_seq(struct stimulus *test_data, struct arguments *args
 
         case BASE_MISMATCH_BASE_UNALIGNED:
             args->rd = c_args.rd_valid;
-            args->rec = c_args.rec_valid;
+            args->rec_ptr = c_args.rec_ptr_valid;
             args->base = c_args.base_valid + PAGE_SIZE / 2;
             args->top = c_args.top_valid;
             break;
 
         case TOP_GRAN_UNALIGNED_TOP_RTT_UNALIGNED:
             args->rd = c_args.rd_valid;
-            args->rec = realm[VALID_REALM].rec[1];
+            args->rec_ptr = realm[VALID_REALM].rec[1];
             args->base = top_rtt_unaligned_prep_sequence();
             args->top = args->base + L2_SIZE + (L3_SIZE / 2);
             break;
@@ -485,7 +485,7 @@ void cmd_rtt_set_ripas_host(void)
             goto exit;
         }
 
-        ret = val_host_rmi_rtt_set_ripas(args.rd, args.rec, args.base, args.top, &out_top);
+        ret = val_host_rmi_rtt_set_ripas(args.rd, args.rec_ptr, args.base, args.top, &out_top);
 
         if (ret != PACK_CODE(test_data[i].status, test_data[i].index)) {
             LOG(ERROR, "\tTest Failure!\n\tThe ABI call returned: %x\n\tExpected: %x\n",
@@ -517,7 +517,7 @@ void cmd_rtt_set_ripas_host(void)
     }
 
     LOG(TEST, "\n\tPositive Observability Check\n", 0, 0);
-    ret = val_host_rmi_rtt_set_ripas(c_args.rd_valid, c_args.rec_valid, c_args.base_valid,
+    ret = val_host_rmi_rtt_set_ripas(c_args.rd_valid, c_args.rec_ptr_valid, c_args.base_valid,
                                                                c_args.top_valid, &out_top);
     if (ret != 0)
     {
