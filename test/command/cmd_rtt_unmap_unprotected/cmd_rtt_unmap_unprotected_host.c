@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023-2024, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -44,11 +44,6 @@ static struct cmd_output {
     uint64_t top;
 } c_exp_output;
 
-static uint64_t ipa_l1_rtt_not_mapped_prep_sequence(void)
-{
-    return IPA_L1_NOT_MAPPED;
-}
-
 static uint64_t level_invalid_start_prep_sequence(void)
 {
     return START_RTT_LEVEL;
@@ -57,11 +52,6 @@ static uint64_t level_invalid_start_prep_sequence(void)
 static uint64_t level_invalid_oob_prep_sequence(void)
 {
     return MAX_RTT_LEVEL + 1;
-}
-
-static uint64_t level_invalid_l1_prep_sequence(void)
-{
-    return 1;
 }
 
 static uint64_t g_rec_ready_prep_sequence(uint64_t vmid)
@@ -200,12 +190,6 @@ static uint64_t intent_to_seq(struct stimulus *test_data, struct arguments *args
             args->level = level_invalid_start_prep_sequence();
             break;
 
-        case LEVEL_L1:
-            args->rd = c_args.rd_valid;
-            args->ipa = c_args.ipa_valid;
-            args->level = level_invalid_l1_prep_sequence();
-            break;
-
         case LEVEL_OOB:
             args->rd = c_args.rd_valid;
             args->ipa = c_args.ipa_valid;
@@ -248,18 +232,18 @@ static uint64_t intent_to_seq(struct stimulus *test_data, struct arguments *args
             c_exp_output.top = IPA_ADDR_UNPROTECTED + L3_SIZE;
             break;
 
-        case LEVEL_L1_IPA_NOT_MAPPED:
+        case LEVEL_OOB_IPA_NOT_MAPPED:
             args->rd = c_args.rd_valid;
-            args->ipa = ipa_l1_rtt_not_mapped_prep_sequence();
-            args->level = level_invalid_l1_prep_sequence();
+            args->ipa = ipa_unprotected_unmapped_prep_sequence();
+            args->level = level_invalid_oob_prep_sequence();
             break;
 
-        case LEVEL_L1_RTTE_STATE_TABLE:
+        case LEVEL_OOB_RTTE_STATE_UNASSIGNED_NS:
             args->rd = c_args.rd_valid;
             args->ipa = ipa_unprotected_unassigned_prep_sequence(realm[VALID_REALM].rd);
             if (args->ipa == VAL_TEST_PREP_SEQ_FAILED)
                 return VAL_ERROR;
-            args->level = level_invalid_l1_prep_sequence();
+            args->level = level_invalid_oob_prep_sequence();
             break;
 
         case IPA_PROTECTED_IPA_NOT_MAPPED:

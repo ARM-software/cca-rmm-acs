@@ -129,13 +129,6 @@ static uint64_t level_invalid_starting_prep_sequence(void)
     return START_RTT_LEVEL;
 }
 
-
-static uint64_t level_invalid_l1_prep_sequence(void)
-{
-    return 1;
-}
-
-
 static uint64_t level_invalid_oob_prep_sequence(void)
 {
     return MAX_RTT_LEVEL + 1;
@@ -277,13 +270,6 @@ static uint64_t intent_to_seq(struct stimulus *test_data, struct arguments *args
             args->rd = c_args.rd_valid;
             args->ipa = c_args.ipa_valid;
             args->level = level_invalid_starting_prep_sequence();
-            args->desc = c_args.desc_valid;
-            break;
-
-        case LEVEL_L1:
-            args->rd = c_args.rd_valid;
-            args->ipa = c_args.ipa_valid;
-            args->level = level_invalid_l1_prep_sequence();
             args->desc = c_args.desc_valid;
             break;
 

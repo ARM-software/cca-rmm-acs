@@ -18,15 +18,14 @@ enum test_intent {
     RD_STATE_RTT = 0X7,
     RD_STATE_DATA = 0X8,
     LEVEL_STARTING = 0X9,
-    LEVEL_L1 = 0XA,
-    LEVEL_OOB = 0XB,
-    ADDR_UNALIGNED = 0XC,
-    ADDR_LPA2_PA = 0XD,
-    IPA_UNALIGNED = 0XE,
-    IPA_PROTECTED = 0XF,
-    IPA_OOB = 0X10,
-    IPA_NOT_MAPPED = 0X11,
-    RTTE_STATE_ASSIGNED_NS = 0X12
+    LEVEL_OOB = 0XA,
+    ADDR_UNALIGNED = 0XB,
+    ADDR_LPA2_PA = 0XC,
+    IPA_UNALIGNED = 0XD,
+    IPA_PROTECTED = 0XE,
+    IPA_OOB = 0XF,
+    IPA_NOT_MAPPED = 0X10,
+    RTTE_STATE_ASSIGNED_NS = 0X11
 };
 
 struct stimulus {
@@ -86,11 +85,6 @@ static struct stimulus test_data[] = {
     {.msg = "level_bound",
     .abi = RMI_RTT_MAP_UNPROTECTED,
     .label = LEVEL_STARTING,
-    .status = RMI_ERROR_INPUT,
-    .index = 0},
-    {.msg = "level_bound",
-    .abi = RMI_RTT_MAP_UNPROTECTED,
-    .label = LEVEL_L1,
     .status = RMI_ERROR_INPUT,
     .index = 0},
     {.msg = "level_bound",

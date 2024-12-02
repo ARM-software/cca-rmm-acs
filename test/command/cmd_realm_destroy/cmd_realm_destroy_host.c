@@ -276,6 +276,8 @@ void cmd_realm_destroy_host(void)
     params->rtt_level_start = realm[VALID_REALM].s2_starting_level;
     params->rtt_num_start = realm[VALID_REALM].num_s2_sl_rtts;
     params->vmid = realm[VALID_REALM].vmid;
+    params->num_bps = 1;
+    params->num_wps = 1;
 
 #ifdef RMM_V_1_1
     params->flags1 |= VAL_REALM_FLAG_RTT_TREE_PP;
