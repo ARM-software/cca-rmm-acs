@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023-2024, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -33,10 +33,10 @@ void mm_ripas_change_reject_realm(void)
     }
 
     val_memset(&args, 0x0, sizeof(val_smc_param_ts));
-    args = val_realm_rsi_ipa_state_get(ipa_base);
-    if (args.x0 || (args.x1 != RSI_RAM))
+    args = val_realm_rsi_ipa_state_get(ipa_base, ipa_base + size);
+    if (args.x0 || (args.x2 != RSI_RAM))
     {
-        LOG(ERROR, "\trsi_ipa_state_get failed x0 %lx x1 %lx\n", args.x0, args.x1);
+        LOG(ERROR, "\trsi_ipa_state_get failed x0 %lx x2 %lx\n", args.x0, args.x2);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(2)));
     }
 

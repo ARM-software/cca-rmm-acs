@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023-2024, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -14,16 +14,19 @@
 __attribute__((aligned (PAGE_SIZE))) static uint8_t target_page[PAGE_SIZE];
 
 static struct argument_store {
-    uint64_t addr_valid;
+    uint64_t base_valid;
+    uint64_t top_valid;
 } c_args;
 
 struct arguments {
-    uint64_t addr;
+    uint64_t base;
+    uint64_t top;
 };
 
 static void valid_argument_prep_sequence(void)
 {
-    c_args.addr_valid = (uint64_t)target_page;
+    c_args.base_valid = (uint64_t)target_page;
+    c_args.top_valid = c_args.base_valid + PAGE_SIZE;
 }
 
 static uint64_t unaligned_prep_sequence(uint64_t addr)
@@ -36,7 +39,7 @@ static uint64_t address_unprotected_prep_sequence(void)
     uint64_t ipa_width;
 
     ipa_width = val_realm_get_ipa_width();
-    return 1ULL << (ipa_width - 1);
+    return (1ULL << (ipa_width - 1)) + PAGE_SIZE;
 }
 
 static uint64_t intent_to_seq(struct stimulus *test_data, struct arguments *args)
@@ -45,12 +48,24 @@ static uint64_t intent_to_seq(struct stimulus *test_data, struct arguments *args
 
     switch (label)
     {
-        case ADDR_UNALIGNED:
-            args->addr = unaligned_prep_sequence(c_args.addr_valid);
+        case BASE_UNALIGNED:
+            args->base = unaligned_prep_sequence(c_args.base_valid);
+            args->top = c_args.top_valid;
             break;
 
-        case ADDR_UNPROTECTED:
-            args->addr = address_unprotected_prep_sequence();
+        case TOP_UNALIGNED:
+            args->base = c_args.base_valid;
+            args->top = unaligned_prep_sequence(c_args.top_valid);
+            break;
+
+        case SIZE_INVALID:
+            args->base = c_args.base_valid;
+            args->top = args->base - PAGE_SIZE;
+            break;
+
+        case REGION_UNPROTECTED:
+            args->base = c_args.base_valid;
+            args->top = address_unprotected_prep_sequence();
             break;
 
         default:
@@ -86,7 +101,7 @@ void cmd_ipa_state_get_realm(void)
             goto exit;
         }
 
-        cmd_ret = val_realm_rsi_ipa_state_get(args.addr);
+        cmd_ret = val_realm_rsi_ipa_state_get(args.base, args.top);
         ret = cmd_ret.x0;
 
         if (ret != test_data[i].status)
@@ -99,7 +114,7 @@ void cmd_ipa_state_get_realm(void)
 
     LOG(TEST, "\n\tPositive Observability Check\n", 0, 0);
 
-    cmd_ret = val_realm_rsi_ipa_state_get(c_args.addr_valid);
+    cmd_ret = val_realm_rsi_ipa_state_get(c_args.base_valid, c_args.top_valid);
     if (cmd_ret.x0)
     {
         LOG(ERROR, "\n\tRSI_IPA_STATE_GET Failed with ret = 0x%x\n", cmd_ret.x0, 0);
@@ -107,7 +122,7 @@ void cmd_ipa_state_get_realm(void)
         goto exit;
     }
 
-    if ((cmd_ret.x1 != RSI_RAM) || (VAL_EXTRACT_BITS(cmd_ret.x1, 8, 63) != 0)) {
+    if ((cmd_ret.x2 != RSI_RAM) || (VAL_EXTRACT_BITS(cmd_ret.x2, 8, 63) != 0)) {
         LOG(ERROR, "\n\tPositive Observability failed.", 0, 0);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(4)));
         goto exit;
