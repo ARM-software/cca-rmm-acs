@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023-2024, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -23,7 +23,7 @@
 #define CCA_PLATFORM_IMPLEMENTATION_ID 239
 #define CCA_PLATFORM_INSTANCE_ID 256
 #define CCA_PLATFORM_CONFIG 2401
-#define CCA_PLATFORM_LIFESTYLE 2395
+#define CCA_PLATFORM_LIFECYCLE 2395
 #define CCA_PLATFORM_SW_COMPONENTS 2399
 #define CCA_PLATFORM_VERIFICATION_SERVICE 2400
 #define CCA_PLATFORM_HASH_ALGO_ID 2402
@@ -48,6 +48,13 @@
 
 #define CCA_BYTE_SIZE_33    33
 #define CCA_BYTE_SIZE_97    97
+
+/* Realm Public Key componenents Labels */
+#define CCA_REALM_PUBLIC_KEY_TYPE    1
+#define CCA_REALM_PUBLIC_KEY_ID      2
+#define CCA_REALM_PUBLIC_KEY_ALGO    3
+#define CCA_REALM_PUBLIC_KEY_OPS     4
+#define CCA_ReALM_PUBLIC_KEY_BASE_IV 5
 
 typedef struct {
     struct q_useful_buf_c challenge;
