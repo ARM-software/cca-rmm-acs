@@ -184,13 +184,6 @@ static uint64_t top_rtt_unaligned_prep_sequence(void)
 {
     uint64_t ret;
 
-    if (!val_host_rmm_supports_rtt_tree_per_plane() ||
-        !val_host_rmm_supports_planes())
-    {
-        LOG(ALWAYS, "\tNo support for RTT tree per plane\n", 0, 0);
-        return VAL_SKIP_CHECK;
-    }
-
     ret = val_host_rmi_rec_enter(realm[VALID_REALM].rec[1], realm[VALID_REALM].run[1]);
     if (ret)
     {
@@ -211,6 +204,13 @@ static uint64_t top_rtt_unaligned_prep_sequence(void)
 static uint64_t ipa_aux_live_prep_sequence(void)
 {
     uint64_t ret;
+
+    if (!val_host_rmm_supports_rtt_tree_per_plane() ||
+        !val_host_rmm_supports_planes())
+    {
+        LOG(ALWAYS, "\tNo support for RTT tree per plane\n", 0, 0);
+        return VAL_SKIP_CHECK;
+    }
 
     ret = val_host_rmi_rec_enter(realm[VALID_REALM].rec[1], realm[VALID_REALM].run[1]);
     if (ret)
@@ -416,11 +416,11 @@ static uint64_t intent_to_seq(struct stimulus *test_data, struct arguments *args
             args->top = c_args.top_valid - PAGE_SIZE / 2;
             break;
 
-        case TOP_RTT_UNALIGNED:
+        case TOP_LEVEL_UNALIGNED:
             args->rd = c_args.rd_valid;
             args->rec_ptr = realm[VALID_REALM].rec[1];
             args->base = top_rtt_unaligned_prep_sequence();
-            args->top = args->base + L2_SIZE + L3_SIZE;
+            args->top = args->base + L3_SIZE;
             break;
 
         case IPA_AUX_LIVE:
@@ -441,11 +441,11 @@ static uint64_t intent_to_seq(struct stimulus *test_data, struct arguments *args
             args->top = c_args.top_valid;
             break;
 
-        case TOP_GRAN_UNALIGNED_TOP_RTT_UNALIGNED:
+        case TOP_GRAN_UNALIGNED_TOP_LEVEL_UNALIGNED:
             args->rd = c_args.rd_valid;
             args->rec_ptr = realm[VALID_REALM].rec[1];
             args->base = top_rtt_unaligned_prep_sequence();
-            args->top = args->base + L2_SIZE + (L3_SIZE / 2);
+            args->top = args->base + (L3_SIZE / 2);
             break;
 
         default:

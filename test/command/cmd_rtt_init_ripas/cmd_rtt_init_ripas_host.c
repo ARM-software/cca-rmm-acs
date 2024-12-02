@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023-2024, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -315,13 +315,13 @@ static uint64_t intent_to_seq(struct stimulus *test_data, struct arguments *args
             args->top = L3_SIZE / 2;
             break;
 
-        case TOP_RTT_UNALIGNED:
+        case TOP_LEVEL_UNALIGNED:
             args->rd = c_args.rd_valid;
             args->base = ipa_protected_unmapped_prep_sequence();
-            args->top = args->base + L2_SIZE + L3_SIZE;
+            args->top = args->base + L3_SIZE;
             break;
 
-        case TOP_GRAN_UNALIGNED_TOP_RTT_UNALIGNED:
+        case TOP_GRAN_UNALIGNED_TOP_LEVEL_UNALIGNED:
             args->rd = c_args.rd_valid;
             args->base = ipa_protected_unmapped_prep_sequence();
             args->top = args->base + (L3_SIZE / 2);

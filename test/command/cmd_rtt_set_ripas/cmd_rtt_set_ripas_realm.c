@@ -33,7 +33,7 @@ void cmd_rtt_set_ripas_realm(void)
             goto exit;
         }
 
-        /* Execure RSI_SET_RIPAS again to trigger top_rtt_align condition */
+        /* Execure RSI_SET_RIPAS again to trigger no_progress condition */
         cmd_ret = val_realm_rsi_ipa_state_set(L2_SIZE, 3 * L2_SIZE, RSI_RAM,
                                                                  RSI_NO_CHANGE_DESTROYED);
         ret = cmd_ret.x0;
