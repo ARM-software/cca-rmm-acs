@@ -81,6 +81,8 @@ static uint64_t g_params_prep_sequence(params_prep_seq_type type)
     params->rtt_num_start = 0;
     params->vmid = 0;
     params->rtt_base = rtt_base;
+    params->num_bps = 1;
+    params->num_wps = 1;
 
     switch (type) {
     /* Generate a Invalid encoding for Hash algorithm */
@@ -157,22 +159,22 @@ static uint64_t g_params_prep_sequence(params_prep_seq_type type)
 
         val_host_rmi_features(0, &featreg0);
 
-        if (VAL_EXTRACT_BITS(featreg0, 14, 17) == 0xF) {
+        if (VAL_EXTRACT_BITS(featreg0, 14, 19) == 0x0) {
             LOG(TEST, "\n\tNo Invalid combitation", 0, 0);
             return VAL_SKIP_CHECK;
         }
-        params->num_bps |= (uint8_t)(VAL_EXTRACT_BITS(featreg0, 14, 17) + 1);
+        params->num_bps = (uint8_t)(VAL_EXTRACT_BITS(featreg0, 14, 19) + 1);
         break;
 
     case PARAMS_WPS_UNSUPPORTED:
 
         val_host_rmi_features(0, &featreg0);
 
-        if (VAL_EXTRACT_BITS(featreg0, 18, 21) == 0xF) {
+        if (VAL_EXTRACT_BITS(featreg0, 20, 25) == 0xF) {
             LOG(TEST, "\n\tNo Invalid combitation", 0, 0);
             return VAL_SKIP_CHECK;
         }
-        params->num_bps |= (uint8_t)(VAL_EXTRACT_BITS(featreg0, 18, 21) + 1);
+        params->num_wps |= (uint8_t)(VAL_EXTRACT_BITS(featreg0, 18, 21) + 1);
         break;
 
     /* Select a unalligned address for rtt */
@@ -301,6 +303,8 @@ static uint64_t params_valid_prep_sequence(void)
     params->rtt_level_start = 0;
     params->vmid = REALM_VALID;
     params->rtt_base = rtt0;
+    params->num_bps = 1;
+    params->num_wps = 1;
 
 #ifdef RMM_V_1_1
     params->flags1 |= VAL_REALM_FLAG_RTT_TREE_PP;
