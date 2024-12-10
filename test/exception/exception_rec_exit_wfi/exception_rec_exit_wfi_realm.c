@@ -88,11 +88,15 @@ void exception_rec_exit_wfi_realm(void)
         /* Before triggering the rec exit(dueto wfi) save the gprs values */
         GET_GPRS_VALUES(gGPRS);
 
+        dsbsy();
+
         /* Trigger the WFI for rec exit */
         __asm__("wfi");
 
         /* Upon rec enter again Read the gprs again */
         GET_GPRS_VALUES(lGPRS);
+
+        dsbsy();
 
         if (*wfi_trig == true)
             break;

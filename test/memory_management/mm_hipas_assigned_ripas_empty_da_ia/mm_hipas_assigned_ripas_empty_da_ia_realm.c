@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023-2024, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -60,6 +60,7 @@ void mm_hipas_assigned_ripas_empty_da_ia_realm(void)
      * => SEA to Realm
      */
     *(volatile uint32_t *)ipa_base = 0x100;
+    dsbsy();
     if (!g_sea_params.handler_abort)
     {
         LOG(ERROR, "\tData abort not triggered\n", 0, 0);

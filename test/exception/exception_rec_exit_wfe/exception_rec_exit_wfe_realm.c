@@ -87,11 +87,15 @@ void exception_rec_exit_wfe_realm(void)
         /* Keep the current gprs information before triggering the realm exit(WFE) */
         GET_GPRS_VALUES(gGPRS);
 
+        dsbsy();
+
         /* trigger the WFE to realm to exit */
         __asm__("wfe");
 
         /* Upon rec enter again Read the gprs again */
         GET_GPRS_VALUES(lGPRS);
+
+        dsbsy();
 
         if (*wfe_trig == true)
             break;
