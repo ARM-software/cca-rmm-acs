@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023-2024, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -38,7 +38,13 @@ void exception_emulatable_da_realm(void)
     /* Read from the memory location */
     data = *(volatile uint32_t *)ipa_base;
 
-    (void)data;
+    if (data != 0x333)
+    {
+        LOG(ERROR, "\tIncorrect emulated data\n", 0, 0);
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(2)));
+        goto exit;
+    }
+
 exit:
     val_realm_return_to_host();
 }

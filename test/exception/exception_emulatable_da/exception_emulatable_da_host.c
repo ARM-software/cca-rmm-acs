@@ -16,7 +16,7 @@ void exception_emulatable_da_host(void)
     val_host_rec_exit_ts *rec_exit = NULL;
     uint32_t index;
     uint64_t ret, mem_attr;
-    uint64_t top;
+    uint64_t top, write_data;
 
     val_memset(&realm, 0, sizeof(realm));
 
@@ -87,6 +87,15 @@ void exception_emulatable_da_host(void)
         goto destroy_realm;
     }
 
+    /* For a emulated write, the data is provided in exit.gprs[0] */
+    write_data = rec_exit->gprs[0];
+    if (write_data != 0x333)
+    {
+        LOG(ERROR, "\tEmulatable write data mismatch\n", 0, 0);
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(8)));
+        goto destroy_realm;
+    }
+
     /* Test Intent: UnProtected IPA, HIPAS = UNASSIGNED read access
      * => REC exit due to Data abort */
     rec_enter->flags = RMI_EMULATED_MMIO;
@@ -94,7 +103,7 @@ void exception_emulatable_da_host(void)
     if (ret)
     {
         LOG(ERROR, "\tRec enter failed, ret=%x\n", ret, 0);
-        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(8)));
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(9)));
         goto destroy_realm;
     }
 
@@ -103,7 +112,18 @@ void exception_emulatable_da_host(void)
                             ESR_ISS_DFSC_TTF_L3, EMULATABLE_DA, ESR_WnR_READ))
     {
         LOG(ERROR, "\tREC exit ESR MBZ params mismatch\n", 0, 0);
-        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(9)));
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(10)));
+        goto destroy_realm;
+    }
+
+    /* Emulate realm's read, For emulated read, data is provided in enter.gprs[0] */
+    rec_enter->gprs[0] = write_data;
+    rec_enter->flags = RMI_EMULATED_MMIO;
+    ret = val_host_rmi_rec_enter(realm.rec[0], realm.run[0]);
+    if (ret)
+    {
+        LOG(ERROR, "\tRec enter failed, ret=%x\n", ret, 0);
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(11)));
         goto destroy_realm;
     }
 
