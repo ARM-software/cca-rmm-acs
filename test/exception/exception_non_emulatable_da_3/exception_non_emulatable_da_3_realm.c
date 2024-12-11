@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023-2024, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2024, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -10,11 +10,11 @@
 #include "val_exceptions.h"
 #include "val_realm_memory.h"
 
-void exception_non_emulatable_da_2_realm(void)
+void exception_non_emulatable_da_3_realm(void)
 {
     val_realm_rsi_host_call_t *gv_realm_host_call;
     val_memory_region_descriptor_ts mem_desc;
-    uint64_t ipa_base, size;
+    uint64_t data, ipa_base, size;
 
     /* Below code is executed for REC[0] only */
     LOG(DBG, "\tIn realm_create_realm REC[0], mpdir=%x\n", val_read_mpidr(), 0);
@@ -34,12 +34,13 @@ void exception_non_emulatable_da_2_realm(void)
         goto exit;
     }
 
-    /* Test intent: Protected IPA, RIPAS=RAM, HIPAS=UNASSIGNED write access
+    /* Test intent: Protected IPA, RIPAS=RAM, HIPAS=UNASSIGNED read access
      * => REC exit due to data abort.
      */
-    /* Write access to memory */
-    *(volatile uint32_t *)ipa_base = 0x100;
+    /* Read access from memory */
+    data = *(volatile uint32_t *)ipa_base;
 
+    (void)data;
 exit:
     val_realm_return_to_host();
 }

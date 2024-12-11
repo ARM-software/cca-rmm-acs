@@ -18,14 +18,13 @@ static void p0_payload(void)
     val_realm_rsi_host_call_t *gv_realm_host_call;
     uint64_t p1_ipa_base, p1_ipa_top;
     uint64_t esr;
-    uint64_t da_ipa, ia_ipa, size;
+    uint64_t ipa_base, size;
     __attribute__((aligned (PAGE_SIZE))) val_realm_rsi_plane_run_ts run_ptr = {0};
 
-    /* Request Host the test IPA whose HIPAS,RIPAS is UNASSIGNED,RAM via host call*/
+    /* Request Host the test IPA whose RIPAS is DESTROYED via host call*/
     gv_realm_host_call = val_realm_rsi_host_call_ripas(VAL_SWITCH_TO_HOST);
-    da_ipa = gv_realm_host_call->gprs[1];
-    ia_ipa = gv_realm_host_call->gprs[2];
-    size = gv_realm_host_call->gprs[3];
+    ipa_base = gv_realm_host_call->gprs[1];
+    size = gv_realm_host_call->gprs[2];
 
     /* Configure Permissions for Plane 1 image */
     p1_ipa_base = VAL_PLANE1_IMAGE_BASE_IPA;
@@ -40,7 +39,7 @@ static void p0_payload(void)
     }
 
     /* Give Plane 1 RW permission for the test IPA */
-    if (val_realm_plane_perm_init(PLANE_1_INDEX, TEST_IPA_PERM_INDEX, da_ipa, da_ipa + size))
+    if (val_realm_plane_perm_init(PLANE_1_INDEX, TEST_IPA_PERM_INDEX, ipa_base, ipa_base + size))
     {
         LOG(ERROR, "Secondary plane permission initialization failed\n", 0, 0);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(2)));
@@ -69,10 +68,8 @@ static void p0_payload(void)
         goto exit;
     }
 
-    /* Return test data to P1 */
-    run_ptr.enter.gprs[0] = da_ipa;
-    run_ptr.enter.gprs[1] = ia_ipa;
-    run_ptr.enter.gprs[2] = size;
+    /* Return the test IPA to P1 */
+    run_ptr.enter.gprs[0] = ipa_base;
 
     /* Run Plane */
     if (val_realm_run_plane(PLANE_1_INDEX, &run_ptr))
@@ -88,22 +85,17 @@ exit:
 static void p1_payload(void)
 {
     val_memory_region_descriptor_ts mem_desc;
-    uint64_t da_ipa, ia_ipa, size;
+    uint64_t test_ipa;
     void (*fun_ptr)(void);
-    val_hvc_param_ts hvc_data;
 
-    /* Request test data from P0 */
-    hvc_data = val_hvc_call(PSI_P0_CALL, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    /* Request test IPA from P0 */
+    test_ipa = val_hvc_call(PSI_P0_CALL, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0).x0;
 
-    da_ipa = hvc_data.x0;
-    ia_ipa = hvc_data.x1;
-    size = hvc_data.x2;
-
-    /* Map the DA IPA as DATA in stage 1 */
-    mem_desc.virtual_address = da_ipa;
-    mem_desc.physical_address = da_ipa;
-    mem_desc.length = size;
-    mem_desc.attributes = MT_RW_DATA | MT_REALM;
+    /* Map the IPA as DATA in stage 1 */
+    mem_desc.virtual_address = test_ipa;
+    mem_desc.physical_address = test_ipa;
+    mem_desc.length = PAGE_SIZE;
+    mem_desc.attributes = MT_CODE | MT_REALM;
     if (val_realm_pgt_create(&mem_desc))
     {
         LOG(ERROR, "\tVA to PA mapping failed\n", 0, 0);
@@ -111,22 +103,9 @@ static void p1_payload(void)
         goto exit;
     }
 
-    /* Test Intent: Protected IPA, HIPAS = UNASSIGNED, RIPAS=RAM
-     * data access => REC exit to host */
-    *(volatile uint32_t *)da_ipa = 0x100;
+    fun_ptr = (void *)test_ipa;
 
-    /* Re-map the IA IPA as CODE in stage 1 */
-    mem_desc.attributes = MT_CODE | MT_REALM ;
-
-    if (val_realm_update_attributes(PAGE_SIZE, ia_ipa, (uint32_t)mem_desc.attributes)) {
-        LOG(ERROR, "\tPage attributes update failed\n", 0, 0);
-        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(7)));
-        goto exit;
-    }
-
-    fun_ptr = (void *)ia_ipa;
-
-    /* Test Intent: Protected IPA, HIPAS = UNASSIGNED, RIPAS=RAM
+    /* Test Intent: Protected IPA, RIPAS = DESTROYED
      * Instruction fetch => REC exit to host */
     (*fun_ptr)();
 
@@ -134,7 +113,7 @@ exit:
     val_realm_return_to_p0();
 }
 
-void planes_rec_exit_da_ia_hipas_unassigned_ripas_ram_realm(void)
+void planes_rec_exit_ia_ripas_destroyed_realm(void)
 {
     if (val_realm_in_p0())
         p0_payload();

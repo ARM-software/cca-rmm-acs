@@ -86,7 +86,6 @@ static void p1_payload(void)
 {
     val_memory_region_descriptor_ts mem_desc;
     uint64_t test_ipa;
-    void (*fun_ptr)(void);
 
     /* Request test IPA from P0 */
     test_ipa = val_hvc_call(PSI_P0_CALL, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0).x0;
@@ -107,26 +106,12 @@ static void p1_payload(void)
      * data access => REC exit to host */
     *(volatile uint32_t *)test_ipa = 0x100;
 
-    /* Re-map the IPA as CODE in stage 1 */
-    mem_desc.attributes = MT_CODE | MT_REALM ;
-
-    if (val_realm_update_attributes(PAGE_SIZE, test_ipa, (uint32_t)mem_desc.attributes)) {
-        LOG(ERROR, "\tPage attributes update failed\n", 0, 0);
-        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(7)));
-        goto exit;
-    }
-
-    fun_ptr = (void *)test_ipa;
-
-    /* Test Intent: Protected IPA, RIPAS = DESTROYED
-     * Instruction fetch => REC exit to host */
-    (*fun_ptr)();
 
 exit:
     val_realm_return_to_p0();
 }
 
-void planes_rec_exit_da_ia_ripas_destroyed_realm(void)
+void planes_rec_exit_da_ripas_destroyed_realm(void)
 {
     if (val_realm_in_p0())
         p0_payload();

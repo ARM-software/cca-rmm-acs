@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023-2024, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -18,7 +18,7 @@ void mm_hipas_unassigned_ripas_ram_da_ia_host(void)
     val_host_rec_enter_ts *rec_enter = NULL;
     val_host_rec_exit_ts *rec_exit = NULL;
     val_data_create_ts data_create;
-    uint64_t ripas_ipa, ripas_size;
+    uint64_t da_ipa, ia_ipa, ripas_size;
     uint64_t phys;
 
     val_memset(&realm, 0, sizeof(realm));
@@ -33,7 +33,7 @@ void mm_hipas_unassigned_ripas_ram_da_ia_host(void)
         goto destroy_realm;
     }
 
-    data_create.size = 0x1000;
+    data_create.size = 2 * PAGE_SIZE;
     phys = (uint64_t)val_host_mem_alloc(PAGE_SIZE, data_create.size);
     if (!phys)
     {
@@ -78,10 +78,12 @@ void mm_hipas_unassigned_ripas_ram_da_ia_host(void)
     }
 
     /* Resume back REC[0] execution */
-    ripas_ipa = PROTECTED_IPA;
-    ripas_size = 0x1000;
-    rec_enter->gprs[1] = ripas_ipa;
-    rec_enter->gprs[2] = ripas_size;
+    da_ipa = PROTECTED_IPA;
+    ia_ipa = PROTECTED_IPA + PAGE_SIZE;
+    ripas_size = data_create.size;
+    rec_enter->gprs[1] = da_ipa;
+    rec_enter->gprs[2] = ia_ipa;
+    rec_enter->gprs[3] = ripas_size;
     /* Test intent: Protected IPA, HIPAS=UNASSIGNED, RIPAS=RAM data access
      * => REC exit due to data abort
      */
@@ -93,7 +95,7 @@ void mm_hipas_unassigned_ripas_ram_da_ia_host(void)
         goto destroy_realm;
     }
 
-    if (validate_rec_exit_da(rec_exit, ripas_ipa, ESR_ISS_DFSC_TTF_L3,
+    if (validate_rec_exit_da(rec_exit, da_ipa, ESR_ISS_DFSC_TTF_L3,
                                 NON_EMULATABLE_DA, ESR_WnR_WRITE))
     {
         LOG(ERROR, "\tREC exit DA: params mismatch\n", 0, 0);
@@ -101,22 +103,38 @@ void mm_hipas_unassigned_ripas_ram_da_ia_host(void)
         goto destroy_realm;
     }
 
-    /* Test intent: Protected IPA, HIPAS=UNASSIGNED, RIPAS=RAM instruction access
-     * => REC exit due to instruction abort
-     */
-    rec_enter->flags = RMI_EMULATED_MMIO;
-    ret = val_host_rmi_rec_enter(realm.rec[0], realm.run[0]);
-    if (ret)
+    /* Fix the Data Abort */
+    phys = (uint64_t)val_host_mem_alloc(PAGE_SIZE, PAGE_SIZE);
+    if (!phys)
     {
-        LOG(ERROR, "\tRec enter failed, ret=%x\n", ret, 0);
+        LOG(ERROR, "\tval_host_mem_alloc failed\n", 0, 0);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(9)));
         goto destroy_realm;
     }
 
-    if (validate_rec_exit_ia(rec_exit, ripas_ipa))
+    ret = val_host_map_protected_data_unknown(&realm, phys, da_ipa, PAGE_SIZE);
+    if (ret)
+    {
+        LOG(ERROR, "\tDATA_CREATE_UNKNOWN failed, ret = %d \n", ret, 0);
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(10)));
+        goto destroy_realm;
+    }
+
+    /* Test intent: Protected IPA, HIPAS=UNASSIGNED, RIPAS=RAM instruction access
+     * => REC exit due to instruction abort
+     */
+    ret = val_host_rmi_rec_enter(realm.rec[0], realm.run[0]);
+    if (ret)
+    {
+        LOG(ERROR, "\tRec enter failed, ret=%x\n", ret, 0);
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(11)));
+        goto destroy_realm;
+    }
+
+    if (validate_rec_exit_ia(rec_exit, ia_ipa))
     {
         LOG(ERROR, "\tREC exit IA: params mismatch\n", 0, 0);
-        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(10)));
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(12)));
         goto destroy_realm;
     }
 

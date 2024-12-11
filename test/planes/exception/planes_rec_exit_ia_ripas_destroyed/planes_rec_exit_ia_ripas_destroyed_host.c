@@ -11,7 +11,7 @@
 
 #define TEST_IPA 0x1000
 
-void planes_rec_exit_da_ia_ripas_destroyed_host(void)
+void planes_rec_exit_ia_ripas_destroyed_host(void)
 {
     static val_host_realm_ts realm;
     val_host_realm_flags1_ts realm_flags;
@@ -156,34 +156,12 @@ void planes_rec_exit_da_ia_ripas_destroyed_host(void)
         goto destroy_realm;
     }
 
-    /* Check that REC exit was due to Data Abort due to P1 access to IPA
-     *  whose RIPAS = DESTROYED */
-    if (validate_rec_exit_da(rec_exit, TEST_IPA, ESR_ISS_DFSC_TTF_L3,
-                                NON_EMULATABLE_DA, ESR_WnR_WRITE))
-    {
-        LOG(ERROR, "\tREC exit DA: params mismatch\n", 0, 0);
-        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(14)));
-        goto destroy_realm;
-    }
-
-    /* Hack to increment PC, even though previous exit was not a emulatable abort*/
-    rec_enter->flags = RMI_EMULATED_MMIO;
-
-    /* Enter REC[0]  */
-    ret = val_host_rmi_rec_enter(realm.rec[0], realm.run[0]);
-    if (ret)
-    {
-        LOG(ERROR, "\tRec enter failed, ret=%x\n", ret, 0);
-        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(15)));
-        goto destroy_realm;
-    }
-
     /* Check that REC exit was due to Data Abort due to P1 access to IPA whose
      * RIPAS = DESTROYED */
     if (validate_rec_exit_ia(rec_exit, TEST_IPA))
     {
         LOG(ERROR, "\tREC exit IA: params mismatch\n", 0, 0);
-        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(16)));
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(12)));
         goto destroy_realm;
     }
 

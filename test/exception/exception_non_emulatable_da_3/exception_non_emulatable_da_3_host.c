@@ -1,17 +1,16 @@
 /*
- * Copyright (c) 2023, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2024, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
  */
 #include "test_database.h"
 #include "val_host_rmi.h"
-#include "mm_common_host.h"
 #include "val_host_helpers.h"
 
 #define PROTECTED_IPA 0x800000
 
-void mm_ripas_destroyed_da_ia_host(void)
+void exception_non_emulatable_da_3_host(void)
 {
     val_host_realm_ts realm;
     uint64_t ret;
@@ -92,7 +91,7 @@ void mm_ripas_destroyed_da_ia_host(void)
     /* Resume back REC[0] execution */
     rec_enter->gprs[1] = ripas_ipa;
     rec_enter->gprs[2] = ripas_size;
-    /* Test intent: Protected IPA, RIPAS=DESTROYED data access
+    /* Test intent: Protected IPA, RIPAS=RAM, HIPAS=DESTROYED write access
      * => REC exit due to data abort.
      */
     ret = val_host_rmi_rec_enter(realm.rec[0], realm.run[0]);
@@ -103,30 +102,12 @@ void mm_ripas_destroyed_da_ia_host(void)
         goto destroy_realm;
     }
 
-    if (validate_rec_exit_da(rec_exit, ripas_ipa, ESR_ISS_DFSC_TTF_L3,
-                                NON_EMULATABLE_DA, 0))
+    /* validates the Rec Exit due to DA */
+    if (validate_rec_exit_da(rec_exit, ripas_ipa,
+                                ESR_ISS_DFSC_TTF_L3, NON_EMULATABLE_DA, 0))
     {
-        LOG(ERROR, "\tREC exit params mismatch\n", 0, 0);
+        LOG(ERROR, "\tREC exit ESR params mismatch\n", 0, 0);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(9)));
-        goto destroy_realm;
-    }
-
-    /* Test intent: Protected IPA, RIPAS=DESTROYED instruction access
-     * => REC exit due to instruction abort.
-     */
-    rec_enter->flags = RMI_EMULATED_MMIO;
-    ret = val_host_rmi_rec_enter(realm.rec[0], realm.run[0]);
-    if (ret)
-    {
-        LOG(ERROR, "\tRec enter failed, ret=%x\n", ret, 0);
-        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(9)));
-        goto destroy_realm;
-    }
-
-    if (validate_rec_exit_ia(rec_exit, ripas_ipa))
-    {
-        LOG(ERROR, "\tREC exit IA: params mismatch\n", 0, 0);
-        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(10)));
         goto destroy_realm;
     }
 

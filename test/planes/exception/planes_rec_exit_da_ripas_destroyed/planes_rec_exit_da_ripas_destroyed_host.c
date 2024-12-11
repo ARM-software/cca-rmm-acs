@@ -7,17 +7,21 @@
 #include "test_database.h"
 #include "val_host_rmi.h"
 #include "val_host_helpers.h"
+#include "val_host_command.h"
 
 #define TEST_IPA 0x1000
 
-void planes_rec_exit_da_ia_hipas_unassigned_ripas_ram_host(void)
+void planes_rec_exit_da_ripas_destroyed_host(void)
 {
     static val_host_realm_ts realm;
     val_host_realm_flags1_ts realm_flags;
     uint64_t ret;
+    val_smc_param_ts cmd_ret;
     val_host_rec_exit_ts *rec_exit = NULL;
     val_host_rec_enter_ts *rec_enter = NULL;
-    uint64_t da_ipa, ia_ipa, size, phys;
+    val_data_create_ts data_create;
+    val_host_data_destroy_ts data_destroy;
+    uint64_t phys;
 
     /* Skip if RMM do not support planes */
     if (!val_host_rmm_supports_planes())
@@ -50,24 +54,59 @@ void planes_rec_exit_da_ia_hipas_unassigned_ripas_ram_host(void)
         goto destroy_realm;
     }
 
-    da_ipa = TEST_IPA;
-    ia_ipa = TEST_IPA + PAGE_SIZE;
-    size = 2 * PAGE_SIZE;
-    /* Prepare IPA whose HIPAS = UNASIGNED, RIPAS = RAM, the process to put the IPA
-     * to this state depends on whether we are acccessing primary or auxiliary RTT tree */
-    if (val_host_ripas_init(&realm, TEST_IPA, TEST_IPA + size,
-                                                     VAL_RTT_MAX_LEVEL, PAGE_SIZE))
+    /* Prepare IPA whose HIPAS = DESTROYED */
+    data_create.size = PAGE_SIZE;
+    phys = (uint64_t)val_host_mem_alloc(PAGE_SIZE, (2 * data_create.size));
+    if (!phys)
     {
-            LOG(ERROR, "\tRMI_INIT_RIPAS failed ", 0, 0);
-            val_set_status(RESULT_FAIL(VAL_ERROR_POINT(2)));
-            goto destroy_realm;
+        LOG(ERROR, "\tval_host_mem_alloc failed\n", 0, 0);
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(2)));
+        goto destroy_realm;
+    }
+
+    data_create.src_pa = phys;
+    data_create.target_pa = phys + data_create.size;
+    data_create.ipa = TEST_IPA;
+    data_create.rtt_alignment = PAGE_SIZE;
+    ret = val_host_map_protected_data_to_realm(&realm, &data_create);
+    if (ret)
+    {
+        LOG(ERROR, "\tval_host_map_protected_data_to_realm failed\n", 0, 0);
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(3)));
+        goto destroy_realm;
+    }
+
+    /* If Realm is configured to use RTT tree per plane, unmap IPA from auxiliary RTTs
+     * before destroying from primary RTT */
+    if (VAL_EXTRACT_BITS(realm.flags1, 0, 0) && realm.num_aux_planes > 0)
+    {
+        for (uint64_t i = 0; i < realm.num_aux_planes; i++)
+        {
+
+            cmd_ret = val_host_rmi_rtt_aux_unmap_protected(realm.rd, TEST_IPA, i + 1);
+
+            if (cmd_ret.x0)
+            {
+                LOG(ERROR, "RTT_AUX_UNMAP_PRTOTECTED failed, ret=%d\n", cmd_ret.x0, 0);
+                val_set_status(RESULT_FAIL(VAL_ERROR_POINT(4)));
+                goto destroy_realm;
+            }
+        }
+    }
+
+    ret = val_host_rmi_data_destroy(realm.rd, TEST_IPA, &data_destroy);
+    if (ret)
+    {
+        LOG(ERROR, "\tData destroy failed, ipa=0x%lx, ret=0x%x\n", TEST_IPA, ret);
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(5)));
+        goto destroy_realm;
     }
 
     /* Activate realm */
     if (val_host_realm_activate(&realm))
     {
         LOG(ERROR, "\tRealm activate failed\n", 0, 0);
-        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(3)));
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(6)));
         goto destroy_realm;
     }
 
@@ -79,87 +118,51 @@ void planes_rec_exit_da_ia_hipas_unassigned_ripas_ram_host(void)
     if (ret)
     {
         LOG(ERROR, "\tRec enter failed, ret=%x\n", ret, 0);
-        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(4)));
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(7)));
         goto destroy_realm;
     }
 
     /* Check that REC Exit was due to host call because of P0 requesting for test IPA */
     if (rec_exit->exit_reason != RMI_EXIT_HOST_CALL) {
         LOG(ERROR, "\tUnexpected REC exit, %d. ESR: %lx \n", rec_exit->exit_reason, rec_exit->esr);
-        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(5)));
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(8)));
         goto destroy_realm;
     }
 
     /* Return the test IPA to P0 */
-    rec_enter->gprs[1] = da_ipa;
-    rec_enter->gprs[2] = ia_ipa;
-    rec_enter->gprs[3] = size;
+    rec_enter->gprs[1] = TEST_IPA;
+    rec_enter->gprs[2] = PAGE_SIZE;
 
     /* Enter REC[0]  */
     ret = val_host_rmi_rec_enter(realm.rec[0], realm.run[0]);
     if (ret)
     {
         LOG(ERROR, "\tRec enter failed, ret=%x\n", ret, 0);
-        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(6)));
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(9)));
         goto destroy_realm;
     }
 
     /* Check that REC exit was due S2AP change request */
     if (rec_exit->exit_reason != RMI_EXIT_S2AP_CHANGE) {
         LOG(ERROR, "\tUnexpected REC exit, %d. ESR: %lx \n", rec_exit->exit_reason, rec_exit->esr);
-        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(7)));
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(10)));
         goto destroy_realm;
     }
 
     /* Update S2AP for the requested memory range */
     if (val_host_set_s2ap(&realm))
     {
-        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(8)));
-        goto destroy_realm;
-    }
-
-    /* Check that REC exit was due to Data Abort due to P1 access to IPA whose
-     * HIPAS,RIPAS = UNASSIGNED,RAM */
-    if (validate_rec_exit_da(rec_exit, da_ipa, ESR_ISS_DFSC_TTF_L3,
-                                NON_EMULATABLE_DA, ESR_WnR_WRITE))
-    {
-        LOG(ERROR, "\tREC exit DA: params mismatch\n", 0, 0);
-        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(9)));
-        goto destroy_realm;
-    }
-
-    /* Fix the Data Abort */
-    phys = (uint64_t)val_host_mem_alloc(PAGE_SIZE, PAGE_SIZE);
-    if (!phys)
-    {
-        LOG(ERROR, "\tval_host_mem_alloc failed\n", 0, 0);
-        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(10)));
-        goto destroy_realm;
-    }
-
-    ret = val_host_map_protected_data_unknown(&realm, phys, da_ipa, PAGE_SIZE);
-    if (ret)
-    {
-        LOG(ERROR, "\tDATA_CREATE_UNKNOWN failed, ret = %d \n", ret, 0);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(11)));
         goto destroy_realm;
     }
 
-    /* Enter REC[0]  */
-    ret = val_host_rmi_rec_enter(realm.rec[0], realm.run[0]);
-    if (ret)
+    /* Check that REC exit was due to Data Abort due to P1 access to IPA
+     *  whose RIPAS = DESTROYED */
+    if (validate_rec_exit_da(rec_exit, TEST_IPA, ESR_ISS_DFSC_TTF_L3,
+                                NON_EMULATABLE_DA, ESR_WnR_WRITE))
     {
-        LOG(ERROR, "\tRec enter failed, ret=%x\n", ret, 0);
+        LOG(ERROR, "\tREC exit DA: params mismatch\n", 0, 0);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(12)));
-        goto destroy_realm;
-    }
-
-    /* Check that REC exit was due to Data Abort due to P1 access to IPA whose
-     * HIPAS,RIPAS = UNASSIGNED,RAM */
-    if (validate_rec_exit_ia(rec_exit, ia_ipa))
-    {
-        LOG(ERROR, "\tREC exit IA: params mismatch\n", 0, 0);
-        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(13)));
         goto destroy_realm;
     }
 
