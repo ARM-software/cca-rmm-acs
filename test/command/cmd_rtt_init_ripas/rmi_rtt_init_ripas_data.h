@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023-2024, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2024, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -18,8 +18,8 @@ enum test_intent {
     RD_STATE_DATA = 0X7,
     SIZE_INVALID = 0X8,
     TOP_UNPROTECTED = 0X9,
-    REALM_ACTIVE = 0XA,
-    REALM_SYSTEM_OFF = 0XB,
+    REALM_SYSTEM_OFF = 0XA,
+    REALM_ACTIVE = 0XB,
     REALM_NULL = 0XC,
     BASE_LEVEL_UNALIGNED = 0XD,
     RTTE_STATE_ASSIGNED = 0XE,
@@ -89,12 +89,12 @@ static struct stimulus test_data[] = {
     .index = 0},
     {.msg = "realm_state",
     .abi = RMI_RTT_INIT_RIPAS,
-    .label = REALM_ACTIVE,
+    .label = REALM_SYSTEM_OFF,
     .status = RMI_ERROR_REALM,
     .index = 0},
     {.msg = "realm_state",
     .abi = RMI_RTT_INIT_RIPAS,
-    .label = REALM_SYSTEM_OFF,
+    .label = REALM_ACTIVE,
     .status = RMI_ERROR_REALM,
     .index = 0},
     {.msg = "realm_state_null",
