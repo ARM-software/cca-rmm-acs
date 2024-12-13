@@ -280,9 +280,13 @@ static void val_host_test_exit(void)
 static void val_host_print_acs_header(void)
 {
    LOG(ALWAYS, "\n\n", 0, 0);
+#if defined(RMM_V_1_1)
    LOG(ALWAYS, "********* RMM v1.1 ACS **********\n\n", 0, 0)
    LOG(ALWAYS, " 1. Planes - BETA \n\n", 0, 0)
    LOG(ALWAYS, "*********************************\n\n", 0, 0)
+#elif defined(RMM_V_1_0)
+   LOG(ALWAYS, "********* RMM v1.0 ACS EAC **********\n\n", 0, 0)
+#endif
 }
 
 /**
