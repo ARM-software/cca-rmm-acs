@@ -689,7 +689,8 @@ Observability
   * - Command Success
     -
   * - X1 (Command return Value)
-    - | when index = 0, Check X1[30:63] MBZ field is zero
+    - | when index = 0, and spec version is v1.0 Check X1[42:63] MBZ field is zero
+      | when index = 0, and spec version is v1.1 Check X1[49:63] MBZ field is zero
       | when index != 0, Check X1 == 0
 
 RMI_GRANULE_DELEGATE
@@ -2339,10 +2340,10 @@ Argument list
 
   * - Input parameters
     - Valid Values
-  * - rec
-    - | granule(rec) = 4K_ALIGNED
-      | granule(rec).state = REC
-      | Rec(rec).state = READY
+  * - rec_ptr
+    - | granule(rec_ptr) = 4K_ALIGNED
+      | granule(rec_ptr).state = REC
+      | Rec(rec_ptr).state = READY
 
 
 Failure conditon testing
@@ -2354,14 +2355,14 @@ Failure conditon testing
   * - Input parameters
     - Input Values
     - Remarks
-  * - rec
-    - granule(rec) = unaligned_addr, mmio_region [A], outside_of_permitted_pa [B],
+  * - rec_ptr
+    - granule(rec_ptr) = unaligned_addr, mmio_region [A], outside_of_permitted_pa [B],
       not_backed_by_encryption, raz or wi [C]
 
-      granule(rec).state = UNDELEGATED, DELEGATED, RD, REC_AUX, RTT, DATA, PDEV, VDEV,
+      granule(rec_ptr).state = UNDELEGATED, DELEGATED, RD, REC_AUX, RTT, DATA, PDEV, VDEV,
       IO_UNDELEGATED, IO_DELEGATED_PRIVATE, IO_DELEGATED_SHARED, IO_PRIVATE, IO_SHARED [D]
 
-      Rec(rec).state = Running [E]
+      Rec(rec_ptr).state = Running [E]
     - [E] This can be verified only in an MP environment and need to be tested outside of
       command ACS.
 
@@ -2373,9 +2374,9 @@ Failure Priority ordering
 
   * - Input parameters
     - Remarks
-  * - rec
-    - The priority ordering as defined in the spec is already covered with granule(rec) = mmio and
-      granule(rec).state  in the failure condition stimulus above
+  * - rec_ptr
+    - The priority ordering as defined in the spec is already covered with granule(rec_ptr) = mmio and
+      granule(rec_ptr).state  in the failure condition stimulus above
 
 Observability
 ~~~~~~~~~~~~~
@@ -2386,7 +2387,7 @@ Observability
     - Verification
   * - Command Failure
     -
-  * - | granule(rec).state
+  * - | granule(rec_ptr).state
       | granule(rec_aux).state
     - Refer Observing Properties of a Granule and Observing Contents of a Granule for details.
   * - Command Success
@@ -2582,8 +2583,7 @@ Observability
       | RTTE.state
       | RTTE.addr
       | RTT[ipa].content
-    - | Execute Valid RTT_AUX__CREATE --> success
-      | Execute RTT_AUX_READ_ENTRY and verify the outcome is as expected by the architecture.
+    - Execute Valid RTT_AUX__CREATE --> success
 
 RMI_RTT_AUX_DESTROY
 ^^^^^^^^^^^^^^^^^^^
@@ -2665,8 +2665,7 @@ Observability
   * - Command Success
     -
   * - rtt.state, rtte
-    - | Execute Valid RTT_AUX_DESTROY --> success
-      | Execute RTT_AUX_READ_ENTRY and verify the outcome is as expected by the architecture.
+    - Execute Valid RTT_AUX_DESTROY --> success
 
 RMI_RTT_AUX_FOLD
 ^^^^^^^^^^^^^^^^
@@ -2752,8 +2751,7 @@ Observability
     -
   * - | rtt.state
       | RTTE.state
-    - | Execute Valid RTT_AUX_FOLD --> success
-      | Execute RTT_AUX_READ_ENTRY and verify the outcome is as expected by the architecture.
+    - Execute Valid RTT_AUX_FOLD --> success
 
 RMI_RTT_AUX_MAP_PROTECTED
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -2943,105 +2941,6 @@ Observability
       | RTTE_AUX.content
     - Execute Valid RTT_AUX_MAP_UNPROTECTED -> success
 
-      Execute RTT_READ_ENTRY
-      -> RTTE_AUX.state = ASSIGNED_NS
-      -> RTTE_AUX.s2ap = RTTE_PRI.s2ap
-      -> RTTE_AUX.addr = RTTE_PRI.addr
-
-RMI_RTT_AUX_READ_ENTRY
-^^^^^^^^^^^^^^^^^^^^^^
-
-Argument list
-~~~~~~~~~~~~~
-
-.. list-table::
-  :widths: 25 75
-
-  * - Input parameters
-    - Valid Values
-  * - rd
-    - | granule(rd) = 4K_ALIGNED
-      | granule(rd).state = RD
-  * - ipa
-    - | ipa = level_aligned
-      | ipa = within_permissible_ipa (< 2^Features0.S2SZ)
-  * - level
-    - level = SL/SL+1 (depending on the value read from RMIFeatureregister0.S2SZ),2, 3
-  * - index
-    - 0 < index < realm.num_aux_planes, provided Realm(rd).rtt_tree_pp is TRUE.
-
-Failure conditon testing
-~~~~~~~~~~~~~~~~~~~~~~~~
-
-.. list-table::
-  :widths: 20 40 40
-
-  * - Input parameters
-    - Input Values
-    - Remarks
-  * - rd
-    - granule(rd) = unaligned_addr, mmio_region [A], outside_of_permitted_ipa [B],
-      not_backed_by_encryption, raz or wi [C]
-
-      granule(rd).state = UNDELEGATED, DELEGATED, REC, RTT, DATA, PDEV, VDEV, IO_UNDELEGATED,
-      IO_DELEGATED_PRIVATE, IO_DELEGATED_SHARED, IO_PRIVATE, IO_SHARED [D]
-    -
-  * - ipa
-    - ipa = unaligned_addrr(wrt "level" argument value supplied to the command. For example,
-      if level = 3, provide an IPA that's < 4KB aligned), outside_permissible_ipa
-    -
-  * - level
-    - level = 4
-    -
-  * - index
-    - index = 0, Realm(rd).num_aux_planes + 1
-
-      index = X, Realm(rd).rtt_tree_pp = FALSE
-    -
-
-Failure Priority ordering
-~~~~~~~~~~~~~~~~~~~~~~~~~
-This command has no failure priority orderings.
-
-Observability
-~~~~~~~~~~~~~
-.. list-table::
-  :widths: 25 75
-
-  * - Footprint
-    - Verification
-  * - Command Failure
-    -
-  * - X1 - X4
-    - Check for X1-X4 = zeros()
-  * - Command Success
-    -
-  * -
-    - | Follow below steps for output values,
-      | Execute Valid RTT_READ_ENTRY --> success
-      | Execute RTT_READ_ENTRY and verify the outcome is as expected by the architecture.
-  * - X1(walk_level)
-    - Create a maximum RTT depth (say, till level3 mapping) and use the same IPA aligned to
-      corresponding level to cover various walk levels.
-  * - X2(state)
-    - Although some of this is tested in other commands as part of their successful execution,
-      we will do this for completeness' sake in this command. see last row in this table.
-  * - X3(desc)
-    - Although some of this is tested in other commands as part of their successful execution,
-      we will do this for completeness' sake in this command. see last row in this table.
-  * - X4(ripas)
-    - Although some of this is tested in other commands as part of their successful execution,
-      we will do this for completeness' sake in this command. see last row in this table.
-  * - | rtte.state
-      | rtte.ripas
-    - | Provide IPA whose state is UNASSIGNED/DESTROYED and validate X3(desc) as per spec
-      | Provide protected IPA whose state is ASSIGNED or IPA whose state is TABLE and validate
-        X3(desc).MemAtt, X3(desc). S2AP, and X3(desc).addr as per spec.
-      | Provide Unprotected IPA whose state is ASSIGNED and validate that X3(desc).MemAttr,
-        X3(desc).S2AP and X3(desc).addr as per spec.
-      | Provide unprotected IPA/ provide IPA whose state is in DESTROYED/TABLE and validate
-        X4 as per spec.
-
 RMI_RTT_AUX_UNMAP_PROTECTED
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -3131,10 +3030,7 @@ Observability
     -
   * - | RTTE.state,
       | RTTE.addr
-    - Execute RTT_AUX_READ_ENTRY and compare the outcome with expected value (as defined by the
-      architecture)
-
-      Do this for Realm(rd).state = {NEW, ACTIVE} and RTTE[ipa].ripas = {EMPTY, RAM}
+    - Executing RTT_AUX_MAP_PROTECTED on the same IPA should succeed. 
 
 RMI_RTT_AUX_UNMAP_UNPROTECTED
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -3211,8 +3107,7 @@ Observability
   * - Command Success
     -
   * - RTTE.state
-    - | Execute Valid RTT_AUX_UNMAP_UNPROTECTED --> success
-      | Execute RTT_AUX_READ_ENTRY and verify the outcome is as expected by the architecture.
+    - Execute Valid RTT_AUX_UNMAP_UNPROTECTED --> success
 
 RMI_RTT_CREATE
 ^^^^^^^^^^^^^^
@@ -3575,7 +3470,7 @@ Argument list
       | walk(ipa).level = level
       | RTTE[ipa].state = UNASSIGNED
   * - level
-    - level = LEAF_LEVEL
+    - level = 3, 2, 1
   * - desc
     - desc = attr_valid, output_addr_aligned to level
 
@@ -3604,8 +3499,7 @@ Failure conditon testing
       RTTE[ipa].state = ASSIGNED_NS
     -
   * - level
-    - level = 0 (when RMIFeatureregister0.LPA2 is not supported), 1 (assuming this is pointing to a
-      Table entry, that is there is no prior RTT_FOLD operation), 4
+    - level = 0 (when RMIFeatureregister0.LPA2 is not supported), 4
     -
   * - desc
     - desc = rtte_addr_unaligned to level, attr_invalid (a value 1 in RES0 field, for example
@@ -3742,16 +3636,16 @@ Argument list
   * - rd
     - | granule(rd) = 4K_ALIGNED
       | granule(rd).state = RD
-  * - rec
-    - | granule(rec) = 4K_ALIGNED
-      | granule(rec).state = REC
-      | Rec(rec).state = READY
-      | Rec(rec).owner = rd
+  * - rec_ptr
+    - | granule(rec_ptr) = 4K_ALIGNED
+      | granule(rec_ptr).state = REC
+      | Rec(rec_ptr).state = READY
+      | Rec(rec_ptr).owner = rd
   * - base
     - | base = walk.level aligned
-      | base = Rec(rec).ripas_addr
+      | base = Rec(rec_ptr).ripas_addr
   * - top
-    - | top <= Rec(rec).ripas_top
+    - | top <= Rec(rec_ptr).ripas_top
       | top > base
       | RTTE_AUX[base, top].state = UNASSIGNED
 
@@ -3771,16 +3665,16 @@ Failure conditon testing
       granule(rd).state = UNDELEGATED, DELEGATED, REC, RTT, DATA, PDEV, VDEV, IO_UNDELEGATED,
       IO_DELEGATED_PRIVATE, IO_DELEGATED_SHARED, IO_PRIVATE, IO_SHARED [D]
     -
-  * - rec
-    - granule(rec) = unaligned_addr, mmio_region [A], outside_of_permitted_ipa [B],
+  * - rec_ptr
+    - granule(rec_ptr) = unaligned_addr, mmio_region [A], outside_of_permitted_ipa [B],
       not_backed_by_encryption, raz or wi [C]
 
-      granule(rec).state = UNDELEGATED, DELEGATED, RD, REC_AUX, RTT, DATA, PDEV, VDEV,
+      granule(rec_ptr).state = UNDELEGATED, DELEGATED, RD, REC_AUX, RTT, DATA, PDEV, VDEV,
       IO_UNDELEGATED, IO_DELEGATED_PRIVATE, IO_DELEGATED_SHARED, IO_PRIVATE, IO_SHARED [D]
 
-      Rec(rec).state = Running [E]
+      Rec(rec_ptr).state = Running [E]
 
-      Rec(rec).owner = not_rd [F]
+      Rec(rec_ptr).owner = not_rd [F]
     - [E] This is an MP scenario as one thread (REC) will be running inside the Realm,
       while another will attempt to enter into realm using the same REC. This needs to be tested
       outside of command ACS.
@@ -3789,10 +3683,10 @@ Failure conditon testing
   * - base
     - base = unaligned_addr (ensuring walk.level = 2, provide an IPA that's 4KB aligned),
 
-      base != rec.ripas_addr
+      base != rec_ptr.ripas_addr
     -
   * - top
-    - top > rec.ripas_top
+    - top > rec_ptr.ripas_top
 
       top <= base
 
@@ -3939,7 +3833,7 @@ Argument list
       | walk(ipa).level = level
       | RTTE[ipa].state = ASSIGNED_NS
   * - level
-    - level = LEAF_LEVEL
+    - level = 3, 2, 1
 
 Failure conditon testing
 ~~~~~~~~~~~~~~~~~~~~~~~~
@@ -4636,9 +4530,12 @@ Argument list
 
   * - Input parameters
     - Valid Values
-  * - addr
-    - | addr = 4K_ALIGNED
-      | addr = Protected
+  * - base
+    - | base = 4K_ALIGNED
+      | base = Protected
+  * - top
+    - | top = 4K_ALIGNED
+      | base + top = Protected
 
 Failure conditon testing
 ~~~~~~~~~~~~~~~~~~~~~~~~
@@ -4649,9 +4546,11 @@ Failure conditon testing
   * - Input parameters
     - Input Values
     - Remarks
-  * - addr
-    - | addr = unaligned_addr,
-      | addr >= 2^(IPA_WIDTH - 1)
+  * - base
+    - base = unaligned_addr, base > top
+    -
+  * - top
+    - top = unaligned_addr , base + top > 2^(IPA_WIDTH -1)
     -
 
 Failure Priority ordering
@@ -4674,8 +4573,8 @@ Argument list
   * - Input parameters
     - Valid Values
   * - base
-    - | addr= 4K_ALIGNED
-      | addr = Protected
+    - | base = 4K_ALIGNED
+      | base = Protected
   * - top
     - top = 4K_ALIGNED
   * - ripas
@@ -4692,9 +4591,6 @@ Failure conditon testing
   * - Input parameters
     - Input Values
     - Remarks
-  * - addr
-    - addr = unaligned_addr
-    -
   * - base
     - base = unaligned_addr, base > top
     -

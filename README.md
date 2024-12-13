@@ -109,7 +109,7 @@ The ACS build generates the binaries as follow :<br />
 - build/output/acs_non_secure.bin
 - build/output/acs_secure.bin
 
-For information on integrating the binaries into the target platform, test suite execution flow, analysing the test results and more, see [Validation Methodology](<./docs/Arm CCA RMM Architecture Compliance Suite Validation Methodology.pdf>) document.
+For information on integrating the binaries into the target platform, test suite execution flow, analysing the test results and more, see [Validation Methodology](./docs/Arm_CCA_RMM_Architecture_Compliance_Suite_Validation_Methodology.pdf) document.
 
 ## Security implication
 The ACS tests may run at higher privilege level. An attacker can utilize these tests to elevate privilege which can potentially reveal the platform secure attests. To prevent such security vulnerabilities into the production system, it is recommended that CCA-RMM-ACS is run on development platforms. If it is run on production system, ensure that the system is scrubbed after running the tests.

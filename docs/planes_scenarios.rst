@@ -6,6 +6,8 @@ Arm RMM ACS Planes Testcase checklist
 *************************************
 
 .. list-table::
+  :widths: 25 30 30 15
+  :header-rows: 1
 
   * - Test name
     - Test Assertion
@@ -52,7 +54,7 @@ Arm RMM ACS Planes Testcase checklist
        * plane_exit.esr_el2.ISS.TI = WFI Instruction
     - Yes
 
-  * - planes_plane_exit_ia_unprtoected
+  * - planes_plane_exit_ia_unprotected
     - An instruction fetch by Pn to an unprotected IPA causes a plane exit due to Synchronous
       Exception taken to P0
     - #. Pick a Unprotected IPA, Map the IPA at stage 2 with RW permission.
@@ -113,7 +115,7 @@ Arm RMM ACS Planes Testcase checklist
        * plane_exit.gprs[0] = RSI_HOST_CALL
     - Yes
 
-  * - planes_rec_exit_da_ia_hipas_unassigned_ripas_ram
+  * - planes_rec_exit_da_ia_hipas_unassigned _ripas_ram
     - A data access or an instruction fetch by Pn to a protected IPA whose HIPAS is DESTORYED or
       HIPAS is UNASSIGNED and RIPAS is not EMPTY causes a REC exit due to Synchronous Exception
       taken to host
@@ -130,8 +132,8 @@ Arm RMM ACS Planes Testcase checklist
        * rec_exit.far_el2, rec_exit.hpfar_el2 = IPA
     - Yes
 
-  * - planes_rec_exit_ripas_destroyed
-    - A data access or an instruction fetch by Pn to a protected IPA whose HIPAS is DESTORYED or
+  * - planes_rec_exit_da_ripas_destroyed
+    - A data access  by Pn to a protected IPA whose HIPAS is DESTORYED or
       HIPAS is UNASSIGNED and RIPAS is not EMPTY causes a REC exit due to Synchronous Exception
       taken to host
     - #. Pick a protected IPA whose (HIPAS, RIPAS ) is (ANY, DESTROYED).
@@ -139,11 +141,28 @@ Arm RMM ACS Planes Testcase checklist
       #. P0 to configure necessary permissions for P1's protected IPA and Enter P1.
       #. Flat - Map the IPA as CODE (RO + X) or DATA (RW) accordingly in stage 1 (since MMU
          is enabled)
-      #. Perform data access and Instruction fetch from above IPA
+      #. Perform data access from above IPA
       #. On REC exit, all of the following are true
 
        * rec_exit.exit_reason = RMI_EXIT_SYNC
-       * rec_exit.esr_el2 = Data abort/Instruction abort
+       * rec_exit.esr_el2 = Data abort
+       * rec_exit.far_el2, rec_exit.hpfar_el2 = IPA
+    - Yes
+
+  * - planes_rec_exit_ia_ripas_destroyed
+    - An instruction fetch by Pn to a protected IPA whose HIPAS is DESTORYED or
+      HIPAS is UNASSIGNED and RIPAS is not EMPTY causes a REC exit due to Synchronous Exception
+      taken to host
+    - #. Pick a protected IPA whose (HIPAS, RIPAS ) is (ANY, DESTROYED).
+      #. Configure Realm with one auxiliary plane and enter Realm.
+      #. P0 to configure necessary permissions for P1's protected IPA and Enter P1.
+      #. Flat - Map the IPA as CODE (RO + X) or DATA (RW) accordingly in stage 1 (since MMU
+         is enabled)
+      #. Perform instruction fetch from above IPA
+      #. On REC exit, all of the following are true
+
+       * rec_exit.exit_reason = RMI_EXIT_SYNC
+       * rec_exit.esr_el2 = Instruction abort
        * rec_exit.far_el2, rec_exit.hpfar_el2 = IPA
     - Yes
 
@@ -172,7 +191,7 @@ Arm RMM ACS Planes Testcase checklist
 
        * rec_exit.exit_reason = RMI_EXIT_IRQ
        * rec_exit.esr_el2 = 0
-    - No
+    - Yes
 
   * - planes_rec_exit_host_call
     - If plane_enter.flags.trap_hc == RSI_NO_TRAP then execution by Pn of RSI_HOST_CALL results
@@ -206,7 +225,7 @@ Arm RMM ACS Planes Testcase checklist
 
        * plane_exit.exit_reason = RSI_EXIT_SYNC
        * plane_exit.esr = Data Abort due to permission fault.
-    -
+    - Yes
 
   * - planes_s2ap_unprotected
     - At Realm Activation,
@@ -221,7 +240,7 @@ Arm RMM ACS Planes Testcase checklist
 
        * plane_exit.exit_reason = RSI_EXIT_SYNC
        * plane_exit.esr = Instruction due to permission fault.
-    -
+    - Yes
 
   * - planes_s2ap_locking
     - At Realm Activation,
@@ -233,7 +252,7 @@ Arm RMM ACS Planes Testcase checklist
       #. Execute RSI_MEM_SET_PERM_VALUE for Overlay index 1 ---> RSI_SUCCESS
       #. Execute RSI_MEM_SET_PERM_INDEX for P0 with Overlay index 1.
       #. Execute RSI_MEM_SET_PERM_VALUE for Overlay index 1 ---> RSI_ERROR_INPUT
-    - No
+    - Yes
 
   * - planes_s2ap_enforced_by_p0
     - To validate permissions set by P0
@@ -243,7 +262,7 @@ Arm RMM ACS Planes Testcase checklist
          in `Table 2 <table-2_>`__ below..
       #. Test for permissions with the all the combinations of inputs to RSI_PLANE_ENTER as
          listed in `Table 3 <table-3_>`__ below and check for respective results.
-    - No
+    - Yes
 
   * - planes_rec_entry_no_virt_int
     - On REC entry, if the values of enter.gicv3_lrs describe one or more Pending interrupts and the
@@ -257,7 +276,7 @@ Arm RMM ACS Planes Testcase checklist
 
          * Check that control passes to Pn
 
-    - No
+    - Yes
 
   * - planes_rec_entry_p0_owner_virt_int
     - On REC entry, if the values of enter.gicv3_lrs describe one or more Pending interrupts and the
@@ -273,7 +292,7 @@ Arm RMM ACS Planes Testcase checklist
          * Check that control passes to P0
          * Check that Plane exit due to synchronous exception
          * Acknowledge the interrupt
-    - No
+    - Yes
 
   * - planes_rec_entry_pn_owner_virt_int
     - On REC entry, if the values of enter.gicv3_lrs describe one or more Pending interrupts and the
@@ -288,7 +307,7 @@ Arm RMM ACS Planes Testcase checklist
          * Check that control passes to Pn
          * Acknowledge the interrupt
 
-    - No
+    - Yes
 
   * - planes_rec_entry_maint_int
     - On REC entry, if the most recent REC exit was from Pn and the value of ICH_MISR_EL2 at the
@@ -302,7 +321,7 @@ Arm RMM ACS Planes Testcase checklist
 
          * Check that control passes to P0
          * Check that Plane exit due to synchronous exception
-    - No
+    - Yes
 
   * - planes_p0_gic_virt_pn
     - Check behavour when P0 is virtualising GIC for Pn
@@ -321,7 +340,7 @@ Arm RMM ACS Planes Testcase checklist
          * Check that control passes to P1
          * Acknowledge the interrupt
 
-    - No
+    - Yes
 
   * - planes_el1_timer_trig
     - On a change in the output of an EL1 timer which requires a Realm-observable change to the
@@ -333,7 +352,7 @@ Arm RMM ACS Planes Testcase checklist
 
          * Check that rec exit due to IRQ
          * rec_exit->cntp_ctl is expected value
-    - No
+    - Yes
 
   * - planes_timer_state_rec_exit
     - On REC exit from Pn, for each of the EL1 virtual and physical timers, if any of the following
@@ -353,7 +372,7 @@ Arm RMM ACS Planes Testcase checklist
       #. Upon REC exit check that rec_exit.cntv_cval is according to `Table 4 <table-4_>`__ below
       #. REC_ENTER again and repeat from Step 2 until all the configurations in the
          `Table 4 <table-4_>`__ below is covered
-    - No
+    - Yes
 
 
 

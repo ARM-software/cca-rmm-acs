@@ -1,16 +1,9 @@
 # Test failure analysis document
 
 This file contains list of failures and skips identified when testing the release on tgt_tfa_fvp target with TF-RMM and TF-A.<br />
-TF-RMM Hash: 9aca983c50230cb9fe444fa00babb0d4a534ff47 <br />
-TF-A Hash: b6c0948400594e3cc4dbb5a4ef04b815d2675808 <br />
+TF-RMM Hash: 362d35e56b893bfdae70dae0bed29f724e71d2f7 <br />
+TF-A Hash: e372c291532ef1c0644edbd9c1a1d6b2f167402c <br />
 The reason for each failing/skipping test is listed here in this file.<br />
-
-## List of failed tests
-
-| Test | Fail description                                                                |
-|------|---------------------------------------------------------------------------------|
-| cmd_rtt_init_ripas | TF-RMM Reference implementation issue |
-| cmd_rtt_set_ripas | TF-RMM Reference implementation issue |
 
 ## List of skipped tests
 
@@ -25,4 +18,4 @@ Arm CCA RMM ACS is distributed under BSD-3-Clause License.
 
 --------------
 
-*Copyright (c) 2023, Arm Limited or its affliates. All rights reserved.*
+*Copyright (c) 2023-2024, Arm Limited or its affliates. All rights reserved.*
