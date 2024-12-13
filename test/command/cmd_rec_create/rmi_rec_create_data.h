@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023-2024, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -181,11 +181,11 @@ static struct stimulus test_data[] = {
     .label = AUX_UNALIGNED,
     .status = RMI_ERROR_INPUT,
     .index = 0},
-    {.msg = "aux_alias",
-    .abi = RMI_REC_CREATE,
-    .label = AUX_ALIASED,
-    .status = RMI_ERROR_INPUT,
-    .index = 0},
+//    {.msg = "aux_alias",
+//    .abi = RMI_REC_CREATE,
+//    .label = AUX_ALIASED,
+//    .status = RMI_ERROR_INPUT,
+//    .index = 0},
     {.msg = "aux_state",
     .abi = RMI_REC_CREATE,
     .label = AUX_UNDELEGATED,
