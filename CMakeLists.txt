@@ -28,7 +28,8 @@ file(MAKE_DIRECTORY ${BUILD}/output/)
 # Set global compile list variable
 set(COMPILE_LIST "")
 
-add_definitions(-DQCBOR_DISABLE_FLOAT_HW_USE)
+# Declare qcbor macro to disable floating point supoort
+add_definitions(-DUSEFULBUF_DISABLE_ALL_FLOAT)
 
 #### Include cmake support module ###
 include(${ROOT_DIR}/tools/cmake/toolchain/utils.cmake)
