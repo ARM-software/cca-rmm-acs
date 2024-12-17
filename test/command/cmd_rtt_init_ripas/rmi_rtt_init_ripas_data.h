@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2024, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -18,14 +18,14 @@ enum test_intent {
     RD_STATE_DATA = 0X7,
     SIZE_INVALID = 0X8,
     TOP_UNPROTECTED = 0X9,
-    REALM_ACTIVE = 0XA,
-    REALM_SYSTEM_OFF = 0XB,
+    REALM_SYSTEM_OFF = 0XA,
+    REALM_ACTIVE = 0XB,
     REALM_NULL = 0XC,
     BASE_LEVEL_UNALIGNED = 0XD,
     RTTE_STATE_ASSIGNED = 0XE,
     TOP_GRAN_UNALIGNED = 0XF,
-    TOP_RTT_UNALIGNED = 0X10,
-    TOP_GRAN_UNALIGNED_TOP_RTT_UNALIGNED = 0X11
+    TOP_LEVEL_UNALIGNED = 0X10,
+    TOP_GRAN_UNALIGNED_TOP_LEVEL_UNALIGNED = 0X11
 };
 
 struct stimulus {
@@ -89,12 +89,12 @@ static struct stimulus test_data[] = {
     .index = 0},
     {.msg = "realm_state",
     .abi = RMI_RTT_INIT_RIPAS,
-    .label = REALM_ACTIVE,
+    .label = REALM_SYSTEM_OFF,
     .status = RMI_ERROR_REALM,
     .index = 0},
     {.msg = "realm_state",
     .abi = RMI_RTT_INIT_RIPAS,
-    .label = REALM_SYSTEM_OFF,
+    .label = REALM_ACTIVE,
     .status = RMI_ERROR_REALM,
     .index = 0},
     {.msg = "realm_state_null",
@@ -117,14 +117,14 @@ static struct stimulus test_data[] = {
     .label = TOP_GRAN_UNALIGNED,
     .status = RMI_ERROR_INPUT,
     .index = 0},
-    {.msg = "top_rtt_align",
+    {.msg = "no_progress",
     .abi = RMI_RTT_INIT_RIPAS,
-    .label = TOP_RTT_UNALIGNED,
+    .label = TOP_LEVEL_UNALIGNED,
     .status = RMI_ERROR_RTT,
     .index = 2},
-    {.msg = "top_gran_align_compare_top_rtt_align",
+    {.msg = "top_gran_align_compare_no_progress",
     .abi = RMI_RTT_INIT_RIPAS,
-    .label = TOP_GRAN_UNALIGNED_TOP_RTT_UNALIGNED,
+    .label = TOP_GRAN_UNALIGNED_TOP_LEVEL_UNALIGNED,
     .status = RMI_ERROR_INPUT,
     .index = 0}
 };

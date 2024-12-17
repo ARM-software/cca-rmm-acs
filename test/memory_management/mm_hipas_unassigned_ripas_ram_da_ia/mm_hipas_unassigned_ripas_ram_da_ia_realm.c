@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023-2024, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -17,7 +17,7 @@ void mm_hipas_unassigned_ripas_ram_da_ia_realm(void)
 {
     val_realm_rsi_host_call_t *gv_realm_host_call;
     val_memory_region_descriptor_ts mem_desc;
-    uint64_t ipa_base, size;
+    uint64_t da_ipa, ia_ipa, size;
     void (*fun_ptr)(void);
     uint32_t Attr;
 
@@ -25,12 +25,13 @@ void mm_hipas_unassigned_ripas_ram_da_ia_realm(void)
     LOG(DBG, "\tIn realm_create_realm REC[0], mpdir=%x\n", val_read_mpidr(), 0);
 
     gv_realm_host_call = val_realm_rsi_host_call_ripas(VAL_SWITCH_TO_HOST);
-    ipa_base = gv_realm_host_call->gprs[1];
-    size = gv_realm_host_call->gprs[2];
+    da_ipa = gv_realm_host_call->gprs[1];
+    ia_ipa = gv_realm_host_call->gprs[2];
+    size = gv_realm_host_call->gprs[3];
     val_exception_setup(NULL, synchronous_exception_handler);
 
-    mem_desc.virtual_address = ipa_base;
-    mem_desc.physical_address = ipa_base;
+    mem_desc.virtual_address = da_ipa;
+    mem_desc.physical_address = da_ipa;
     mem_desc.length = size;
     mem_desc.attributes = MT_RW_DATA | MT_REALM;
     if (val_realm_pgt_create(&mem_desc))
@@ -42,11 +43,11 @@ void mm_hipas_unassigned_ripas_ram_da_ia_realm(void)
 
     val_memset(&g_sea_params, 0, sizeof(g_sea_params));
     g_sea_params.abort_type = EC_DATA_ABORT_SAME_EL;
-    g_sea_params.far = ipa_base;
+    g_sea_params.far = da_ipa;
     /* Test intent: Protected IPA, HIPAS=UNASSIGNED, RIPAS=RAM data access
      * => REC exit due to data abort.
      */
-    *(volatile uint32_t *)ipa_base = 0x100;
+    *(volatile uint32_t *)da_ipa = 0x100;
     if (g_sea_params.handler_abort)
     {
         LOG(ERROR, "\tError: Data abort triggered to realm\n", 0, 0);
@@ -56,7 +57,7 @@ void mm_hipas_unassigned_ripas_ram_da_ia_realm(void)
     /* Map Realm memory as Code */
     Attr = MT_CODE | MT_REALM ;
 
-    if (val_realm_update_attributes(PAGE_SIZE, ipa_base, Attr)) {
+    if (val_realm_update_attributes(PAGE_SIZE, ia_ipa, Attr)) {
         LOG(ERROR, "\tPage attributes update failed\n", 0, 0);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(3)));
         goto exit;
@@ -64,11 +65,11 @@ void mm_hipas_unassigned_ripas_ram_da_ia_realm(void)
 
     val_memset(&g_sea_params, 0, sizeof(g_sea_params));
     g_sea_params.abort_type = EC_INSTRUCTION_ABORT_SAME_EL;
-    g_sea_params.far = ipa_base;
+    g_sea_params.far = ia_ipa;
     /* Test intent: Protected IPA, HIPAS=UNASSIGNED, RIPAS=RAM instruction access
      * => REC exit due to instruction abort.
      */
-    fun_ptr = (void *)ipa_base;
+    fun_ptr = (void *)ia_ipa;
     (*fun_ptr)();
 
 exit:

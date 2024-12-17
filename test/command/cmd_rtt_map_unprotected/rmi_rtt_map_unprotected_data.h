@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023-2024, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -18,9 +18,9 @@ enum test_intent {
     RD_STATE_RTT = 0X7,
     RD_STATE_DATA = 0X8,
     LEVEL_STARTING = 0X9,
-    LEVEL_L1 = 0XA,
-    LEVEL_OOB = 0XB,
-    ADDR_UNALIGNED = 0XC,
+    LEVEL_OOB = 0XA,
+    ADDR_UNALIGNED = 0XB,
+    ADDR_LPA2_PA = 0XC,
     IPA_UNALIGNED = 0XD,
     IPA_PROTECTED = 0XE,
     IPA_OOB = 0XF,
@@ -89,17 +89,17 @@ static struct stimulus test_data[] = {
     .index = 0},
     {.msg = "level_bound",
     .abi = RMI_RTT_MAP_UNPROTECTED,
-    .label = LEVEL_L1,
-    .status = RMI_ERROR_INPUT,
-    .index = 0},
-    {.msg = "level_bound",
-    .abi = RMI_RTT_MAP_UNPROTECTED,
     .label = LEVEL_OOB,
     .status = RMI_ERROR_INPUT,
     .index = 0},
     {.msg = "addr_align",
     .abi = RMI_RTT_MAP_UNPROTECTED,
     .label = ADDR_UNALIGNED,
+    .status = RMI_ERROR_INPUT,
+    .index = 0},
+    {.msg = "addr_bound",
+    .abi = RMI_RTT_MAP_UNPROTECTED,
+    .label = ADDR_LPA2_PA,
     .status = RMI_ERROR_INPUT,
     .index = 0},
     {.msg = "ipa_align",

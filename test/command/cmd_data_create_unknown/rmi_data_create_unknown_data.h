@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023-2024, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -16,19 +16,20 @@ enum test_intent {
     DATA_STATE_REC = 0X5,
     DATA_STATE_RTT = 0X6,
     DATA_STATE_DATA = 0X7,
-    RD_UNALIGNED = 0X8,
-    RD_DEV_MEM_MMIO = 0X9,
-    RD_OUTSIDE_OF_PERMITTED_PA = 0XA,
-    RD_STATE_UNDELEGATED = 0XB,
-    RD_STATE_DELEGATED = 0XC,
-    RD_STATE_REC = 0XD,
-    RD_STATE_RTT = 0XE,
-    RD_STATE_DATA = 0XF,
-    IPA_UNALIGNED = 0X10,
-    IPA_UNPROTECTED = 0X11,
-    IPA_OUTSIDE_OF_PERMITTED_IPA = 0X12,
-    IPA_NOT_MAPPED = 0X13,
-    RTTE_STATE_ASSIGNED = 0X14,
+    DATA_LPA2_PA = 0X8,
+    RD_UNALIGNED = 0X9,
+    RD_DEV_MEM_MMIO = 0XA,
+    RD_OUTSIDE_OF_PERMITTED_PA = 0XB,
+    RD_STATE_UNDELEGATED = 0XC,
+    RD_STATE_DELEGATED = 0XD,
+    RD_STATE_REC = 0XE,
+    RD_STATE_RTT = 0XF,
+    RD_STATE_DATA = 0X10,
+    IPA_UNALIGNED = 0X11,
+    IPA_UNPROTECTED = 0X12,
+    IPA_OUTSIDE_OF_PERMITTED_IPA = 0X13,
+    IPA_NOT_MAPPED = 0X14,
+    RTTE_STATE_ASSIGNED = 0X15,
     IPA_UNPROTECTED_NOT_MAPPED = 0X16,
     IPA_UNPROTECTED_RTTE_ASSIGNED = 0X17
 };
@@ -80,6 +81,11 @@ static struct stimulus test_data[] = {
     {.msg = "data_state",
     .abi = RMI_DATA_CREATE_UNKNOWN,
     .label = DATA_STATE_DATA,
+    .status = RMI_ERROR_INPUT,
+    .index = 0},
+    {.msg = "data_bound2",
+    .abi = RMI_DATA_CREATE_UNKNOWN,
+    .label = DATA_LPA2_PA,
     .status = RMI_ERROR_INPUT,
     .index = 0},
     {.msg = "rd_align",

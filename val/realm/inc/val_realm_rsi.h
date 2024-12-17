@@ -90,7 +90,7 @@ uint64_t val_realm_rsi_host_call_struct(uint64_t gv_realm_host_call1);
 uint64_t val_realm_get_ipa_width(void);
 val_smc_param_ts val_realm_rsi_ipa_state_set(uint64_t base, uint64_t size, uint8_t ripas,
                                                                          uint64_t flags);
-val_smc_param_ts val_realm_rsi_ipa_state_get(uint64_t ipa_base);
+val_smc_param_ts val_realm_rsi_ipa_state_get(uint64_t base, uint64_t top);
 uint64_t val_realm_rsi_host_params(val_realm_rsi_host_call_t *realm_host_params);
 val_smc_param_ts val_realm_rsi_attestation_token_continue(uint64_t addr, uint64_t offset,
                                                            uint64_t size, uint64_t *len);

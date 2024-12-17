@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023-2024, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -9,7 +9,59 @@
 
 uint32_t    mandatory_realm_claims = 0;
 uint32_t    mandatory_platform_claims = 0;
-uint32_t    mandaroty_sw_components = 0;
+uint32_t    mandatory_sw_comp_fields = 0;
+
+/**
+    @brief    - API to validate Realm Public Key structure,
+    @param    - KeyBstr : Realm Public Key binary string.
+    @return   - Error status.
+**/
+static uint64_t validate_realm_pub_key(UsefulBufC KeyBstr)
+{
+    uint64_t status;
+    QCBORDecodeContext ctx;
+    QCBORItem item;
+    bool pub_key_type_present = false;
+
+    /* Initialize Realm Public Key decoding */
+    QCBORDecode_Init(&ctx, KeyBstr, QCBOR_DECODE_MODE_NORMAL);
+
+    status = QCBORDecode_GetNext(&ctx, &item);
+    if (status)
+        return status;
+
+    /* Realm public key is a CBOR map*/
+    if (status == QCBOR_SUCCESS && item.uDataType != QCBOR_TYPE_MAP)
+    {
+        LOG(ERROR, "Unidentified Realm Public Key format\n", 0, 0);
+        return VAL_ERROR;
+    }
+
+    /* Parse Realm Public Key structure*/
+    while (QCBORDecode_GetNext(&ctx, &item) == QCBOR_SUCCESS) {
+        if (item.uLabelType == QCBOR_TYPE_INT64) {
+            if (item.label.int64 == CCA_REALM_PUBLIC_KEY_TYPE) {
+                pub_key_type_present = true;
+            }
+        }
+    }
+
+    /* Check if Decoding finished successfully */
+    if (QCBORDecode_Finish(&ctx) != QCBOR_SUCCESS)
+    {
+        LOG(ERROR, "Realm Public key decoding failed\n", 0, 0);
+        return VAL_ERROR;
+    }
+
+    /* The Realm Public Key object must contain key type */
+    if (!pub_key_type_present)
+    {
+        LOG(ERROR, "Key type should be present in the Realm Public Key object\n", 0, 0);
+        return VAL_ERROR;
+    }
+
+    return VAL_SUCCESS;
+}
 
 /**
     @brief    - This API will verify the claims for realm token
@@ -94,9 +146,10 @@ static uint64_t parse_claims_realm_token(attestation_token_ts *attestation_token
                     LOG(ERROR, "\tRealm public key is not in expected format.", 0, 0);
                     return VAL_ERROR;
                 }
-                if (item.val.string.len != CCA_BYTE_SIZE_97)
-                {
-                    LOG(ERROR, "\tRealm public key size is incorrect.", 0, 0);
+
+                /* Realm public key should be of type COSE_Key defined in RFC 8152 protocol*/
+                if (validate_realm_pub_key(item.val.string)) {
+                    LOG(ERROR, "\tRealm public key is not in expected format.", 0, 0);
                     return VAL_ERROR;
                 }
             }
@@ -228,12 +281,12 @@ static uint64_t parse_claims_platform_token(attestation_token_ts *attestation_to
                     LOG(ERROR, "\tPlatform config is not in expected format.", 0, 0);
                     return VAL_ERROR;
                 }            }
-            else if (item.label.int64 == CCA_PLATFORM_LIFESTYLE)
+            else if (item.label.int64 == CCA_PLATFORM_LIFECYCLE)
             {
                 mandatory_platform_claims = mandatory_platform_claims + 1;
                 if (item.uDataType != QCBOR_TYPE_INT64)
                 {
-                    LOG(ERROR, "\tPlatform lifestyle is not in expected format.", 0, 0);
+                    LOG(ERROR, "\tPlatform lifecycle is not in expected format.", 0, 0);
                     return VAL_ERROR;
                 }            }
             else if (item.label.int64 == CCA_PLATFORM_SW_COMPONENTS)
@@ -258,7 +311,7 @@ static uint64_t parse_claims_platform_token(attestation_token_ts *attestation_to
                             item.label.int64 == CCA_PLATFORM_SW_COMPONENT_VERSION ||
                             item.label.int64 == CCA_PLATFORM_SW_COMPONENT_ALGORITHM_ID)
                         {
-                            mandaroty_sw_components = mandaroty_sw_components + 1;
+                            mandatory_sw_comp_fields++;
                             if (item.uDataType != QCBOR_TYPE_TEXT_STRING)
                             {
                                 LOG(ERROR, "\tSoftware component type/version/algorithm is \
@@ -269,20 +322,11 @@ static uint64_t parse_claims_platform_token(attestation_token_ts *attestation_to
                         else if (item.label.int64 == CCA_PLATFORM_SW_COMPONENT_MEASUREMENT_VALUE ||
                                  item.label.int64 == CCA_PLATFORM_SW_COMPONENT_SIGNER_ID)
                         {
-                            mandaroty_sw_components = mandaroty_sw_components + 1;
+                            mandatory_sw_comp_fields++;
                             if (item.uDataType != QCBOR_TYPE_BYTE_STRING)
                             {
                                 LOG(ERROR, "\tSoftware component measurement value/signer is \
                                                             not in expected format.", 0, 0);
-                                return VAL_ERROR;
-                            }
-                        }
-                        else if (item.label.int64 == CCA_PLATFORM_LIFESTYLE)
-                        {
-                            mandaroty_sw_components = mandaroty_sw_components + 1;
-                            if (item.uDataType != QCBOR_TYPE_INT64)
-                            {
-                                LOG(ERROR, "\tPlatform lifstyle is not in expected format.", 0, 0);
                                 return VAL_ERROR;
                             }
                         }
@@ -297,6 +341,14 @@ static uint64_t parse_claims_platform_token(attestation_token_ts *attestation_to
                             }
                         }
                     } /*for (i = 0; i <= count; i++)*/
+
+                    if (mandatory_sw_comp_fields < 2) {
+                        LOG(ERROR, "\t mandatory sw_components fields are absent\n", 0, 0);
+                        return VAL_ERROR;
+                    }
+
+                    mandatory_sw_comp_fields = 0;
+
                 } /*for (index = 0; index<sw_comp_count; index++)*/
             }
         }
@@ -337,7 +389,7 @@ uint64_t val_attestation_verify_token(attestation_token_ts *attestation_token,
     completed_challenge.ptr = challenge;
     completed_challenge.len = challenge_size;
 
-/*
+/*      COSE_Sign1 Format
     -------------------------
     |  CBOR Array Type      |
     -------------------------
@@ -458,14 +510,15 @@ uint64_t val_attestation_verify_token(attestation_token_ts *attestation_token,
 
     if (mandatory_realm_claims != 7)
     {
-        LOG(ERROR, "\t mandatory realm claims are not there", 0, 0);
+        LOG(ERROR, "\t mandatory realm claims are absent.", 0, 0);
         return VAL_ERROR;
     }
 
-    if (!(mandatory_platform_claims >= 8) && !(mandaroty_sw_components >= 2))
-    {
-        LOG(ERROR, "\t mandatory platform claims/sw_components are not there.", 0, 0);
+    if (!(mandatory_platform_claims >= 8)) {
+        LOG(ERROR, "\t mandatory platform claims are absent.", 0, 0);
         return VAL_ERROR;
     }
+
     return VAL_SUCCESS;
 }
+

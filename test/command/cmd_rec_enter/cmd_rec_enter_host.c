@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023-2024, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -9,6 +9,7 @@
 #include "val_host_rmi.h"
 #include "rmi_rec_enter_data.h"
 #include "command_common_host.h"
+#include "val_host_helpers.h"
 
 #define IPA_WIDTH 40
 #define MAX_GRANULES 256
@@ -23,6 +24,7 @@
 #define RUNNABLE_REALM 4
 
 #define IPA_ADDR_DATA 0
+#define TEST_IPA 0x10000
 
 static val_host_realm_ts realm_test[NUM_REALMS];
 
@@ -264,9 +266,11 @@ static uint64_t g_rec_aux_prep_sequence(void)
     return params->aux[0];
 }
 
-static uint64_t g_rec_psci_pending_prep_sequence(void)
+static uint64_t g_rec_non_emulatable_abort_prep_sequence(void)
 {
-    uint64_t ret;
+    uint64_t ret, phys;
+    val_host_rec_exit_ts *rec_exit = NULL;
+    val_host_rec_enter_ts *rec_enter = NULL;
 
     val_memset(&realm_test[RUNNABLE_REALM], 0, sizeof(realm_test[RUNNABLE_REALM]));
 
@@ -276,8 +280,86 @@ static uint64_t g_rec_psci_pending_prep_sequence(void)
     realm_test[RUNNABLE_REALM].rec_count = 2;
 
     /* Populate realm with one REC*/
-    if (val_host_realm_setup(&realm_test[RUNNABLE_REALM], 1))
+    if (val_host_realm_setup(&realm_test[RUNNABLE_REALM], false))
+    {
         LOG(ERROR, "\tRealm setup failed\n", 0, 0);
+        return VAL_TEST_PREP_SEQ_FAILED;
+    }
+
+    /* Prepare IPA whose HIPAS = UNASIGNED, RIPAS = RAM */
+    if (val_host_ripas_init(&realm_test[RUNNABLE_REALM], TEST_IPA, TEST_IPA + PAGE_SIZE,
+                                                     VAL_RTT_MAX_LEVEL, PAGE_SIZE))
+    {
+            LOG(ERROR, "\tRMI_INIT_RIPAS failed ", 0, 0);
+            return VAL_TEST_PREP_SEQ_FAILED;
+    }
+
+    /* Activate realm */
+    if (val_host_realm_activate(&realm_test[RUNNABLE_REALM]))
+    {
+        LOG(ERROR, "\tRealm activate failed\n", 0, 0);
+        return VAL_TEST_PREP_SEQ_FAILED;
+    }
+
+    rec_enter = &(((val_host_rec_run_ts *)realm_test[RUNNABLE_REALM].run[0])->enter);
+    rec_exit = &(((val_host_rec_run_ts *)realm_test[RUNNABLE_REALM].run[0])->exit);
+
+    /* Enter REC[0]  */
+    ret = val_host_rmi_rec_enter(realm_test[RUNNABLE_REALM].rec[0],
+                                 realm_test[RUNNABLE_REALM].run[0]);
+    if (ret) {
+        LOG(ERROR, "\tRec enter failed, ret=%x\n", ret, 0);
+        return VAL_TEST_PREP_SEQ_FAILED;
+    }
+
+    /* Check that REC Exit was due to host call because of realm requesting for test IPA */
+    if (rec_exit->exit_reason != RMI_EXIT_HOST_CALL) {
+        LOG(ERROR, "\tUnexpected REC exit, %d. ESR: %lx \n", rec_exit->exit_reason, rec_exit->esr);
+        return VAL_TEST_PREP_SEQ_FAILED;
+    }
+
+    /* Return the test IPA to realm */
+    rec_enter->gprs[1] = TEST_IPA;
+
+    /* Enter REC[0]  */
+    ret = val_host_rmi_rec_enter(realm_test[RUNNABLE_REALM].rec[0],
+                                 realm_test[RUNNABLE_REALM].run[0]);
+    if (ret) {
+        LOG(ERROR, "\tRec enter failed, ret=%x\n", ret, 0);
+        return VAL_TEST_PREP_SEQ_FAILED;
+    }
+
+    /* Check that REC exit was due to Data Abort due to realm access to IPA whose
+     * HIPAS,RIPAS = UNASSIGNED,RAM */
+    if (validate_rec_exit_da(rec_exit, TEST_IPA, ESR_ISS_DFSC_TTF_L3,
+                                NON_EMULATABLE_DA, ESR_WnR_WRITE))
+    {
+        LOG(ERROR, "\tREC exit DA: params mismatch\n", 0, 0);
+        return VAL_TEST_PREP_SEQ_FAILED;
+    }
+
+    /* Fix the Abort */
+    phys = (uint64_t)val_host_mem_alloc(PAGE_SIZE, PAGE_SIZE);
+    if (!phys)
+    {
+        LOG(ERROR, "\tval_host_mem_alloc failed\n", 0, 0);
+        return VAL_TEST_PREP_SEQ_FAILED;
+    }
+
+    ret = val_host_map_protected_data_unknown(&realm_test[RUNNABLE_REALM], phys,
+                                                                TEST_IPA, PAGE_SIZE);
+    if (ret)
+    {
+        LOG(ERROR, "\tDATA_CREATE_UNKNOWN failed, ret = %d \n", ret, 0);
+        return VAL_TEST_PREP_SEQ_FAILED;
+    }
+
+    return realm_test[RUNNABLE_REALM].rec[0];
+}
+
+static uint64_t g_rec_psci_pending_prep_sequence(void)
+{
+    uint64_t ret;
 
     /* Enter REC[0]  */
     ret = val_host_rmi_rec_enter(realm_test[RUNNABLE_REALM].rec[0],
@@ -288,7 +370,6 @@ static uint64_t g_rec_psci_pending_prep_sequence(void)
     }
 
     return realm_test[RUNNABLE_REALM].rec[0];
-
 }
 
 static uint64_t g_rec_owner_state_system_off_prep_sequence(void)
@@ -304,7 +385,6 @@ static uint64_t g_rec_owner_state_system_off_prep_sequence(void)
         return VAL_TEST_PREP_SEQ_FAILED;
     }
 
-
     /* Enter REC[1]  */
     ret = val_host_rmi_rec_enter(realm_test[RUNNABLE_REALM].rec[1],
                                  realm_test[RUNNABLE_REALM].run[1]);
@@ -312,7 +392,6 @@ static uint64_t g_rec_owner_state_system_off_prep_sequence(void)
         LOG(ERROR, "\tRec enter failed, ret=%x\n", ret, 0);
 
     return realm_test[RUNNABLE_REALM].rec[1];
-
 }
 
 static uint64_t valid_input_args_prep_sequence(void)
@@ -440,7 +519,9 @@ static uint64_t intent_to_seq(struct stimulus *test_data, struct arguments *args
             break;
 
         case REC_EMULATED_MMIO:
-            args->rec = c_args.rec_valid;
+            args->rec = g_rec_non_emulatable_abort_prep_sequence();
+            if (args->rec == VAL_TEST_PREP_SEQ_FAILED)
+                return VAL_ERROR;
             args->run_ptr = emulated_mmio_prep_sequence();
             break;
 

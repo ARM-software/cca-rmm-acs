@@ -68,7 +68,7 @@ void planes_s2ap_unprotected_host(void)
     }
 
     /* Configure and map Unprotected IPA at S2 */
-    mem_attr = ATTR_NORMAL_WB | ATTR_INNER_SHARED;
+    mem_attr = ATTR_NORMAL_WB;
 
     if (VAL_EXTRACT_BITS(realm.flags1, 0, 0))
         mem_attr |= ATTR_STAGE2_AP_RW;

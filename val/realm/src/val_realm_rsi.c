@@ -89,15 +89,17 @@ val_smc_param_ts val_realm_rsi_ipa_state_set(uint64_t base, uint64_t top,
 
 /**
  *   @brief    Get RIPAS of a target page
- *   @param    addr     - IPA of target page
+ *   @param    base     - base of the target IPA region
+ *   @param    top      - end of the target IPA region
  *   @return   Returns args, X0: Returns command return status,
- *                           X1: RIPAS value
+ *                           X1: Top of IPA region which has reported RIPAS value
+ *                           X2: RIPAS value
 **/
-val_smc_param_ts val_realm_rsi_ipa_state_get(uint64_t ipa_base)
+val_smc_param_ts val_realm_rsi_ipa_state_get(uint64_t base, uint64_t top)
 {
        val_smc_param_ts args;
 
-       args = val_smc_call(RSI_IPA_STATE_GET, ipa_base, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+       args = val_smc_call(RSI_IPA_STATE_GET, base, top, 0, 0, 0, 0, 0, 0, 0, 0);
 
        return args;
 }

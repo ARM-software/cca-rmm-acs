@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023-2024, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -23,10 +23,10 @@ enum test_intent {
     REC_GRAN_STATE_DATA = 0XC,
     REC_GRAN_STATE_REC_AUX = 0XD,
     REALM_NEW = 0XE,
-    REC_PSCI_PENDING = 0XF,
-    REALM_SYSTEM_OFF = 0X10,
-    REC_NOT_RUNNABLE = 0X11,
-    REC_EMULATED_MMIO = 0X12,
+    REC_EMULATED_MMIO = 0XF,
+    REC_PSCI_PENDING = 0X10,
+    REALM_SYSTEM_OFF = 0X11,
+    REC_NOT_RUNNABLE = 0X12,
     RUN_PTR_INVALID_GIV3_HCR = 0X13,
     REC_UNALIGNED_INVALID_GICV3 = 0X14,
     REC_DEV_MEM_INVALID_GICV3 = 0X15,
@@ -123,6 +123,11 @@ static struct stimulus test_data[] = {
     .label = REALM_NEW,
     .status = RMI_ERROR_REALM,
     .index = 0},
+    {.msg = "rec_mmio",
+    .abi = RMI_REC_ENTER,
+    .label = REC_EMULATED_MMIO,
+    .status = RMI_ERROR_REC,
+    .index = 0},
     {.msg = "rec_psci",
     .abi = RMI_REC_ENTER,
     .label = REC_PSCI_PENDING,
@@ -136,11 +141,6 @@ static struct stimulus test_data[] = {
     {.msg = "rec_runnable",
     .abi = RMI_REC_ENTER,
     .label = REC_NOT_RUNNABLE,
-    .status = RMI_ERROR_REC,
-    .index = 0},
-    {.msg = "rec_mmio",
-    .abi = RMI_REC_ENTER,
-    .label = REC_EMULATED_MMIO,
     .status = RMI_ERROR_REC,
     .index = 0},
     {.msg = "rec_giv3",

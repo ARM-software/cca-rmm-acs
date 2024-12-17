@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023-2024, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -108,27 +108,6 @@ void exception_non_emulatable_da_2_host(void)
     {
         LOG(ERROR, "\tREC exit ESR params mismatch\n", 0, 0);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(9)));
-        goto destroy_realm;
-    }
-
-    /* Test intent: Protected IPA, RIPAS=RAM, HIPAS=DESTROYED read access
-     * => REC exit due to data abort.
-     */
-    rec_enter->flags = RMI_EMULATED_MMIO;
-    ret = val_host_rmi_rec_enter(realm.rec[0], realm.run[0]);
-    if (ret)
-    {
-        LOG(ERROR, "\tRec enter failed, ret=%x\n", ret, 0);
-        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(10)));
-        goto destroy_realm;
-    }
-
-    /* validates the Rec Exit due to DA */
-    if (validate_rec_exit_da(rec_exit, ripas_ipa,
-                                ESR_ISS_DFSC_TTF_L3, NON_EMULATABLE_DA, 0))
-    {
-        LOG(ERROR, "\tREC exit ESR params mismatch\n", 0, 0);
-        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(11)));
         goto destroy_realm;
     }
 

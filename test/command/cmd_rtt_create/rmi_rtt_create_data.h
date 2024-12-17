@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023-2024, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -28,8 +28,9 @@ enum test_intent {
     RTT_STATE_REC = 0X11,
     RTT_STATE_RTT = 0X12,
     RTT_STATE_DATA = 0X13,
-    LEVEL_NO_PARENT_RTTE = 0X14,
-    RTTE_STATE_TABLE = 0X15
+    RTT_LPA2_PA = 0X14,
+    LEVEL_NO_PARENT_RTTE = 0X15,
+    RTTE_STATE_TABLE = 0X16
 };
 
 struct stimulus {
@@ -139,6 +140,11 @@ static struct stimulus test_data[] = {
     {.msg = "rtt_state",
     .abi = RMI_RTT_CREATE,
     .label = RTT_STATE_DATA,
+    .status = RMI_ERROR_INPUT,
+    .index = 0},
+    {.msg = "rtt_bound2",
+    .abi = RMI_RTT_CREATE,
+    .label = RTT_LPA2_PA,
     .status = RMI_ERROR_INPUT,
     .index = 0},
     {.msg = "rtt_walk",

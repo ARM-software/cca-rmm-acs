@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023-2024, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -115,7 +115,7 @@ static uint64_t desc_valid_prep_sequence(void)
     if (ns == VAL_TEST_PREP_SEQ_FAILED)
         return VAL_TEST_PREP_SEQ_FAILED;
 
-    return (ns | ATTR_NORMAL_WB_WA_RA | ATTR_STAGE2_AP_RW | ATTR_INNER_SHARED);
+    return (ns | ATTR_NORMAL_WB_WA_RA | ATTR_STAGE2_AP_RW);
 }
 
 
@@ -128,13 +128,6 @@ static uint64_t level_invalid_starting_prep_sequence(void)
 {
     return START_RTT_LEVEL;
 }
-
-
-static uint64_t level_invalid_l1_prep_sequence(void)
-{
-    return 1;
-}
-
 
 static uint64_t level_invalid_oob_prep_sequence(void)
 {
@@ -150,7 +143,12 @@ static uint64_t desc_addr_unaligned_prep_sequence(void)
 
     ns = ns + (L3_SIZE / 2);
 
-    return (ns | ATTR_NORMAL_WB_WA_RA | ATTR_STAGE2_AP_RW | ATTR_INNER_SHARED);
+    return (ns | ATTR_NORMAL_WB_WA_RA | ATTR_STAGE2_AP_RW);
+}
+
+static uint64_t desc_addr_in_lpa2_range_prep_sequence(void)
+{
+    return ((1ULL << 48) | ATTR_NORMAL_WB_WA_RA | ATTR_STAGE2_AP_RW);
 }
 
 static uint64_t g_rec_ready_prep_sequence(uint64_t rd)
@@ -275,13 +273,6 @@ static uint64_t intent_to_seq(struct stimulus *test_data, struct arguments *args
             args->desc = c_args.desc_valid;
             break;
 
-        case LEVEL_L1:
-            args->rd = c_args.rd_valid;
-            args->ipa = c_args.ipa_valid;
-            args->level = level_invalid_l1_prep_sequence();
-            args->desc = c_args.desc_valid;
-            break;
-
         case LEVEL_OOB:
             args->rd = c_args.rd_valid;
             args->ipa = c_args.ipa_valid;
@@ -295,6 +286,13 @@ static uint64_t intent_to_seq(struct stimulus *test_data, struct arguments *args
             args->level = c_args.level_valid;
             args->desc = desc_addr_unaligned_prep_sequence();
             break;
+
+        case ADDR_LPA2_PA:
+            args->rd = c_args.rd_valid;
+            args->ipa = c_args.ipa_valid;
+            args->level = c_args.level_valid;
+            args->desc = desc_addr_in_lpa2_range_prep_sequence();
+           break;
 
         case IPA_UNALIGNED:
             args->rd = c_args.rd_valid;

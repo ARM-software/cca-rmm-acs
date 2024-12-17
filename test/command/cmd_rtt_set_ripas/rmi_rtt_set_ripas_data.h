@@ -30,10 +30,10 @@ enum test_intent {
     TOP_OUT_OF_BOUND = 0X13,
     BASE_UNALIGNED = 0X14,
     TOP_GRAN_UNALIGNED = 0X15,
-    TOP_RTT_UNALIGNED = 0X16,
+    TOP_LEVEL_UNALIGNED = 0X16,
     IPA_AUX_LIVE = 0X17,
     BASE_MISMATCH_BASE_UNALIGNED = 0X18,
-    TOP_GRAN_UNALIGNED_TOP_RTT_UNALIGNED = 0X19
+    TOP_GRAN_UNALIGNED_TOP_LEVEL_UNALIGNED = 0X19
 };
 
 struct stimulus {
@@ -155,9 +155,9 @@ static struct stimulus test_data[] = {
     .label = TOP_GRAN_UNALIGNED,
     .status = RMI_ERROR_INPUT,
     .index = 0},
-    {.msg = "top_rtt_align",
+    {.msg = "no_progress",
     .abi = RMI_RTT_SET_RIPAS,
-    .label = TOP_RTT_UNALIGNED,
+    .label = TOP_LEVEL_UNALIGNED,
     .status = RMI_ERROR_RTT,
     .index = 2},
 #if defined(RMM_V_1_1)
@@ -172,9 +172,9 @@ static struct stimulus test_data[] = {
     .label = BASE_MISMATCH_BASE_UNALIGNED,
     .status = RMI_ERROR_INPUT,
     .index = 0},
-    {.msg = "top_gran_align_compare_top_rtt_align",
+    {.msg = "top_gran_align_compare_no_progress",
     .abi = RMI_RTT_SET_RIPAS,
-    .label = TOP_GRAN_UNALIGNED_TOP_RTT_UNALIGNED,
+    .label = TOP_GRAN_UNALIGNED_TOP_LEVEL_UNALIGNED,
     .status = RMI_ERROR_INPUT,
     .index = 0}
 };

@@ -4,7 +4,7 @@
 The software is provided under a BSD-3-Clause license (below).
 
 ```
-Copyright (c) 2023, Arm Limited or its affiliates. All rights reserved.
+Copyright (c) [XXXX-]YYYY, <OWNER>. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,
 are permitted provided that the following conditions are met:

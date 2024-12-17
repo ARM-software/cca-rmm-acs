@@ -112,6 +112,9 @@ uint32_t val_host_realm_create_common(val_host_realm_ts *realm)
         params->aux_vmid[i] = (uint16_t)(realm->vmid + i + 1);
     for (i = 0; i < realm->num_aux_planes; i++)
         params->aux_rtt_base[i] = realm->rtt_aux_l0_addr[i];
+    /* RealmParams strucurue takes the number of breakpoints, minus one */
+    params->num_bps = realm->num_bps + 1;
+    params->num_wps = realm->num_wps + 1;
 
 #ifdef RMM_V_1_1
     if (realm->num_aux_planes == 0)
@@ -483,7 +486,7 @@ uint64_t ipa_unprotected_assinged_prep_sequence(uint64_t rd1)
     if (ns == VAL_TEST_PREP_SEQ_FAILED)
         return VAL_TEST_PREP_SEQ_FAILED;
 
-    uint64_t desc = (ns | ATTR_NORMAL_WB_WA_RA | ATTR_STAGE2_AP_RW | ATTR_INNER_SHARED);
+    uint64_t desc = (ns | ATTR_NORMAL_WB_WA_RA | ATTR_STAGE2_AP_RW);
 
     if (val_host_rmi_rtt_map_unprotected(rd1, IPA_ADDR_UNPROTECTED, MAP_LEVEL, desc))
     {
@@ -562,5 +565,10 @@ uint64_t ipa_protected_aux_assigned_prep_sequence(uint64_t rd, uint64_t rtt_inde
     }
 
     return IPA_ADDR_PROTECTED_AUX_ASSIGNED;
+}
+
+uint64_t g_pa_in_lpa2_range_prep_sequence(void)
+{
+    return (0x1ULL << 48) + PAGE_SIZE;
 }
 

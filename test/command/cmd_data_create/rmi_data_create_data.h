@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023-2024, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -21,7 +21,7 @@ enum test_intent {
     DATA_STATE_REC = 0XA,
     DATA_STATE_RTT = 0XB,
     DATA_STATE_DATA = 0XC,
-    DATA_PAS_SECURE = 0XD,
+    DATA_LPA2_PA = 0XD,
     RD_UNALIGNED = 0XE,
     RD_DEV_MEM_MMIO = 0XF,
     RD_OUTSIDE_OF_PERMITTED_PA = 0X10,
@@ -116,9 +116,9 @@ static struct stimulus test_data[] = {
     .label = DATA_STATE_DATA,
     .status = RMI_ERROR_INPUT,
     .index = 0},
-    {.msg = "data_pas",
+    {.msg = "data_bound2",
     .abi = RMI_DATA_CREATE,
-    .label = DATA_PAS_SECURE,
+    .label = DATA_LPA2_PA,
     .status = RMI_ERROR_INPUT,
     .index = 0},
     {.msg = "rd_align",

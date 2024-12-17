@@ -55,7 +55,7 @@ static uint64_t ipa_aux_rtt_unmapped_prep_sequence(void)
     if (ns == VAL_TEST_PREP_SEQ_FAILED)
         return VAL_TEST_PREP_SEQ_FAILED;
 
-    uint64_t desc = (ns | ATTR_NORMAL_WB_WA_RA | ATTR_STAGE2_AP_RW | ATTR_INNER_SHARED);
+    uint64_t desc = (ns | ATTR_NORMAL_WB_WA_RA | ATTR_STAGE2_AP_RW);
 
     if (val_host_rmi_rtt_map_unprotected(realm[VALID_REALM].rd, IPA_UNPROT_AUX_UNMAPPED,
                                                                            MAP_LEVEL, desc))

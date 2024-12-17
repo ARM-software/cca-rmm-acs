@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023-2024, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -30,13 +30,13 @@ void pmu_overflow_host(void)
 
     /* Read Feature Register 0 and check for PMU support */
     val_host_rmi_features(0, &feature_reg);
-    if (VAL_EXTRACT_BITS(feature_reg, 22, 22) == 0) {
+    if (VAL_EXTRACT_BITS(feature_reg, 26, 26) == 0) {
         LOG(ERROR, "\tPMU not supported\n", 0, 0);
         val_set_status(RESULT_SKIP(VAL_SKIP_CHECK));
         goto destroy_realm;
     }
 
-    pmu_num_ctrs = VAL_EXTRACT_BITS(feature_reg, 23, 27);
+    pmu_num_ctrs = VAL_EXTRACT_BITS(feature_reg, 27, 31);
 
     val_irq_enable(PMU_PPI, 0);
 

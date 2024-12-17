@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023-2024, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -17,16 +17,15 @@ enum test_intent {
     RD_STATE_RTT = 0X6,
     RD_STATE_DATA = 0X7,
     LEVEL_STARTING = 0X8,
-    LEVEL_L1 = 0X9,
-    LEVEL_OOB = 0XA,
-    IPA_UNALIGNED = 0XB,
-    IPA_PROTECTED = 0XC,
-    IPA_OOB = 0XD,
-    IPA_NOT_MAPPED = 0XE,
-    RTTE_STATE_UNASSIGNED_NS = 0XF,
-    LEVEL_L1_IPA_NOT_MAPPED = 0X10,
-    LEVEL_L1_RTTE_STATE_TABLE = 0X11,
-    IPA_PROTECTED_IPA_NOT_MAPPED = 0X12
+    LEVEL_OOB = 0X9,
+    IPA_UNALIGNED = 0XA,
+    IPA_PROTECTED = 0XB,
+    IPA_OOB = 0XC,
+    IPA_NOT_MAPPED = 0XD,
+    RTTE_STATE_UNASSIGNED_NS = 0XE,
+    LEVEL_OOB_IPA_NOT_MAPPED = 0XF,
+    LEVEL_OOB_RTTE_STATE_UNASSIGNED_NS = 0X10,
+    IPA_PROTECTED_IPA_NOT_MAPPED = 0X11
 };
 
 struct stimulus {
@@ -85,11 +84,6 @@ static struct stimulus test_data[] = {
     .index = 0},
     {.msg = "level_bound",
     .abi = RMI_RTT_UNMAP_UNPROTECTED,
-    .label = LEVEL_L1,
-    .status = RMI_ERROR_INPUT,
-    .index = 0},
-    {.msg = "level_bound",
-    .abi = RMI_RTT_UNMAP_UNPROTECTED,
     .label = LEVEL_OOB,
     .status = RMI_ERROR_INPUT,
     .index = 0},
@@ -120,12 +114,12 @@ static struct stimulus test_data[] = {
     .index = 3},
     {.msg = "level_bound_compare_rtt_walk",
     .abi = RMI_RTT_UNMAP_UNPROTECTED,
-    .label = LEVEL_L1_IPA_NOT_MAPPED,
+    .label = LEVEL_OOB_IPA_NOT_MAPPED,
     .status = RMI_ERROR_INPUT,
     .index = 0},
     {.msg = "level_bound_compare_rtte_state",
     .abi = RMI_RTT_UNMAP_UNPROTECTED,
-    .label = LEVEL_L1_RTTE_STATE_TABLE,
+    .label = LEVEL_OOB_RTTE_STATE_UNASSIGNED_NS,
     .status = RMI_ERROR_INPUT,
     .index = 0},
     {.msg = "ipa_bound_compare_rtt_walk",

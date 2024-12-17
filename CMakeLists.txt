@@ -5,7 +5,7 @@
 #
 #-------------------------------------------------------------------------------
 
-project(rmm-acs LANGUAGES)
+project(rmm-acs LANGUAGES C ASM)
 
 ### Tool dependency check - start ###
 
@@ -28,7 +28,8 @@ file(MAKE_DIRECTORY ${BUILD}/output/)
 # Set global compile list variable
 set(COMPILE_LIST "")
 
-add_definitions(-DQCBOR_DISABLE_FLOAT_HW_USE)
+# Declare qcbor macro to disable floating point supoort
+add_definitions(-DUSEFULBUF_DISABLE_ALL_FLOAT)
 
 #### Include cmake support module ###
 include(${ROOT_DIR}/tools/cmake/toolchain/utils.cmake)
@@ -248,6 +249,7 @@ endforeach()
 ###
 
 ### Compile host, realm and secure val/pal/test sources and create output binaries
+include(${ROOT_DIR}/tools/cmake/common/acs_xlat.cmake)
 add_subdirectory(${ROOT_DIR}/tools/cmake/acs_host)
 add_subdirectory(${ROOT_DIR}/tools/cmake/acs_realm)
 add_subdirectory(${ROOT_DIR}/tools/cmake/acs_secure)

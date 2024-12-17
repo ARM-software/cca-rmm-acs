@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023-2024, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -22,11 +22,11 @@
 static val_host_realm_ts realm[NUM_REALMS];
 
 static struct argument_store {
-    uint64_t rec_valid;
+    uint64_t rec_ptr_valid;
 } c_args;
 
 struct arguments {
-    uint64_t rec;
+    uint64_t rec_ptr;
 };
 
 static uint64_t g_rec_aux_prep_sequence(void)
@@ -108,8 +108,8 @@ static uint64_t rec_valid_prep_sequence(void)
 
 static uint64_t valid_input_args_prep_sequence(void)
 {
-    c_args.rec_valid = rec_valid_prep_sequence();
-    if (c_args.rec_valid == VAL_TEST_PREP_SEQ_FAILED)
+    c_args.rec_ptr_valid = rec_valid_prep_sequence();
+    if (c_args.rec_ptr_valid == VAL_TEST_PREP_SEQ_FAILED)
         return VAL_ERROR;
 
     return VAL_SUCCESS;
@@ -122,40 +122,40 @@ static uint64_t intent_to_seq(struct stimulus *test_data, struct arguments *args
     switch (label)
     {
         case REC_UNALIGNED:
-            args->rec = g_unaligned_prep_sequence(c_args.rec_valid);
+            args->rec_ptr = g_unaligned_prep_sequence(c_args.rec_ptr_valid);
             break;
 
         case REC_OUTSIDE_OF_PERMITTED_PA:
-            args->rec = g_outside_of_permitted_pa_prep_sequence();
+            args->rec_ptr = g_outside_of_permitted_pa_prep_sequence();
             break;
 
         case REC_DEV_MEM:
-            args->rec = g_dev_mem_prep_sequence();
+            args->rec_ptr = g_dev_mem_prep_sequence();
             break;
 
         case REC_GRAN_STATE_UNDELEGATED:
-            args->rec = g_undelegated_prep_sequence();
-            if (args->rec == VAL_TEST_PREP_SEQ_FAILED)
+            args->rec_ptr = g_undelegated_prep_sequence();
+            if (args->rec_ptr == VAL_TEST_PREP_SEQ_FAILED)
                 return VAL_ERROR;
             break;
 
         case REC_GRAN_STATE_RD:
-            args->rec = realm[VALID_REALM].rd;
+            args->rec_ptr = realm[VALID_REALM].rd;
             break;
 
         case REC_GRAN_STATE_REC_AUX:
-            args->rec = g_rec_aux_prep_sequence();
-            if (args->rec == VAL_TEST_PREP_SEQ_FAILED)
+            args->rec_ptr = g_rec_aux_prep_sequence();
+            if (args->rec_ptr == VAL_TEST_PREP_SEQ_FAILED)
                 return VAL_ERROR;
             break;
 
         case REC_GRAN_STATE_RTT:
-            args->rec = realm[VALID_REALM].rtt_l0_addr;
+            args->rec_ptr = realm[VALID_REALM].rtt_l0_addr;
             break;
 
         case REC_GRAN_STATE_DATA:
-            args->rec = g_data_prep_sequence(realm[VALID_REALM].rd, IPA_ADDR_DATA);
-            if (args->rec == VAL_TEST_PREP_SEQ_FAILED)
+            args->rec_ptr = g_data_prep_sequence(realm[VALID_REALM].rd, IPA_ADDR_DATA);
+            if (args->rec_ptr == VAL_TEST_PREP_SEQ_FAILED)
                 return VAL_ERROR;
             break;
 
@@ -188,7 +188,7 @@ void cmd_rec_destroy_host(void)
             goto exit;
         }
 
-        ret = val_host_rmi_rec_destroy(args.rec);
+        ret = val_host_rmi_rec_destroy(args.rec_ptr);
         if (ret != PACK_CODE(test_data[i].status, test_data[i].index)) {
             LOG(ERROR, "\tTest Failure!\n\tThe ABI call returned: %x\n\tExpected: %x\n",
                 ret, PACK_CODE(test_data[i].status, test_data[i].index));
@@ -198,7 +198,7 @@ void cmd_rec_destroy_host(void)
     }
 
     LOG(TEST, "\n\tPositive Observability Check\n", 0, 0);
-    ret = val_host_rmi_rec_destroy(c_args.rec_valid);
+    ret = val_host_rmi_rec_destroy(c_args.rec_ptr_valid);
     if (ret != 0)
     {
         LOG(ERROR, "\n\t REC destroy failed. %x\n", ret, 0);
