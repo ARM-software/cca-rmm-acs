@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023-2024, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -8,10 +8,6 @@
 
 void exception_rec_exit_wfi_realm(void)
 {
-#ifndef TEST_WFI_TRAP
-    val_set_status(RESULT_SKIP(VAL_SKIP_CHECK));
-    goto test_exit;
-#else
     register int x0 __asm("x0");
     register int x1 __asm("x1");
     register int x2 __asm("x2");
@@ -83,28 +79,47 @@ void exception_rec_exit_wfi_realm(void)
     uint64_t index = 0;
     int gGPRS[EXCEPTION_TEST_MAX_GPRS];
     int lGPRS[EXCEPTION_TEST_MAX_GPRS];
+    uint64_t *wfi_trig = (uint64_t *)(val_get_shared_region_base() + VAL_TEST_USE1);
     val_set_status(RESULT_PASS(VAL_SUCCESS));
 
-    /* Before triggering the rec exit(dueto wfi) save the gprs values */
-    GET_GPRS_VALUES(gGPRS);
+    /* Execute WFI in a loop to avoid conditions where PE treating it as NOP */
+    for (uint8_t i = 0; i < WFX_ITERATIONS; i++)
+    {
+        /* Before triggering the rec exit(dueto wfi) save the gprs values */
+        GET_GPRS_VALUES(gGPRS);
 
-    /* Trigger the WFI for rec exit */
-    __asm__("wfi");
+        /* Trigger the WFI for rec exit */
+        __asm__("wfi");
 
-    /* Upon rec enter again Read the gprs again and compare with earlier saved one */
-    GET_GPRS_VALUES(lGPRS);
+        /* Upon rec enter again Read the gprs again */
+        GET_GPRS_VALUES(lGPRS);
+
+        if (*wfi_trig == true)
+            break;
+    }
+
+    /* Fail the test if WFI is not triggered */
+    if (*wfi_trig == false)
+    {
+            LOG(ERROR, "\tWFI not triggered\n", 0, 0);
+            val_set_status(RESULT_FAIL(VAL_ERROR_POINT(1)));
+            goto test_exit;
+    }
+
+    /* Compare the new gprs with earlier saved one */
     for (index = 0; index < EXCEPTION_TEST_MAX_GPRS; index++)
     {
         if (gGPRS[index] != lGPRS[index])
         {
-            LOG(TEST, "\tWFI check, the gprs value is corrupted, \
-                             hence testcase failed : line %d\n", __LINE__, 0);
-            val_set_status(RESULT_FAIL(VAL_ERROR));
+            LOG(ERROR, "\tWFI check, the gprs value is corrupted, \
+                             hence testcase failed\n", 0, 0);
+            val_set_status(RESULT_FAIL(VAL_ERROR_POINT(2)));
             goto test_exit;
         }
     }
+
     LOG(TEST, "\tREALM WFI Trigger checks are verified \n", 0, 0);
-#endif
+
 test_exit:
     val_realm_return_to_host();
 }
