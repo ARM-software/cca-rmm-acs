@@ -33,7 +33,8 @@ For more information on Architecture Compliance Suite see [Validation Methodolog
 - Release Version - v1.1 ACS PLANES BETA
 - Code Quality: BETA
 - The tests are written for Arm RMM 1.1-ALP8 specification version.
-- For information about the test coverage scenarios that are implemented in ACS, see [docs](./docs/).
+- For information about the test coverage scenarios that are implemented in ACS, see [scenario docs](./docs/scenario_doc.md).
+- For information about the test failures in ACS, see [Test failure analysis doc](./docs/testcase_failure_analysis.md).
 - The [Change log](./docs/change-log.rst) has details of the features implemented by this version of CCA-RMM-ACS.
 
 **Note:** The current release has been tested on tgt_tfa_fvp reference platforms with GNUARM Compiler.
@@ -128,4 +129,4 @@ Arm CCA-RMM-ACS is distributed under BSD-3-Clause License.
 
 --------------
 
-*Copyright (c) 2023-2024, Arm Limited or its affiliates. All rights reserved.*
+*Copyright (c) 2023-2025, Arm Limited or its affiliates. All rights reserved.*
