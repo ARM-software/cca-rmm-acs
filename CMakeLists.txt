@@ -1,11 +1,11 @@
 #-------------------------------------------------------------------------------
-# Copyright (c) 2023-2024, Arm Limited or its affiliates. All rights reserved.
+# Copyright (c) 2023-2025, Arm Limited or its affiliates. All rights reserved.
 #
 # SPDX-License-Identifier: BSD-3-Clause
 #
 #-------------------------------------------------------------------------------
 
-project(rmm-acs LANGUAGES C ASM)
+project(rmm-acs LANGUAGES)
 
 ### Tool dependency check - start ###
 
