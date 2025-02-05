@@ -1,10 +1,11 @@
 #-------------------------------------------------------------------------------
-# Copyright (c) 2024, Arm Limited or its affiliates. All rights reserved.
+# Copyright (c) 2024-2025, Arm Limited or its affiliates. All rights reserved.
 #
 # SPDX-License-Identifier: BSD-3-Clause
 #
 #-------------------------------------------------------------------------------
 
+project(xlat-lib LANGUAGES C ASM)
 
 file(GLOB XLAT_SRC
     "${CMAKE_CURRENT_SOURCE_DIR}/include/*.S"
