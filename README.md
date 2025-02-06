@@ -93,6 +93,7 @@ make
 - -RMM_ACS_TARGET_QCBOR=<path_for_pre_fetched_cbor_folder> this is option used where no network  connectivity is possible during the build.
 - -DSECURE_TEST_ENABLE=<value_to_enable_secure_test> Enable secure test macro definition and it will run secure test in regression. Valid value is 1. By default this macro will not define and secure test will not run in regression.
 - -DRMM_SPEC_VER=<value_to_select_specification_version> Select the Specification version to test against. Current supported values are RMM_V_1_0, RMM_V_1_1 and ALL. If this flag is not set during compilation, ALL is selected by default.
+- -DUART_NS_OVERRIDE=<value_of_uart_base_address> To override the default NS UART base address defined in the plat/targets/*
 
 *To compile tests for tgt_tfa_fvp platform*:<br />
 ```

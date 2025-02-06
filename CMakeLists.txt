@@ -197,6 +197,11 @@ if(NOT DEFINED RMM_SPEC_VER)
     set(RMM_SPEC_VER "ALL")
 endif()
 
+#Check if UART_NS_OVERRIDE is set, if set add the definition.
+if(DEFINED UART_NS_OVERRIDE)
+    add_definitions(-DUART_NS_OVERRIDE=${UART_NS_OVERRIDE})
+endif()
+
 #Check if RMM_SPEC_VER is set correctly and add definitions accordingly
 CheckSpecVersionAndAddDefinitions(${RMM_SPEC_VER})
 
