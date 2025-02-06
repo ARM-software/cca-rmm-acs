@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023-2024, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023-2025, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -45,7 +45,11 @@
  */
 
 /* Non-secure UART - PL011_UART2_BASE */
+#ifdef UART_NS_OVERRIDE
+#define PLATFORM_NS_UART_BASE    UART_NS_OVERRIDE
+#else
 #define PLATFORM_NS_UART_BASE    0x1c0b0000
+#endif
 #define PLATFORM_NS_UART_SIZE    0x10000
 
 /* Non-volatile memory range assigned */
