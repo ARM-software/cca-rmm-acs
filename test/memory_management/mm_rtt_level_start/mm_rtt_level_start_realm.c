@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023,2025, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -24,7 +24,7 @@ void mm_rtt_level_start_realm(void)
     LOG(DBG, "\tIn realm_create_realm REC[0], mpdir=%x\n", val_read_mpidr(), 0);
     ipa_width = val_realm_get_ipa_width();
 
-    for (i = 0; i < 23; i++)
+    for (i = 0; i < sizeof(rtt_sl_start)/sizeof(rtt_sl_start[0]); i++)
     {
         if (ipa_width != rtt_sl_start[i][0])
             continue;

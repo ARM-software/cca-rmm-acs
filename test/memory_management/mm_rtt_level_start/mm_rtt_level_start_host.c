@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023,2025, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -25,7 +25,7 @@ static uint32_t create_realm(val_host_realm_ts *realm)
     }
 
     ipa_width = VAL_EXTRACT_BITS(realm->s2sz, 0, 7);
-    for (i = 0; i < 23; i++)
+    for (i = 0; i < sizeof(rtt_sl_start) / sizeof(rtt_sl_start[0]); i++)
     {
         if (ipa_width != rtt_sl_start[i][0])
             continue;
@@ -107,11 +107,14 @@ void mm_rtt_level_start_host(void)
     val_host_realm_ts realm;
     uint64_t ret;
     uint64_t s2sz_supp = 0, i;
-    uint8_t arr[5][4] = {{32, 32, 2, 4},
+    uint8_t arr[][4] = {{32, 32, 2, 4},
                          {36, 34, 2, 16},
                          {40, 40, 1, 2},
                          {42, 42, 1, 8},
-                         {52, 52, 0, 16} };
+#ifdef ENABLE_LPA2 /* Needs LPA2 support in XLAT to enable this */
+                         {52, 52, 0, 16}
+#endif
+                      };
 
     val_memset(&realm, 0, sizeof(realm));
 
@@ -130,7 +133,7 @@ void mm_rtt_level_start_host(void)
 
     LOG(DBG, "\tRMI Features s2sz supp %d %d\n", s2sz_supp, arr[0][0]);
 
-    for (i = 0; i < 5; i++)
+    for (i = 0; i < sizeof(arr)/sizeof(arr[0]); i++)
     {
         if (s2sz_supp < arr[i][0])
             break;
