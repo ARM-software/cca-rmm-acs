@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023-2024, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023-2025, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -751,6 +751,7 @@ uint32_t val_host_realm_create(val_host_realm_ts *realm)
     /* RealmParams strucurue takes the number of breakpoints, minus one */
     params->num_bps = realm->num_bps + 1;
     params->num_wps = realm->num_wps + 1;
+    params->mecid = realm->mecid;
 
     val_memcpy(&params->rpv, &realm->rpv, sizeof(realm->rpv));
 

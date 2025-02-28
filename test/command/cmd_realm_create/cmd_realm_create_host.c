@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023-2024, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023-2025, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -14,9 +14,13 @@
 #define MAX_VMID 65535 // 16-bit VMID
 #define MAX_GRANULES 256
 
-#define NUM_REALMS 2
+#define MECID_PRIVATE 0x1
+#define MECID_VALID   0x2
+
+#define NUM_REALMS 3
 #define REALM_VALID 0
 #define REALM_NEW 1
+#define REALM_MEC 2
 
 #define IPA_ADDR_DATA 0
 
@@ -50,7 +54,9 @@ typedef enum {
     PARAMS_AUX_RTT_UNALIGNED,
     PARAMS_AUX_RTT_UNDELEGATED,
     PARAMS_AUX_VMID_INVALID,
-    PARAMS_AUX_VMID_USED
+    PARAMS_AUX_VMID_USED,
+    PARAMS_MECID_BOUND,
+    PARAMS_MECID_STATE
 } params_prep_seq_type;
 
 static uint64_t rd_valid_prep_sequence(void)
@@ -65,6 +71,28 @@ static uint64_t rd_valid_prep_sequence(void)
     return rd;
 }
 
+static uint64_t g_mec_state_private_assigned_prep_sequence(uint16_t vmid)
+{
+    val_host_realm_ts realm_init;
+
+    val_memset(&realm_init, 0, sizeof(realm_init));
+
+    realm_init.s2sz = 40;
+    realm_init.hash_algo = RMI_HASH_SHA_256;
+    realm_init.s2_starting_level = 0;
+    realm_init.num_s2_sl_rtts = 1;
+    realm_init.vmid = vmid;
+    realm_init.mecid = MECID_PRIVATE;
+
+    if (val_host_realm_create_common(&realm_init))
+    {
+        LOG(ERROR, "\tRealm create failed\n", 0, 0);
+        return VAL_TEST_PREP_SEQ_FAILED;
+    }
+
+    return MECID_PRIVATE;
+}
+
 static uint64_t g_params_prep_sequence(params_prep_seq_type type)
 {
     /*  Allocate a granule for RealmParams */
@@ -73,6 +101,7 @@ static uint64_t g_params_prep_sequence(params_prep_seq_type type)
     uint64_t rtt_base = realm[REALM_VALID].rtt_l0_addr;
 
     uint64_t featreg0;
+    uint64_t featreg1;
     uint8_t s2sz, supported_hashalgo, vmidbits;
 
     params->hash_algo = RMI_SHA256;
@@ -278,6 +307,17 @@ static uint64_t g_params_prep_sequence(params_prep_seq_type type)
         params->vmid = 1;
         break;
 
+    case PARAMS_MECID_BOUND:
+        val_host_rmi_features(1, &featreg1);
+        params->mecid = featreg1;
+        break;
+
+    case PARAMS_MECID_STATE:
+        params->mecid = g_mec_state_private_assigned_prep_sequence(REALM_MEC);
+        if (params->mecid == VAL_TEST_PREP_SEQ_FAILED)
+            return VAL_TEST_PREP_SEQ_FAILED;
+        break;
+
     default:
         LOG(ERROR, "\n\t INVALID PREP_SEQUENCE \n", 0, 0);
         return VAL_TEST_PREP_SEQ_FAILED;
@@ -305,6 +345,7 @@ static uint64_t params_valid_prep_sequence(void)
     params->rtt_base = rtt0;
     params->num_bps = 1;
     params->num_wps = 1;
+    params->mecid = MECID_VALID;
 
 #ifdef RMM_V_1_1
     params->flags1 |= VAL_REALM_FLAG_RTT_TREE_PP;
@@ -588,6 +629,18 @@ static uint64_t intent_to_seq(struct stimulus *test_data, struct arguments *args
         case AUX_VMID_USED:
             args->rd = c_args.rd_valid;
             args->params_ptr = g_params_prep_sequence(PARAMS_AUX_VMID_USED);
+            break;
+
+        case MECID_BOUND:
+            args->rd = c_args.rd_valid;
+            args->params_ptr = g_params_prep_sequence(PARAMS_MECID_BOUND);
+            break;
+
+        case MECID_STATE:
+            args->rd = c_args.rd_valid;
+            args->params_ptr = g_params_prep_sequence(PARAMS_MECID_STATE);
+            if (args->params_ptr == VAL_TEST_PREP_SEQ_FAILED)
+                return VAL_ERROR;
             break;
 
         default:

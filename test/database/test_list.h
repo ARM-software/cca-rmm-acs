@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023-2024, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023-2025, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -64,6 +64,8 @@ DECLARE_TEST_FN(cmd_rtt_aux_unmap_protected);
 DECLARE_TEST_FN(cmd_rtt_aux_unmap_unprotected);
 DECLARE_TEST_FN(cmd_plane_reg_read);
 DECLARE_TEST_FN(cmd_plane_reg_write);
+DECLARE_TEST_FN(cmd_mec_set_shared);
+DECLARE_TEST_FN(cmd_mec_set_private);
 /*command testcase declaration ends here*/
 
 /*val sanity testcase starts here*/
@@ -172,6 +174,18 @@ DECLARE_TEST_FN(planes_rec_entry_maint_int);
 DECLARE_TEST_FN(planes_el1_timer_trig);
 DECLARE_TEST_FN(planes_timer_state_rec_exit);
 /* Planes test declaration ends here */
+
+/* MEC testcase declaration starts here */
+DECLARE_TEST_FN(mec_id_shared);
+DECLARE_TEST_FN(mec_id_private);
+DECLARE_TEST_FN(mec_feat_support);
+DECLARE_TEST_FN(mec_private_shared);
+/* MEC testcase declaration ends here */
+
+/* LFA testcase declaration starts here */
+DECLARE_TEST_FN(lfa_test);
+/* LFA testcase declaration ends here */
+
 
 #else /* TEST_FUNC_DATABASE */
 /* Add test funcs to the respective host/realm/secure test_list array */
@@ -627,5 +641,36 @@ DECLARE_TEST_FN(planes_timer_state_rec_exit);
         #endif
     #endif /* #if (defined(d_all) || defined(d_planes) */
 #endif /* #if defined(RMM_V_1_0) || defined(RMM_V_1_1) */
+
+#if defined(RMM_V_1_1)
+    #if (defined(d_all) || defined(d_mec))
+        #if (defined(TEST_COMBINE) || defined(d_mec_feat_support))
+        HOST_TEST(mec, mec_feat_support),
+        #endif
+        #if (defined(TEST_COMBINE) || defined(d_mec_id_shared))
+        HOST_REALM_TEST(mec, mec_id_shared),
+        #endif
+        #if (defined(TEST_COMBINE) || defined(d_mec_id_private))
+        HOST_REALM_TEST(mec, mec_id_private),
+        #endif
+        #if (defined(TEST_COMBINE) || defined(d_mec_private_shared))
+        HOST_REALM_TEST(mec, mec_private_shared),
+        #endif
+        #if (defined(TEST_COMBINE) || defined(d_cmd_mec_set_shared))
+        HOST_TEST(mec, cmd_mec_set_shared),
+        #endif
+        #if (defined(TEST_COMBINE) || defined(d_cmd_mec_set_private))
+        HOST_TEST(mec, cmd_mec_set_private),
+        #endif
+    #endif /* #if (defined(d_all) || defined(d_mec)) */
+#endif /* #if defined(RMM_V_1_1) */
+
+#if defined(RMM_V_1_1)
+    #if (defined(d_all) || defined(d_lfa))
+        #if (defined(TEST_COMBINE) || defined(d_lfa_test))
+        HOST_TEST(lfa, lfa_test),
+        #endif
+    #endif /* #if (defined(d_all) || defined(d_lfa)) */
+#endif /* #if defined(RMM_V_1_1) */
 
 #endif /* TEST_FUNC_DATABASE */

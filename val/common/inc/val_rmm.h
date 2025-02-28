@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023-2024, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023-2025, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -65,6 +65,10 @@
 #define RMI_RTT_AUX_MAP_UNPROTECTED    0xC4000181
 #define RMI_RTT_AUX_UNMAP_PROTECTED    0xC4000183
 #define RMI_RTT_AUX_UNMAP_UNPROTECTED  0xC4000184
+
+/* v1.1 MEC SMC IDs */
+#define RMI_MEC_SET_SHARED             0xC400018C
+#define RMI_MEC_SET_PRIVATE            0xC400018D
 
 /* RmiFeature type */
 #define RMI_FEATURE_FALSE     0
@@ -232,11 +236,7 @@
 
 /* RSI SMC FID */
 #define RSI_VERSION                           (0xC4000190)
-#ifdef RMM_V_1_1
-#define RSI_REALM_CONFIG                      (0xC40001AD)
-#elif defined(RMM_V_1_0)
 #define RSI_REALM_CONFIG                      (0xC4000196)
-#endif
 #define RSI_MEASUREMENT_READ                  (0xC4000192)
 #define RSI_MEASUREMENT_EXTEND                (0xC4000193)
 #define RSI_IPA_STATE_GET                     (0xC4000198)

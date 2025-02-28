@@ -1,11 +1,12 @@
 /*
- * Copyright (c) 2023, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023-2025, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
  */
 
 #include "val_macros.S"
+#define ID_AA64MMFR3_EL1        S3_0_C0_C7_3
 
   .section .text.sysreg, "ax"
 
@@ -119,6 +120,11 @@ val_id_aa64mmfr1_el1_read:
 .global val_id_aa64mmfr2_el1_read
 val_id_aa64mmfr2_el1_read:
         mrs x0, ID_AA64MMFR2_EL1
+        ret
+
+.global val_id_aa64mmfr3_el1_read
+val_id_aa64mmfr3_el1_read:
+        mrs x0, ID_AA64MMFR3_EL1
         ret
 
 .global val_id_aa64pfr0_el1_read

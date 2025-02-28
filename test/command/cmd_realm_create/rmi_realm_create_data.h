@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023-2024, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023-2025, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -39,7 +39,9 @@ enum test_intent {
     AUX_RTT_UNALIGNED = 0x1C,
     AUX_RTT_BASE_UNDELEGATED = 0x1D,
     AUX_VMID_INVALID = 0x1E,
-    AUX_VMID_USED = 0x1F
+    AUX_VMID_USED = 0x1F,
+    MECID_BOUND = 0x20,
+    MECID_STATE = 0x21
 };
 
 struct stimulus {
@@ -204,6 +206,18 @@ static struct stimulus test_data[] = {
     {.msg = "vmid_valid",
     .abi = RMI_REALM_CREATE,
     .label = AUX_VMID_USED,
+    .status = RMI_ERROR_INPUT,
+    .index = 0},
+#endif
+#ifdef RMM_V_1_1
+    {.msg = "mecid_bound",
+    .abi = RMI_REALM_CREATE,
+    .label = MECID_BOUND,
+    .status = RMI_ERROR_INPUT,
+    .index = 0},
+    {.msg = "mecid_state",
+    .abi = RMI_REALM_CREATE,
+    .label = MECID_STATE,
     .status = RMI_ERROR_INPUT,
     .index = 0},
 #endif

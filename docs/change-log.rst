@@ -1,9 +1,24 @@
-.. Copyright [C] 2023, Arm Limited or its affiliates. All rights reserved.
+.. Copyright [C] 2023-2025, Arm Limited or its affiliates. All rights reserved.
       SPDX-License-Identifier: BSD-3-Clause
 
 ##########
 Change-log
 ##########
+
+***********************
+v1.1_MEC_LFA_BETA_02_25
+***********************
+
+-  This release is aligned to `RMM v1.1 alp12 specification`_ . Details are given below.
+
+New Features / Tests Added
+==========================
+
+- Added MEC and LFA infra
+- Added MEC shared and private ID scenarios
+- Added MEC_SET_PRIVATE and MEC_SET_SHARED command ABIs 
+- Added LFA test
+- For more details on these tests details check `MEC LFA Scenarios`_.
 
 ***************
 v1.0_REL0_12.24
@@ -34,13 +49,42 @@ v1.1_PLANES_BETA_09_24
 New Features / Tests Added
 ==========================
 
+- Additional test to Planes exeption model.
 - Added new tests in for Planes ABIs in Command suite.
+- Added new tests for Planes memory mangement, Planes GIC and Planes timers modules.
+- For more details on these tests details check `Planes Scenarios`_.
+
+
+***********************
+v1.1_PLANES_ALPHA_07_24
+***********************
+
+-  This release is aligned to `RMM v1.1 alp5 specification`_ . Details are given below.
+
+New Features / Tests Added
+==========================
+
 - Added stage 2 permission indirection support in VAL.
 - Added Planes leaf level ABI support.
 - VAL infra updates to support Planes.
-- Added new tests in for Planes ABIs in Command suite.
-- Added new tests for Planes exception model, Planes memory mangement, Planes GIC and Planes timers modules.
-- For more details on these tests details check `Planes Scenarios`_.
+- Added Planes command scenarios to Command scenario document.
+- Added Planes exception model tests. For details check `Planes Scenarios`_.
+
+*******************
+v1.1_DA_ALPHA_07_24
+*******************
+
+-  This release is aligned to `RMM v1.1 alp5 specification`_ . Details are given below.
+
+New Features / Tests Added
+==========================
+
+- Added PCI enumeration code.
+- Added PCI DOE driver.
+- Added secure SPDM session test.
+- Added DA commands scenario document.
+- Added DA commands leaf-level ABIs support
+- VAL infra updates
 
 ******************
 v1.0_EAC1.0_12.23
@@ -92,6 +136,9 @@ New Features / Tests Added
     -alp5_rmm-arch_internal.pdf?csf=1&web=1&e=xvBiLU
 .. _RMM v1.1 alp8 specification:  https://developer.arm.com/-/cdn-downloads/permalink/PDF/
     Architectures/DEN0137_1.1-alp8_rmm-arch_external.pdf
+.. _RMM v1.1 alp12 specification:  https://developer.arm.com/-/cdn-downloads/permalink/
+    Architectures/Armv9/DEN0137_1.1-alp12.zip
 .. _PMU and Debug Scenarios: ./pmu_debug.md
 .. _Attestation and Measurement Scenarios: ./attestation_measurement_scenarios.md
 .. _Planes Scenarios: ./planes_scenarios.rst
+.. _MEC LFA Scenarios: ./mec_lfa.md

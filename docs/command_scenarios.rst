@@ -5817,6 +5817,86 @@ Observability
 ~~~~~~~~~~~~~
 Check for PSCI_Version.major == 1, PSCI_Version.minor = 1
 
+RMI_MEC_SET_PRIVATE
+^^^^^^^^^^^^^^^^^^^
+
+Argument list
+~~~~~~~~~~~~~
+
+.. list-table::
+  :widths: 25 75
+
+  * - Input parameters
+    - Valid Values
+  * - mecid
+    - valid mec_id for given realm
+
+Failure conditon testing
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. list-table::
+  :widths: 20 40 40
+
+  * - Input parameters
+    - Input Values
+    - Remarks
+  * - mecid_bound
+    - | mec_id = (ImplFeatures().max_mecid + 1)
+    -
+  * - state
+    - | mec_id state:  MEC_STATE_PRIVATE_UNASSIGNED
+    -
+
+  * - members
+    - | MecMembers(mec_id) = 1
+    - | create realm with private mec policy and pass the same mec_id to RMI_MEC_SET_PRIVATE
+
+Failure Priority ordering
+~~~~~~~~~~~~~~~~~~~~~~~~~
+This command has no failure priority orderings
+
+Observability
+~~~~~~~~~~~~~
+This command has no footprint.
+
+RMI_MEC_SET_SHARED
+^^^^^^^^^^^^^^^^^^
+
+Argument list
+~~~~~~~~~~~~~
+
+.. list-table::
+  :widths: 25 75
+
+  * - Input parameters
+    - Valid Values
+  * - mecid
+    - valid mec_id for given realm
+
+Failure conditon testing
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. list-table::
+  :widths: 20 40 40
+
+  * - Input parameters
+    - Input Values
+    - Remarks
+  * - mecid_bound
+    - | mec_id = (ImplFeatures().max_mecid + 1)
+    -
+  * - state
+    - | mec_id state:  MEC_STATE_PRIVATE_ASSIGNED
+    -
+
+Failure Priority ordering
+~~~~~~~~~~~~~~~~~~~~~~~~~
+This command has no failure priority orderings
+
+Observability
+~~~~~~~~~~~~~
+This command has no footprint.
+
 
 .. |Priority orderings| image:: ./diagrams/priority_ordering.png
 .. |Intent to sequence structure| image:: ./diagrams/intent_structure.png
