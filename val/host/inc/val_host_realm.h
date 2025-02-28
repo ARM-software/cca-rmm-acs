@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023-2024, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023-2025, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -93,6 +93,7 @@ typedef struct {
     uint32_t num_s2_sl_rtts;
     uint64_t rec_count;
     uint8_t num_aux_planes;
+    uint64_t mecid;
 
     /* Test Input end */
     uint64_t image_pa_base;
@@ -137,9 +138,11 @@ typedef struct {
             /* RTT starting level */
             unsigned long rtt_level_start;                      /* 0x810 */
             /* Number of starting level RTTs */
-            unsigned int rtt_num_start;		                    /* 0x818 */
+            unsigned int rtt_num_start;                         /* 0x818 */
             /* Flags 1 */
-            unsigned long flags1;                                /* 0x820 */
+            unsigned long flags1;                               /* 0x820 */
+            /* MEC ID */
+            unsigned long mecid;                                /* 0x828 */
             }, 0x800, 0xF00);
     SET_MEMBER_RMI(
     /* Virtual Machine Identifier of the auxiliary contexts.

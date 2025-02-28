@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023-2024, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023-2025, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -866,4 +866,24 @@ val_smc_param_ts val_host_rmi_vdev_get_state(uint64_t vdev_ptr)
 val_smc_param_ts val_host_rmi_vdev_stop(uint64_t vdev_ptr)
 {
     return val_smc_call(RMI_VDEV_STOP, vdev_ptr, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+/**
+ *   @brief    Change state of a MEC to Private
+ *   @param    mecid         -  MECID
+ *   @return   SMC return arguments
+**/
+val_smc_param_ts val_host_rmi_mec_set_private(uint64_t mecid)
+{
+    return val_smc_call(RMI_MEC_SET_PRIVATE, mecid, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+/**
+ *   @brief    Change state of a MEC to Shared
+ *   @param    mecid         -  MECID
+ *   @return   SMC return arguments
+**/
+val_smc_param_ts val_host_rmi_mec_set_shared(uint64_t mecid)
+{
+    return val_smc_call(RMI_MEC_SET_SHARED, mecid, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }

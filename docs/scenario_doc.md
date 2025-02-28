@@ -4,11 +4,13 @@ This document provides a consolidated list of scenario documents designed to tes
 | List of Scenario Documents |
 | -------------------------- |
 | [Attestation and Measurement](./attestation_measurement_scenarios.md) |
+| [Command](./command_scenarios.rst) |
 | [Exception](./exception_scenarios.md) |
 | [GIC](./gic_scenarios.md) |
 | [Memory Management](./memory_management_scenarios.md) |
 | [Planes](./planes_scenarios.rst) |
 | [PMU and Debug](./pmu_debug.md) |
+| [MEC and LFA](./mec_lfa.md) |
 
 ## License
 

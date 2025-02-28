@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023-2025, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -29,6 +29,7 @@ extern void val_elr_el1_write(uint64_t value);
 extern uint64_t val_id_aa64mmfr0_el1_read(void);
 extern uint64_t val_id_aa64mmfr1_el1_read(void);
 extern uint64_t val_id_aa64mmfr2_el1_read(void);
+extern uint64_t val_id_aa64mmfr3_el1_read(void);
 extern uint64_t val_id_aa64pfr0_el1_read(void);
 extern uint64_t val_id_aa64isar0_el1_read(void);
 extern uint64_t val_id_aa64dfr0_el1_read(void);

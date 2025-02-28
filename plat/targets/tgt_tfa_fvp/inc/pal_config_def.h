@@ -8,12 +8,8 @@
 #ifndef _PAL_CONFIG_H_
 #define _PAL_CONFIG_H_
 
-/* To enable WFI test */
-#define TEST_WFI_TRAP
-
 /* Defines the number of iterations WFX will be executed in loop for WFX tests */
 #define WFX_ITERATIONS  10
-
 
 /* Total number of CPUs(PEs) in system. ACS requires minimum of 2 CPUs.
  * Example:
@@ -193,5 +189,9 @@
 
 /* Maximum size of Realm CCA token */
 #define MAX_REALM_CCA_TOKEN_SIZE    0x1000
+
+/* LFA RMM GUIDs */
+#define PLATFORM_LFA_RMM_GUID0 0x564bf212a662076c
+#define PLATFORM_LFA_RMM_GUID1 0xd90636638fbacb92
 
 #endif /* _PAL_CONFIG_H_ */

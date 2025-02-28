@@ -18,7 +18,7 @@ The RMM exposes the following interfaces, which are accessed via SMC instruction
 - The Realm Services Interface (RSI), which provides services used to manage resources allocated to the Realm, and to request an attestation report.
 - The Power State Coordination Interface (PSCI), which provides services used to control power states of VPEs within a Realm.
 
-For more information on RMM refer [RMM Specification]( https://developer.arm.com/-/cdn-downloads/permalink/PDF/Architectures/DEN0137_1.1-alp8_rmm-arch_external.pdf)
+For more information on RMM refer [RMM Specification]( https://developer.arm.com/-/cdn-downloads/permalink/Architectures/Armv9/DEN0137_1.1-alp12.zip)
 
 ## Architecture Compliance Suite
 
@@ -30,9 +30,10 @@ This suite is not a substitute for design verification.
 For more information on Architecture Compliance Suite see [Validation Methodology](./docs/Arm_CCA_RMM_Architecture_Compliance_Suite_Validation_Methodology.pdf) document.
 
 ## Release details
-- Release Version - v1.1 ACS PLANES BETA
+- Release Version - v1.1 ACS PLANES BETA, v1.1 ACS MEC_LFA BETA
 - Code Quality: BETA
-- The tests are written for Arm RMM 1.1-ALP8 specification version.
+- The Planes tests are written for Arm RMM 1.1-ALP8 specification version.
+- The MEC and LFA tests are written for Arm RMM 1.1-ALP12 specification version.
 - For information about the test coverage scenarios that are implemented in ACS, see [scenario docs](./docs/scenario_doc.md).
 - For information about the test failures in ACS, see [Test failure analysis doc](./docs/testcase_failure_analysis.md).
 - The [Change log](./docs/change-log.rst) has details of the features implemented by this version of CCA-RMM-ACS.

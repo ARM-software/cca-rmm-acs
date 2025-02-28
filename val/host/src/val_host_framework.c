@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023-2025, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -283,6 +283,7 @@ static void val_host_print_acs_header(void)
 #if defined(RMM_V_1_1)
    LOG(ALWAYS, "********* RMM v1.1 ACS **********\n\n", 0, 0)
    LOG(ALWAYS, " 1. Planes - BETA \n\n", 0, 0)
+   LOG(ALWAYS, " 2. MEC and LFA - BETA \n\n", 0, 0)
    LOG(ALWAYS, "*********************************\n\n", 0, 0)
 #elif defined(RMM_V_1_0)
    LOG(ALWAYS, "********* RMM v1.0 ACS EAC **********\n\n", 0, 0)
