@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2025 Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -9,23 +9,26 @@
 #include "val_realm_rsi.h"
 #include "val_timer.h"
 
+#define TIMEOUT     100
 
 void gic_timer_val_read_realm(void)
 {
     uint64_t phys_counter_t0, phys_counter_t1;
     uint64_t virt_counter_t0, virt_counter_t1;
-    uint64_t timeout = 0x100000;
+    uint64_t timeout = TIMEOUT + 1;
 
     /* Below code is executed for REC[0] only */
     LOG(DBG, "\tIn realm_create_realm REC[0], mpdir=%x\n", val_read_mpidr(), 0);
-    val_timer_set_phy_el1(100, true);
+    val_timer_set_phy_el1(TIMEOUT, true);
 
     phys_counter_t0 = syscounter_read();
     virt_counter_t0 = virtualcounter_read();
 
     phys_counter_t1 = syscounter_read();
-    while ((phys_counter_t0 == phys_counter_t1) && timeout--)
+    while ((phys_counter_t0 == phys_counter_t1) && timeout > 0)
     {
+        val_sleep_elapsed_time(1);
+        timeout--;
         phys_counter_t1 = syscounter_read();
     }
     virt_counter_t1 = virtualcounter_read();
