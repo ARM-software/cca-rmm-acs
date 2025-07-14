@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023-2024, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023-2025, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -59,7 +59,7 @@ static uint64_t g_rd_new_prep_sequence(uint16_t vmid)
 
     if (val_host_realm_create_common(&realm_init))
     {
-        LOG(ERROR, "\tRealm create failed\n", 0, 0);
+        LOG(ERROR, "Realm create failed\n");
         return VAL_TEST_PREP_SEQ_FAILED;
     }
     realm_test[vmid].rd = realm_init.rd;
@@ -127,14 +127,14 @@ static uint64_t rec_valid_prep_sequence(void)
     uint64_t mpidr = 0;
 
     if (add_rec(entry_addr, RMI_RUNNABLE, mpidr, VALID_REALM)) {
-        LOG(ERROR, "\tCouldn't create/add rec_valid\n", 0, 0);
+        LOG(ERROR, "Couldn't create/add rec_valid\n");
         return VAL_TEST_PREP_SEQ_FAILED;
     }
 
     uint64_t rec = realm_test[VALID_REALM].rec[mpidr];
 
     if (val_host_rmi_realm_activate(rd)) {
-        LOG(ERROR, "\tCouldn't activate the Realm\n", 0, 0);
+        LOG(ERROR, "Couldn't activate the Realm\n");
         return VAL_TEST_PREP_SEQ_FAILED;
     }
 
@@ -161,7 +161,7 @@ static uint64_t g_rec_ready_owner_state_new_prep_sequence(void)
     uint64_t mpidr = 0;
 
     if (add_rec(entry_addr, RMI_RUNNABLE, mpidr, NEW_REALM_2)) {
-        LOG(ERROR, "\tCouldn't create/add the rec\n", 0, 0);
+        LOG(ERROR, "Couldn't create/add the rec\n");
         return VAL_TEST_PREP_SEQ_FAILED;
     }
 
@@ -179,12 +179,12 @@ static uint64_t g_rec_ready_not_runnable_prep_sequence(void)
     uint64_t mpidr = 0;
 
     if (add_rec(entry_addr, RMI_NOT_RUNNABLE, mpidr, NOT_RUNNABLE_REALM)) {
-        LOG(ERROR, "\tCouldn't create/add the rec\n", 0, 0);
+        LOG(ERROR, "Couldn't create/add the rec\n");
         return VAL_TEST_PREP_SEQ_FAILED;
     }
 
     if (val_host_rmi_realm_activate(rd)) {
-        LOG(ERROR, "\tCouldn't activate the Realm\n", 0, 0);
+        LOG(ERROR, "Couldn't activate the Realm\n");
         return VAL_TEST_PREP_SEQ_FAILED;
     }
 
@@ -259,7 +259,7 @@ static uint64_t g_rec_aux_prep_sequence(void)
 
     /* Create the REC */
     if (val_host_rmi_rec_create(rd, rec, (uint64_t)params)) {
-        LOG(ERROR, "\n\t REC create failed ", 0, 0);
+        LOG(ERROR, " REC create failed \n");
         return VAL_TEST_PREP_SEQ_FAILED;
     }
 
@@ -282,7 +282,7 @@ static uint64_t g_rec_non_emulatable_abort_prep_sequence(void)
     /* Populate realm with one REC*/
     if (val_host_realm_setup(&realm_test[RUNNABLE_REALM], false))
     {
-        LOG(ERROR, "\tRealm setup failed\n", 0, 0);
+        LOG(ERROR, "Realm setup failed\n");
         return VAL_TEST_PREP_SEQ_FAILED;
     }
 
@@ -290,14 +290,14 @@ static uint64_t g_rec_non_emulatable_abort_prep_sequence(void)
     if (val_host_ripas_init(&realm_test[RUNNABLE_REALM], TEST_IPA, TEST_IPA + PAGE_SIZE,
                                                      VAL_RTT_MAX_LEVEL, PAGE_SIZE))
     {
-            LOG(ERROR, "\tRMI_INIT_RIPAS failed ", 0, 0);
+            LOG(ERROR, "RMI_INIT_RIPAS failed \n");
             return VAL_TEST_PREP_SEQ_FAILED;
     }
 
     /* Activate realm */
     if (val_host_realm_activate(&realm_test[RUNNABLE_REALM]))
     {
-        LOG(ERROR, "\tRealm activate failed\n", 0, 0);
+        LOG(ERROR, "Realm activate failed\n");
         return VAL_TEST_PREP_SEQ_FAILED;
     }
 
@@ -308,13 +308,13 @@ static uint64_t g_rec_non_emulatable_abort_prep_sequence(void)
     ret = val_host_rmi_rec_enter(realm_test[RUNNABLE_REALM].rec[0],
                                  realm_test[RUNNABLE_REALM].run[0]);
     if (ret) {
-        LOG(ERROR, "\tRec enter failed, ret=%x\n", ret, 0);
+        LOG(ERROR, "Rec enter failed, ret=%x\n", ret);
         return VAL_TEST_PREP_SEQ_FAILED;
     }
 
     /* Check that REC Exit was due to host call because of realm requesting for test IPA */
     if (rec_exit->exit_reason != RMI_EXIT_HOST_CALL) {
-        LOG(ERROR, "\tUnexpected REC exit, %d. ESR: %lx \n", rec_exit->exit_reason, rec_exit->esr);
+        LOG(ERROR, "Unexpected REC exit, %d. ESR: %lx \n", rec_exit->exit_reason, rec_exit->esr);
         return VAL_TEST_PREP_SEQ_FAILED;
     }
 
@@ -325,7 +325,7 @@ static uint64_t g_rec_non_emulatable_abort_prep_sequence(void)
     ret = val_host_rmi_rec_enter(realm_test[RUNNABLE_REALM].rec[0],
                                  realm_test[RUNNABLE_REALM].run[0]);
     if (ret) {
-        LOG(ERROR, "\tRec enter failed, ret=%x\n", ret, 0);
+        LOG(ERROR, "Rec enter failed, ret=%x\n", ret);
         return VAL_TEST_PREP_SEQ_FAILED;
     }
 
@@ -334,7 +334,7 @@ static uint64_t g_rec_non_emulatable_abort_prep_sequence(void)
     if (validate_rec_exit_da(rec_exit, TEST_IPA, ESR_ISS_DFSC_TTF_L3,
                                 NON_EMULATABLE_DA, ESR_WnR_WRITE))
     {
-        LOG(ERROR, "\tREC exit DA: params mismatch\n", 0, 0);
+        LOG(ERROR, "REC exit DA: params mismatch\n");
         return VAL_TEST_PREP_SEQ_FAILED;
     }
 
@@ -342,7 +342,7 @@ static uint64_t g_rec_non_emulatable_abort_prep_sequence(void)
     phys = (uint64_t)val_host_mem_alloc(PAGE_SIZE, PAGE_SIZE);
     if (!phys)
     {
-        LOG(ERROR, "\tval_host_mem_alloc failed\n", 0, 0);
+        LOG(ERROR, "val_host_mem_alloc failed\n");
         return VAL_TEST_PREP_SEQ_FAILED;
     }
 
@@ -350,7 +350,7 @@ static uint64_t g_rec_non_emulatable_abort_prep_sequence(void)
                                                                 TEST_IPA, PAGE_SIZE);
     if (ret)
     {
-        LOG(ERROR, "\tDATA_CREATE_UNKNOWN failed, ret = %d \n", ret, 0);
+        LOG(ERROR, "DATA_CREATE_UNKNOWN failed, ret = %d \n", ret);
         return VAL_TEST_PREP_SEQ_FAILED;
     }
 
@@ -365,7 +365,7 @@ static uint64_t g_rec_psci_pending_prep_sequence(void)
     ret = val_host_rmi_rec_enter(realm_test[RUNNABLE_REALM].rec[0],
                                  realm_test[RUNNABLE_REALM].run[0]);
     if (ret) {
-        LOG(ERROR, "\tRec enter failed, ret=%x\n", ret, 0);
+        LOG(ERROR, "Rec enter failed, ret=%x\n", ret);
         return VAL_TEST_PREP_SEQ_FAILED;
     }
 
@@ -381,7 +381,7 @@ static uint64_t g_rec_owner_state_system_off_prep_sequence(void)
                                      realm_test[RUNNABLE_REALM].rec[1], PSCI_E_SUCCESS);
     if (ret)
     {
-        LOG(ERROR, "\t PSCI_COMPLETE Failed, ret=%x\n", ret, 0);
+        LOG(ERROR, " PSCI_COMPLETE Failed, ret=%x\n", ret);
         return VAL_TEST_PREP_SEQ_FAILED;
     }
 
@@ -389,7 +389,7 @@ static uint64_t g_rec_owner_state_system_off_prep_sequence(void)
     ret = val_host_rmi_rec_enter(realm_test[RUNNABLE_REALM].rec[1],
                                  realm_test[RUNNABLE_REALM].run[1]);
     if (ret)
-        LOG(ERROR, "\tRec enter failed, ret=%x\n", ret, 0);
+        LOG(ERROR, "Rec enter failed, ret=%x\n", ret);
 
     return realm_test[RUNNABLE_REALM].rec[1];
 }
@@ -584,7 +584,7 @@ static uint64_t intent_to_seq(struct stimulus *test_data, struct arguments *args
 
         default:
             /* set status to failure */
-            LOG(ERROR, "\t\nUnknown intent label encountered\n", 0, 0);
+            LOG(ERROR, "Unknown intent label encountered\n");
             return VAL_ERROR;
     }
 
@@ -605,9 +605,8 @@ void cmd_rec_enter_host(void)
     /* Iterate over the input */
     for (i = 0; i < (sizeof(test_data) / sizeof(struct stimulus)); i++)
     {
-        LOG(TEST, "\n\tCheck %d : ", i + 1, 0);
-        LOG(TEST, test_data[i].msg, 0, 0);
-        LOG(TEST, "; intent id : 0x%x \n", test_data[i].label, 0);
+        LOG(TEST, "Check %2d : %s; intent id : 0x%x \n",
+              i + 1, test_data[i].msg, test_data[i].label);
 
         if (intent_to_seq(&test_data[i], &args)) {
             val_set_status(RESULT_FAIL(VAL_ERROR_POINT(2)));
@@ -617,7 +616,7 @@ void cmd_rec_enter_host(void)
         ret = val_host_rmi_rec_enter(args.rec, args.run_ptr);
 
         if (ret != PACK_CODE(test_data[i].status, test_data[i].index)) {
-            LOG(ERROR, "\tTest Failure!\n\tThe ABI call returned: %x\n\tExpected: %x\n",
+            LOG(ERROR, "Test Failure!The ABI call returned: %xExpected: %x\n",
                 ret, PACK_CODE(test_data[i].status, test_data[i].index));
             val_set_status(RESULT_FAIL(VAL_ERROR_POINT(5)));
             goto exit;

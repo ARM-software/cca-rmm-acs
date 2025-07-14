@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2025, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -37,7 +37,7 @@ void attestation_rem_extend_check_realm_token_realm(void)
                                               0, 0, 0, 0);
     if (ret)
     {
-        LOG(ERROR, "\tRealm RSI MEASUREMENT EXTEND failed, ret=%x\n", ret, 0);
+        LOG(ERROR, "Realm RSI MEASUREMENT EXTEND failed, ret=%x\n", ret);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(1)));
         goto exit;
     }
@@ -47,7 +47,7 @@ void attestation_rem_extend_check_realm_token_realm(void)
                                                  challenge[5], challenge[6], challenge[7]);
     if (args.x0)
     {
-        LOG(ERROR, "\tToken init failed, ret=%x\n", args.x0, 0);
+        LOG(ERROR, "Token init failed, ret=%x\n", args.x0);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(2)));
         goto exit;
     }
@@ -72,7 +72,7 @@ void attestation_rem_extend_check_realm_token_realm(void)
 
     if (args.x0)
     {
-        LOG(ERROR, "\tToken continue failed, ret=%x\n", args.x0, 0);
+        LOG(ERROR, "Token continue failed, ret=%x\n", args.x0);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(3)));
         goto exit;
     }
@@ -81,7 +81,7 @@ void attestation_rem_extend_check_realm_token_realm(void)
                         ATTEST_CHALLENGE_SIZE_64, token, token_size);
     if (ret != VAL_SUCCESS)
     {
-        LOG(ERROR, "\tattestation token verification failed, ret=%x\n", ret, 0);
+        LOG(ERROR, "attestation token verification failed, ret=%x\n", ret);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(4)));
         goto exit;
     }
@@ -89,7 +89,7 @@ void attestation_rem_extend_check_realm_token_realm(void)
     /* Compare REM for index 1 with zero initialize structure, if REM is zero it should fail */
     if (!val_memcmp(&zero_ref, (void *)attestation_token.rem[0].ptr, attestation_token.rem[0].len))
     {
-        LOG(ERROR, "\t rem is zero. \n", 0, 0);
+        LOG(ERROR, " rem is zero. \n");
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(5)));
         goto exit;
     }

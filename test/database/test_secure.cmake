@@ -1,5 +1,5 @@
 #-------------------------------------------------------------------------------
-# Copyright (c) 2023-2024, Arm Limited or its affiliates. All rights reserved.
+# Copyright (c) 2023-2025, Arm Limited or its affiliates. All rights reserved.
 #
 # SPDX-License-Identifier: BSD-3-Clause
 #
@@ -28,12 +28,14 @@ list(APPEND TEST_INCLUDE
     ${ROOT_DIR}/plat/driver/src/
     ${ROOT_DIR}/test/database/
     ${ROOT_DIR}/test/common/
+    ${COMMON_VAL_PATH}/inc
 )
 
 foreach(SUITE ${TEST_SUITE_LIST})
-    list(APPEND TEST_INCLUDE
-    ${ROOT_DIR}/test/${SUITE}/common/
-)
+    list(APPEND TEST_INCLUDE ${ROOT_DIR}/test/${SUITE}/common/)
+    if(NOT ${SUITE} STREQUAL "command")
+        list(APPEND TEST_INCLUDE ${ROOT_DIR}/test/command/common/)
+    endif()
 endforeach()
 
 if(${TEST_COMBINE})
@@ -57,6 +59,17 @@ file(GLOB TEST_SRC
 )
 endif()
 
+#Adding command test source files for SUITE_COVERAGE
+if(NOT ${SUITE} STREQUAL "command")
+    file(GLOB COMMAND_TEST_SRC
+    "${ROOT_DIR}/test/command/*/*_secure.c"
+    "${ROOT_DIR}/test/command/*/*_secure.S"
+    "${ROOT_DIR}/test/command/*/*/*_secure.c"
+    "${ROOT_DIR}/test/command/common/*_secure.c"
+)
+endif()
+
+list(APPEND TEST_SRC ${COMMAND_TEST_SRC})
 list(APPEND TEST_SRC
     ${ROOT_DIR}/test/database/test_database_secure.c
 )

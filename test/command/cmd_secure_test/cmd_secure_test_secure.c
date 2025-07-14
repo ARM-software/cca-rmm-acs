@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2025, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -14,7 +14,7 @@ void cmd_secure_test_secure(void)
 {
     uint64_t *test_shared_region = (val_get_shared_region_base() + TEST_USE_OFFSET1);
 
-    LOG(ALWAYS, "\tIn secure_test_secure\n", 0, 0);
+    LOG(ALWAYS, "In secure_test_secure\n");
 
     /* Compare data pattern with expected value sent by host */
     if (*test_shared_region != DATA_PATTERN_1)

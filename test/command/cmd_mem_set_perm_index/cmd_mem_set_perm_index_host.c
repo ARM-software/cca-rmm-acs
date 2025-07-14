@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2024-2025, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -22,7 +22,7 @@ void cmd_mem_set_perm_index_host(void)
     /* Skip if RMM do not support planes */
     if (!val_host_rmm_supports_planes())
     {
-        LOG(ALWAYS, "\n\tPlanes feature not supported\n", 0, 0);
+        LOG(ALWAYS, "Planes feature not supported\n");
         val_set_status(RESULT_SKIP(VAL_SKIP_CHECK));
         goto destroy_realm;
     }
@@ -44,7 +44,7 @@ void cmd_mem_set_perm_index_host(void)
     /* Populate realm with one REC*/
     if (val_host_realm_setup(&realm, true))
     {
-        LOG(ERROR, "\tRealm setup failed\n", 0, 0);
+        LOG(ERROR, "Realm setup failed\n");
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(1)));
         goto destroy_realm;
     }
@@ -53,7 +53,7 @@ void cmd_mem_set_perm_index_host(void)
     ret = val_host_rmi_rec_enter(realm.rec[0], realm.run[0]);
     if (ret)
     {
-        LOG(ERROR, "\tRec enter failed, ret=%x\n", ret, 0);
+        LOG(ERROR, "Rec enter failed, ret=%x\n", ret);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(2)));
         goto destroy_realm;
     }
@@ -63,7 +63,7 @@ void cmd_mem_set_perm_index_host(void)
 
     /* Check that REC exit was due S2AP change request */
     if (rec_exit->exit_reason != RMI_EXIT_S2AP_CHANGE) {
-        LOG(ERROR, "\tUnexpected REC exit, %d. ESR: %lx \n", rec_exit->exit_reason, rec_exit->esr);
+        LOG(ERROR, "Unexpected REC exit, %d. ESR: %lx \n", rec_exit->exit_reason, rec_exit->esr);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(3)));
         goto destroy_realm;
     }
@@ -74,7 +74,7 @@ void cmd_mem_set_perm_index_host(void)
     while (s2ap_ipa_base != s2ap_ipa_top) {
         cmd_ret = val_host_rmi_rtt_set_s2ap(realm.rd, realm.rec[0], s2ap_ipa_base, s2ap_ipa_top);
         if (cmd_ret.x0) {
-            LOG(ERROR, "\nRMI_SET_S2AP failed with ret= 0x%x\n", cmd_ret.x0, 0);
+            LOG(ERROR, "RMI_SET_S2AP failed with ret= 0x%x\n", cmd_ret.x0);
             goto destroy_realm;
         }
         s2ap_ipa_base = cmd_ret.x1;
@@ -87,14 +87,14 @@ void cmd_mem_set_perm_index_host(void)
     ret = val_host_rmi_rec_enter(realm.rec[0], realm.run[0]);
     if (ret)
     {
-        LOG(ERROR, "\tRec enter failed, ret=%x\n", ret, 0);
+        LOG(ERROR, "Rec enter failed, ret=%x\n", ret);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(4)));
         goto destroy_realm;
     }
 
     /* Check that REC exit was due S2AP change request */
     if (rec_exit->exit_reason != RMI_EXIT_S2AP_CHANGE) {
-        LOG(ERROR, "\tUnexpected REC exit, %d. ESR: %lx \n", rec_exit->exit_reason, rec_exit->esr);
+        LOG(ERROR, "Unexpected REC exit, %d. ESR: %lx \n", rec_exit->exit_reason, rec_exit->esr);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(5)));
         goto destroy_realm;
     }
@@ -107,14 +107,14 @@ void cmd_mem_set_perm_index_host(void)
     ret = val_host_rmi_rec_enter(realm.rec[0], realm.run[0]);
     if (ret)
     {
-        LOG(ERROR, "\tRec enter failed, ret=%x\n", ret, 0);
+        LOG(ERROR, "Rec enter failed, ret=%x\n", ret);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(6)));
         goto destroy_realm;
     }
 
     /* Check REC exit due to host call after completion of test */
     if (rec_exit->exit_reason != RMI_EXIT_HOST_CALL) {
-        LOG(ERROR, "\tUnexpected REC exit, %d. ESR: %lx \n", rec_exit->exit_reason, rec_exit->esr);
+        LOG(ERROR, "Unexpected REC exit, %d. ESR: %lx \n", rec_exit->exit_reason, rec_exit->esr);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(7)));
         goto destroy_realm;
     }

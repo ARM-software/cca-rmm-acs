@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023-2024, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023-2025, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -97,8 +97,5 @@
 
 /* Use this macro for test use IPA */
 #define VAL_TEST_USE_IPA 0x0
-
-//MSB is set at runtime based on ipa_width selected
-#define VAL_NS_SHARED_REGION_IPA_OFFSET 0x700000
 
 #endif /* _VAL_DEF_H_ */

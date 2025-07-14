@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023-2024, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023-2025, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -20,7 +20,7 @@ void cmd_rmi_features_host(void)
     /* RmiFeatureTegister0[49:63] Must be Zero  */
     if ((VAL_EXTRACT_BITS(feature_reg, 49, 63)) != 0 ||
                (VAL_EXTRACT_BITS(feature_reg, 30, 42) != 0)) {
-        LOG(ERROR, "\tReceived non zero value \n", 0, 0);
+        LOG(ERROR, "Received non zero value \n");
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(1)));
         goto exit;
     }
@@ -28,7 +28,7 @@ void cmd_rmi_features_host(void)
 
     /* RmiFeatureTegister0[42:63] Must be Zero  */
     if (VAL_EXTRACT_BITS(feature_reg, 42, 63) != 0) {
-        LOG(ERROR, "\tReceived non zero value \n", 0, 0);
+        LOG(ERROR, "Received non zero value \n");
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(2)));
         goto exit;
     }
@@ -37,7 +37,7 @@ void cmd_rmi_features_host(void)
     val_host_rmi_features(1, &feature_reg);
 
     if (feature_reg != 0) {
-        LOG(ERROR, "Read non zero value \n", 0, 0);
+        LOG(ERROR, "Read non zero value \n");
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(3)));
         goto exit;
     }

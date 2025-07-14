@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2025 Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2025, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -18,7 +18,7 @@ void gic_timer_val_read_realm(void)
     uint64_t timeout = TIMEOUT + 1;
 
     /* Below code is executed for REC[0] only */
-    LOG(DBG, "\tIn realm_create_realm REC[0], mpdir=%x\n", val_read_mpidr(), 0);
+    LOG(DBG, "In realm_create_realm REC[0], mpdir=%x\n", val_read_mpidr());
     val_timer_set_phy_el1(TIMEOUT, true);
 
     phys_counter_t0 = syscounter_read();
@@ -36,13 +36,13 @@ void gic_timer_val_read_realm(void)
 
     if (phys_counter_t1 <= phys_counter_t0)
     {
-        LOG(ERROR, "\tPhysical counter is not increased\n", 0, 0);
+        LOG(ERROR, "Physical counter is not increased\n");
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(1)));
     }
 
     if (virt_counter_t1 <= virt_counter_t0)
     {
-        LOG(ERROR, "\tvirtual counter is not increased\n", 0, 0);
+        LOG(ERROR, "virtual counter is not increased\n");
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(2)));
     }
 

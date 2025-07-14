@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2025, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -28,7 +28,7 @@ void exception_rec_exit_hostcall_realm(void)
     {
         if (realm_host_params.gprs[index] != HOST_GPRS_DATA)
         {
-            LOG(ERROR, "\tGPRS values mismatch: gprs[%d]= %lx\n",
+            LOG(ERROR, "GPRS values mismatch: gprs[%d]= %lx\n",
                                         index, realm_host_params.gprs[index]);
             val_set_status(RESULT_FAIL(VAL_ERROR_POINT(1)));
             goto exit;

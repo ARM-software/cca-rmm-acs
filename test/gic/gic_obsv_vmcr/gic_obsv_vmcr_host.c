@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2025, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -20,7 +20,7 @@ void gic_obsv_vmcr_host(void)
     /* Populate realm with one REC */
     if (val_host_realm_setup(&realm, true))
     {
-        LOG(ERROR, "\tRealm setup failed\n", 0, 0);
+        LOG(ERROR, "Realm setup failed\n");
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(1)));
         goto destroy_realm;
     }
@@ -29,7 +29,7 @@ void gic_obsv_vmcr_host(void)
     ret = val_host_rmi_rec_enter(realm.rec[0], realm.run[0]);
     if (ret)
     {
-        LOG(ERROR, "\tRec enter failed, ret=%x\n", ret, 0);
+        LOG(ERROR, "Rec enter failed, ret=%x\n", ret);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(2)));
         goto destroy_realm;
     }
@@ -38,7 +38,7 @@ void gic_obsv_vmcr_host(void)
     if ((VAL_EXTRACT_BITS(rec_exit->gicv3_vmcr, 24, 31) !=
                         VAL_EXTRACT_BITS(rec_exit->gprs[1], 0, 7)))
     {
-        LOG(ERROR, "\tGIC VMCR priority mismatch, received %x expected %x\n",
+        LOG(ERROR, "GIC VMCR priority mismatch, received %x expected %x\n",
                         VAL_EXTRACT_BITS(rec_exit->gicv3_vmcr, 24, 31),
                         VAL_EXTRACT_BITS(rec_exit->gprs[1], 0, 7));
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(3)));
@@ -49,7 +49,7 @@ void gic_obsv_vmcr_host(void)
     if ((VAL_EXTRACT_BITS(rec_exit->gicv3_vmcr, 9, 9) !=
                         VAL_EXTRACT_BITS(rec_exit->gprs[2], 1, 1)))
     {
-        LOG(ERROR, "\tGIC VMCR EOIM mismatch, received %x expected %x\n",
+        LOG(ERROR, "GIC VMCR EOIM mismatch, received %x expected %x\n",
                         VAL_EXTRACT_BITS(rec_exit->gicv3_vmcr, 9, 9),
                         VAL_EXTRACT_BITS(rec_exit->gprs[2], 1, 1));
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(4)));
@@ -60,7 +60,7 @@ void gic_obsv_vmcr_host(void)
     if ((VAL_EXTRACT_BITS(rec_exit->gicv3_vmcr, 1, 1) !=
                         VAL_EXTRACT_BITS(rec_exit->gprs[3], 0, 0)))
     {
-        LOG(ERROR, "\tGIC VMCR IGRPEN1 mismatch, received %x expected %x\n",
+        LOG(ERROR, "GIC VMCR IGRPEN1 mismatch, received %x expected %x\n",
                         VAL_EXTRACT_BITS(rec_exit->gicv3_vmcr, 1, 1),
                         VAL_EXTRACT_BITS(rec_exit->gprs[3], 0, 0));
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(5)));
@@ -71,7 +71,7 @@ void gic_obsv_vmcr_host(void)
     if ((VAL_EXTRACT_BITS(rec_exit->gicv3_vmcr, 21, 23) !=
                         VAL_EXTRACT_BITS(rec_exit->gprs[4], 0, 2)))
     {
-        LOG(ERROR, "\tGIC VMCR BPR0 mismatch, received %x expected %x\n",
+        LOG(ERROR, "GIC VMCR BPR0 mismatch, received %x expected %x\n",
                         VAL_EXTRACT_BITS(rec_exit->gicv3_vmcr, 21, 23),
                         VAL_EXTRACT_BITS(rec_exit->gprs[4], 0, 2));
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(6)));

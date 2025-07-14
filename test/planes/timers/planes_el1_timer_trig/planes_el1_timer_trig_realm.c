@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2024-2025, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -33,7 +33,7 @@ static int gic_eoir(uint32_t irq)
     {
         handler_flag = 0;
     } else {
-        LOG(ERROR, "\tInterrupt %d not triggered to realm\n", irq, 0);
+        LOG(ERROR, "Interrupt %d not triggered to realm\n", irq);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(1)));
         return VAL_ERROR;
     }
@@ -54,7 +54,7 @@ static void p0_payload(void)
 
     if (val_irq_register_handler(IRQ_PHY_TIMER_EL1, rmi_irq_handler))
     {
-        LOG(ERROR, "\tInterrupt %d register failed\n", IRQ_PHY_TIMER_EL1, 0);
+        LOG(ERROR, "Interrupt %d register failed\n", IRQ_PHY_TIMER_EL1);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(2)));
         goto exit;
     }
@@ -66,7 +66,7 @@ static void p0_payload(void)
     if (val_realm_plane_perm_init(PLANE_1_INDEX, PLANE_1_PERMISSION_INDEX, p1_ipa_base,
                                                                              p1_ipa_top))
     {
-        LOG(ERROR, "Secondary plane permission initialization failed\n", 0, 0);
+        LOG(ERROR, "Secondary plane permission initialization failed\n");
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(3)));
         goto free_irq;
     }
@@ -84,7 +84,7 @@ static void p0_payload(void)
     /* Check that Plane exit was due to timer interrupt*/
     if (run_ptr.exit.reason != RSI_EXIT_SYNC)
     {
-        LOG(ERROR, "Invalid exit type: %d, ESR: 0x%lx",
+        LOG(ERROR, "Invalid exit type: %d, ESR: 0x%lx\n",
                                              run_ptr.exit.reason, run_ptr.exit.esr_el2);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(5)));
         goto free_irq;
@@ -113,7 +113,7 @@ static void p0_payload(void)
 free_irq:
     if (val_irq_unregister_handler(IRQ_PHY_TIMER_EL1))
     {
-        LOG(ERROR, "\tInterrupt %d unregister failed\n", IRQ_PHY_TIMER_EL1, 0);
+        LOG(ERROR, "Interrupt %d unregister failed\n", IRQ_PHY_TIMER_EL1);
     }
 
 exit:
@@ -127,7 +127,7 @@ static void p1_payload(void)
     if (val_irq_register_handler(IRQ_PHY_TIMER_EL1, rmi_irq_handler))
 
     {
-        LOG(ERROR, "\tInterrupt %d register failed\n", IRQ_PHY_TIMER_EL1, 0);
+        LOG(ERROR, "Interrupt %d register failed\n", IRQ_PHY_TIMER_EL1);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(7)));
         goto exit;
     }
@@ -139,7 +139,7 @@ static void p1_payload(void)
     time =  val_sleep_elapsed_time(2);
 
     if (!handler_flag)
-        LOG(ERROR, "\tTimer interrupt not triggered %d \n", time, 0);
+        LOG(ERROR, "Timer interrupt not triggered %d \n", time);
 
     /* Clear the Interrupt after returning bakc to Pn */
     if (gic_eoir(IRQ_PHY_TIMER_EL1))
@@ -150,7 +150,7 @@ static void p1_payload(void)
 free_irq:
     if (val_irq_unregister_handler(IRQ_PHY_TIMER_EL1))
     {
-        LOG(ERROR, "\tInterrupt %d unregister failed\n", IRQ_PHY_TIMER_EL1, 0);
+        LOG(ERROR, "Interrupt %d unregister failed\n", IRQ_PHY_TIMER_EL1);
     }
 
 exit:

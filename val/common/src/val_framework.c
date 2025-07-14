@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023-2024, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023-2025, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -39,29 +39,6 @@ void val_set_running_in_realm_flag(void)
 }
 
 /**
- *   @brief    Returns the base address of the shared region
- *   @param    Void
- *   @return   Base address of the shared region
-**/
-void *val_get_shared_region_base(void)
-{
-    if (realm_ipa_width != 0)
-        return val_get_shared_region_base_ipa(realm_ipa_width);
-    else
-        return val_get_shared_region_base_pa();
-}
-
-/**
- *   @brief    Returns the base address of the shared region
- *   @param    Void
- *   @return   Physical address of the shared region
-**/
-void *val_get_shared_region_base_pa(void)
-{
-    return ((void *)(PLATFORM_SHARED_REGION_BASE));
-}
-
-/**
  *   @brief    Returns the IPA address of the shared region
  *   @param    ipa_width      - Realm IPA_WIDTH
  *   @return   IPA address of the shared region
@@ -88,104 +65,87 @@ uint64_t val_get_ns_shared_region_base_ipa(uint64_t ipa_width, uint64_t pa)
 }
 
 /**
- *   @brief    This function prints the given string and data onto the UART
- *   @param    str      - Input String
- *   @param    data1    - Value for first format specifier
- *   @param    data2    - Value for second format specifier
- *   @return   SUCCESS(0)/FAILURE
-**/
-uint32_t val_printf(const char *msg, uint64_t data1, uint64_t data2)
+ * @brief Prints a formatted message from the Realm environment to a shared memory region.
+ *
+ * This function formats a message using a variable argument list and writes it to a
+ * designated shared memory buffer. It then triggers SMC or HVC to relay the message
+ * to the host environment, depending on the execution
+ * context.
+ *
+ * @param verbosity The verbosity level of the log message.
+ * @param fmt The format string, similar to printf.
+ * @param ... The variable argument list corresponding to the format specifiers.
+ **/
+void val_realm_printf(print_verbosity_t verbosity, const char *fmt, ...)
 {
-  return pal_printf(msg, data1, data2);
-}
+    va_list args;
+    __attribute__((aligned (PAGE_SIZE))) val_print_rsi_host_call_t realm_print;
 
-/**
- *   @brief    This function checks the security state and take action based on it.
- *   @param    str      - Input String
- *   @param    data1    - Value for first format specifier
- *   @param    data2    - Value for second format specifier
- *   @return   Void
-**/
-void val_common_printf(const char *msg, uint64_t data1, uint64_t data2)
-{
-    size_t length = 0, msg_security_state_length = 0;
-    char msg_security_state[1000] = {0,};
-    uint64_t prev_log_state = (*(uint64_t *)(val_get_shared_region_base() + PRINT_OFFSET));
+    char *log_buffer = (char *)(val_get_shared_region_base() + REALM_PRINTF_MSG_OFFSET);
 
-    if (msg == NULL) {
-        LOG(WARN, "\tInvalid Message pointer \n", 0, 0);
-        return;
-    }
+    /* Write realm message to shared printf location */
+    *(print_verbosity_t *)(val_get_shared_region_base() + \
+                            REALM_PRINTF_VERBOSITY_OFFSET) = (print_verbosity_t)verbosity;
 
-    while (msg[length] != '\0')
-    {
-        ++length;
-    }
+    va_start(args, fmt);
 
-    if (length == 0) {
-        LOG(WARN, "\tInvalid Message length \n", 0, 0);
-        return;
-    }
+    (void)val_vsnprintf((char *)log_buffer,
+            MAX_BUF_SIZE, fmt, args);
 
-    if (security_state == 1)
-    {
-        if (prev_log_state != security_state)
-        {
-            *(uint64_t *)(val_get_shared_region_base() + PRINT_OFFSET) = security_state;
-            if (skip_for_val_logs == 1)
-            {
-                val_memcpy(msg_security_state, "HOST : \n", 8);
-            }
-        }
-    }
-    else if (security_state == 2)
-    {
-        if (prev_log_state != security_state)
-        {
-            *(uint64_t *)(val_get_shared_region_base() + PRINT_OFFSET) = security_state;
-            val_memcpy(msg_security_state, "REALM : \n", 9);
-        }
-    }
-    else if (security_state == 3)
-    {
-        if (prev_log_state != security_state)
-        {
-            *(uint64_t *)(val_get_shared_region_base() + PRINT_OFFSET) = security_state;
-            val_memcpy(msg_security_state, "SECURE : \n", 10);
-        }
-    }
-    else
-    {
-        val_memcpy(msg_security_state, "UNKNOWN : \n", 11);
-    }
+    va_end(args);
 
-    msg_security_state_length = val_strlen(msg_security_state);
-
-    val_memcpy(&msg_security_state[msg_security_state_length], msg, length);
-
-    if (security_state == 2)
-    {
-        __attribute__((aligned (PAGE_SIZE))) val_print_rsi_host_call_t realm_print;
-            /* Write realm message to shared printf location */
-        val_memcpy((char *)(val_get_shared_region_base() + REALM_PRINTF_MSG_OFFSET),
-                    (char *)msg_security_state,
-                    length+msg_security_state_length+1);
-        *(uint64_t *)(val_get_shared_region_base() + REALM_PRINTF_DATA1_OFFSET) = (uint64_t)data1;
-        *(uint64_t *)(val_get_shared_region_base() + REALM_PRINTF_DATA2_OFFSET) = (uint64_t)data2;
-
-        /* Print from realm through RSI_HOST_CALL */
+    /* Print from realm through RSI_HOST_CALL if in P0 or HVC call to P0 if executing in Pn */
     if (realm_in_p0) {
         realm_print.imm = VAL_REALM_PRINT_MSG;
         val_smc_call(RSI_HOST_CALL, (uint64_t)&realm_print, 0, 0, 0, 0, 0, 0, 0, 0, 0);
     } else {
         val_hvc_call(PSI_PRINT_MSG, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
     }
+}
 
+/**
+ *   @brief    This function prints the security state as a prefix to ACS prints.
+ *   @param    none
+ *   @return   none
+**/
+void val_print_secuity_state(void)
+{
+    uint64_t prev_log_state = (*(uint64_t *)(val_get_shared_region_base() + PRINT_OFFSET));
+
+    if (security_state == SEC_STATE_NS)
+    {
+        if (prev_log_state != security_state)
+        {
+            *(uint64_t *)(val_get_shared_region_base() + PRINT_OFFSET) = security_state;
+            if (skip_for_val_logs == 1)
+            {
+                LOG(ALWAYS, "Host:\n");
+            }
+        }
     }
-    else {
-        val_printf(msg_security_state, data1, data2);
+
+    else if (security_state == SEC_STATE_REALM)
+    {
+        if (prev_log_state != security_state)
+        {
+            *(uint64_t *)(val_get_shared_region_base() + PRINT_OFFSET) = security_state;
+            LOG(ALWAYS, "Realm:\n");
+        }
+    }
+    else if (security_state == SEC_STATE_SECURE)
+    {
+        if (prev_log_state != security_state)
+        {
+            *(uint64_t *)(val_get_shared_region_base() + PRINT_OFFSET) = security_state;
+            LOG(ALWAYS, "Secure:\n");
+        }
+    }
+    else
+    {
+        LOG(ALWAYS, "Unknown:\n");
     }
 }
+
 
 /**
  *   @brief    Returns the current test number from shared region
@@ -248,86 +208,6 @@ void val_set_curr_test_name(char *testname)
                 (char *)testname,
                 length+1);
 
-}
-
-/**
- *   @brief    Records the state and status of test
- *   @param    status - Test status bit field - (state|status_code)
- *   @return   void
-**/
-void val_set_status(uint32_t status)
-{
-    uint8_t state = ((status >> TEST_STATE_SHIFT) & TEST_STATE_MASK);
-    val_test_status_buffer_ts *curr_test_status = (val_get_shared_region_base()
-                                                  + TEST_STATUS_OFFSET);
-
-    /* Update the test_status only when previously set status isn't fail or
-     * it is required to set as part of test init */
-    if ((curr_test_status->state != TEST_FAIL && curr_test_status->state != TEST_ERROR)
-            || (state == TEST_START))
-
-    {
-        curr_test_status->state = state;
-        curr_test_status->status_code  = (status & TEST_STATUS_CODE_MASK);
-    }
-}
-
-/**
- *   @brief    Returns the state and status for a given test
- *   @param    Void
- *   @return   test status
-**/
-uint32_t val_get_status(void)
-{
-    val_test_status_buffer_ts *curr_test_status = (val_get_shared_region_base()
-                                                   + TEST_STATUS_OFFSET);
-    return (uint32_t)(((curr_test_status->state) << TEST_STATE_SHIFT) |
-            (curr_test_status->status_code));
-}
-
-/**
- *    @brief     Writes 'size' bytes from buffer into non-volatile memory at a given
- *               'base + offset'.
- *    @param     offset    - Offset
- *    @param     buffer    - Pointer to source address
- *    @param     size      - Number of bytes
- *    @return    SUCCESS/FAILURE
-**/
-uint32_t val_nvm_write(uint32_t offset, void *buffer, size_t size)
-{
-      return pal_nvm_write(offset, buffer, size);
-}
-
-/**
- *   @brief     Reads 'size' bytes from Non-volatile memory 'base + offset' into given buffer.
- *   @param     offset    - Offset from NV MEM base address
- *   @param     buffer    - Pointer to destination address
- *   @param     size      - Number of bytes
- *   @return    SUCCESS/FAILURE
-**/
-uint32_t val_nvm_read(uint32_t offset, void *buffer, size_t size)
-{
-      return pal_nvm_read(offset, buffer, size);
-}
-
-/**
- *   @brief    Initializes and enable the hardware watchdog timer
- *   @param    void
- *   @return   SUCCESS/FAILURE
- **/
-uint32_t val_watchdog_enable(void)
-{
-      return pal_watchdog_enable();
-}
-
-/**
- *   @brief    Disables the hardware watchdog timer
- *   @param    void
- *   @return   SUCCESS/FAILURE
- **/
-uint32_t val_watchdog_disable(void)
-{
-      return pal_watchdog_disable();
 }
 
 /**

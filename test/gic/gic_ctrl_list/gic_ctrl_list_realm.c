@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2025, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -28,7 +28,7 @@ static int gic_eoir(uint32_t irq)
     {
         handler_flag = 0;
     } else {
-        LOG(ERROR, "\tInterrupt %d not triggered to realm\n", irq, 0);
+        LOG(ERROR, "Interrupt %d not triggered to realm\n", irq);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(1)));
         return VAL_ERROR;
     }
@@ -48,24 +48,24 @@ void gic_ctrl_list_realm(void)
 {
 
     /* Below code is executed for REC[0] only */
-    LOG(TEST, "\tIn realm_create_realm REC[0], mpdir=%x\n", val_read_mpidr(), 0);
+    LOG(TEST, "In realm_create_realm REC[0], mpdir=%x\n", val_read_mpidr());
     if (val_irq_register_handler(SPI_vINTID, rmi_irq_handler))
     {
-        LOG(ERROR, "\tInterrupt %d register failed\n", SPI_vINTID, 0);
+        LOG(ERROR, "Interrupt %d register failed\n", SPI_vINTID);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(2)));
         goto exit;
     }
 
     if (val_irq_register_handler(PPI_vINTID, rmi_irq_handler))
     {
-        LOG(ERROR, "\tInterrupt %d register failed\n", PPI_vINTID, 0);
+        LOG(ERROR, "Interrupt %d register failed\n", PPI_vINTID);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(3)));
         goto exit;
     }
 
     if (val_irq_register_handler(SGI_vINTID, rmi_irq_handler))
     {
-        LOG(ERROR, "\tInterrupt %d register failed\n", SGI_vINTID, 0);
+        LOG(ERROR, "Interrupt %d register failed\n", SGI_vINTID);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(4)));
         goto exit;
     }
@@ -88,15 +88,15 @@ void gic_ctrl_list_realm(void)
 exit:
     if (val_irq_unregister_handler(SPI_vINTID))
     {
-        LOG(ERROR, "\tInterrupt %d unregister failed\n", SPI_vINTID, 0);
+        LOG(ERROR, "Interrupt %d unregister failed\n", SPI_vINTID);
     }
     if (val_irq_unregister_handler(PPI_vINTID))
     {
-        LOG(ERROR, "\tInterrupt %d unregister failed\n", PPI_vINTID, 0);
+        LOG(ERROR, "Interrupt %d unregister failed\n", PPI_vINTID);
     }
     if (val_irq_unregister_handler(SGI_vINTID))
     {
-        LOG(ERROR, "\tInterrupt %d unregister failed\n", SGI_vINTID, 0);
+        LOG(ERROR, "Interrupt %d unregister failed\n", SGI_vINTID);
     }
 
 }

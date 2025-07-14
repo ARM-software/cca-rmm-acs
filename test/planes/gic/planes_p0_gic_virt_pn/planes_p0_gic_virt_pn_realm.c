@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2024-2025, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -33,7 +33,7 @@ static int gic_eoir(uint32_t irq)
     {
         handler_flag = 0;
     } else {
-        LOG(ERROR, "\tInterrupt %d not triggered to realm\n", irq, 0);
+        LOG(ERROR, "Interrupt %d not triggered to realm\n", irq);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(1)));
         return VAL_ERROR;
     }
@@ -57,7 +57,7 @@ static void p0_payload(void)
 
     if (val_irq_register_handler(PPI_vINTID, rmi_irq_handler))
     {
-        LOG(ERROR, "\tInterrupt %d register failed\n", PPI_vINTID, 0);
+        LOG(ERROR, "Interrupt %d register failed\n", PPI_vINTID);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(2)));
         goto exit;
     }
@@ -74,7 +74,7 @@ static void p0_payload(void)
     if (val_realm_plane_perm_init(PLANE_1_INDEX, PLANE_1_PERMISSION_INDEX, p1_ipa_base,
                                                                              p1_ipa_top))
     {
-        LOG(ERROR, "Secondary plane permission initialization failed\n", 0, 0);
+        LOG(ERROR, "Secondary plane permission initialization failed\n");
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(3)));
         goto free_irq;
     }
@@ -82,7 +82,7 @@ static void p0_payload(void)
     /* Give Plane 1 RW permission for the test IPA */
     if (val_realm_plane_perm_init(PLANE_1_INDEX, TEST_IPA_PERM_INDEX, ipa_base, ipa_base + size))
     {
-        LOG(ERROR, "Secondary plane permission initialization failed\n", 0, 0);
+        LOG(ERROR, "Secondary plane permission initialization failed\n");
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(4)));
         goto free_irq;
     }
@@ -103,7 +103,7 @@ static void p0_payload(void)
         ESR_EL2_EC(esr) != ESR_EL2_EC_HVC ||
         run_ptr.exit.gprs[0] != PSI_P0_CALL)
     {
-        LOG(ERROR, "Invalid exit type: %d, ESR: 0x%lx",
+        LOG(ERROR, "Invalid exit type: %d, ESR: 0x%lx\n",
                                              run_ptr.exit.reason, run_ptr.exit.esr_el2);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(6)));
         goto free_irq;
@@ -122,7 +122,7 @@ static void p0_payload(void)
         goto free_irq;
     }
 
-    LOG(ALWAYS, "INFO : Returned to P0\n", 0, 0);
+    LOG(ALWAYS, "INFO : Returned to P0\n");
 
     if (gic_eoir(PPI_vINTID))
         goto free_irq;
@@ -144,7 +144,7 @@ static void p0_payload(void)
 free_irq:
     if (val_irq_unregister_handler(PPI_vINTID))
     {
-        LOG(ERROR, "\tInterrupt %d unregister failed\n", PPI_vINTID, 0);
+        LOG(ERROR, "Interrupt %d unregister failed\n", PPI_vINTID);
     }
 
 exit:
@@ -159,7 +159,7 @@ static void p1_payload(void)
     if (val_irq_register_handler(PPI_vINTID, rmi_irq_handler))
 
     {
-        LOG(ERROR, "\tInterrupt %d register failed\n", PPI_vINTID, 0);
+        LOG(ERROR, "Interrupt %d register failed\n", PPI_vINTID);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(2)));
         goto exit;
     }
@@ -174,7 +174,7 @@ static void p1_payload(void)
     mem_desc.attributes = MT_RW_DATA | MT_REALM;
     if (val_realm_pgt_create(&mem_desc))
     {
-        LOG(ERROR, "\tVA to PA mapping failed\n", 0, 0);
+        LOG(ERROR, "VA to PA mapping failed\n");
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(9)));
         goto free_irq;
     }
@@ -185,12 +185,12 @@ static void p1_payload(void)
     if (gic_eoir(PPI_vINTID))
         goto free_irq;
 
-    LOG(ALWAYS, "INFO : Returned to Pn \n", 0, 0);
+    LOG(ALWAYS, "INFO : Returned to Pn \n");
 
 free_irq:
     if (val_irq_unregister_handler(PPI_vINTID))
     {
-        LOG(ERROR, "\tInterrupt %d unregister failed\n", PPI_vINTID, 0);
+        LOG(ERROR, "Interrupt %d unregister failed\n", PPI_vINTID);
     }
 
 exit:

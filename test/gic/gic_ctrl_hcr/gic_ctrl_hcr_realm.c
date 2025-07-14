@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2025, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -44,7 +44,7 @@ static uint32_t wait_for_interrupt(void)
     {
         handler_flag = 0;
     } else {
-        LOG(ERROR, "\tInterrupt not triggered to realm \n", 0, 0);
+        LOG(ERROR, "Interrupt not triggered to realm \n");
         return VAL_ERROR;
     }
 
@@ -56,21 +56,21 @@ void gic_ctrl_hcr_realm(void)
 
     if (val_irq_register_handler(SPI_vINTID, rmi_spi_handler))
     {
-        LOG(ERROR, "\tInterrupt %d register failed\n", SPI_vINTID, 0);
+        LOG(ERROR, "Interrupt %d register failed\n", SPI_vINTID);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(1)));
         goto exit;
     }
 
     if (val_irq_register_handler(PPI_vINTID, rmi_ppi_handler))
     {
-        LOG(ERROR, "\tInterrupt %d register failed\n", PPI_vINTID, 0);
+        LOG(ERROR, "Interrupt %d register failed\n", PPI_vINTID);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(2)));
         goto exit;
     }
 
     if (val_irq_register_handler(SGI_vINTID, rmi_sgi_handler))
     {
-        LOG(ERROR, "\tInterrupt %d register failed\n", SGI_vINTID, 0);
+        LOG(ERROR, "Interrupt %d register failed\n", SGI_vINTID);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(3)));
         goto exit;
     }
@@ -104,15 +104,15 @@ void gic_ctrl_hcr_realm(void)
 exit:
     if (val_irq_unregister_handler(SPI_vINTID))
     {
-        LOG(ERROR, "\tInterrupt %d unregister failed\n", SPI_vINTID, 0);
+        LOG(ERROR, "Interrupt %d unregister failed\n", SPI_vINTID);
     }
     if (val_irq_unregister_handler(PPI_vINTID))
     {
-        LOG(ERROR, "\tInterrupt %d unregister failed\n", PPI_vINTID, 0);
+        LOG(ERROR, "Interrupt %d unregister failed\n", PPI_vINTID);
     }
     if (val_irq_unregister_handler(SGI_vINTID))
     {
-        LOG(ERROR, "\tInterrupt %d unregister failed\n", SGI_vINTID, 0);
+        LOG(ERROR, "Interrupt %d unregister failed\n", SGI_vINTID);
     }
 
     val_realm_return_to_host();

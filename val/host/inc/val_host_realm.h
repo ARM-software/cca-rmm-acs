@@ -540,5 +540,7 @@ uint64_t val_host_rtt_level_mapsize(uint64_t rtt_level);
 bool val_host_rmm_supports_planes(void);
 bool val_host_rmm_supports_rtt_tree_single(void);
 bool val_host_rmm_supports_rtt_tree_per_plane(void);
+bool val_host_rmm_supports_mec(void);
+
 #endif /* _VAL_HOST_REALM_H_ */
 

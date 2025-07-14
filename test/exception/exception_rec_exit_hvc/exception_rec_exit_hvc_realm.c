@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2025, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -22,10 +22,10 @@ void exception_rec_exit_hvc_realm(void)
     __asm__("hvc #0");
 
     if (g_sea_params.handler_abort) {
-        LOG(TEST, "\tREALM handled the SEA(For HVC) successfully \n", 0, 0);
+        LOG(TEST, "REALM handled the SEA(For HVC) successfully \n");
     }
     else {
-         LOG(ERROR, "\tREALM failed to handle the SEA(For HVC) \n", 0, 0);
+         LOG(ERROR, "REALM failed to handle the SEA(For HVC) \n");
          val_set_status(RESULT_FAIL(VAL_ERROR_POINT(1)));
          goto test_exit;
     }

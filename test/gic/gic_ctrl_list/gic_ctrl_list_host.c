@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2025, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -24,7 +24,7 @@ static bool host_realm_handle_irq(val_host_realm_ts *realm, uint32_t irq, uint32
     ret = val_host_rmi_rec_enter(realm->rec[0], realm->run[0]);
     if (ret)
     {
-        LOG(ERROR, "\tRec enter failed, ret=%x\n", ret, 0);
+        LOG(ERROR, "Rec enter failed, ret=%x\n", ret);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(1)));
         return VAL_ERROR;
     }
@@ -33,7 +33,7 @@ static bool host_realm_handle_irq(val_host_realm_ts *realm, uint32_t irq, uint32
     {
         if (VAL_EXTRACT_BITS(rec_exit->gicv3_lrs[0], 62, 63) != GICV3_LR_STATE_INACTIVE)
         {
-            LOG(ERROR, "\tGIC list reg interrupt state check failed, received %x expected %x\n",
+            LOG(ERROR, "GIC list reg interrupt state check failed, received %x expected %x\n",
                         VAL_EXTRACT_BITS(rec_exit->gicv3_lrs[0], 62, 63), GICV3_LR_STATE_INACTIVE);
             val_set_status(RESULT_FAIL(VAL_ERROR_POINT(2)));
             return VAL_ERROR;
@@ -41,7 +41,7 @@ static bool host_realm_handle_irq(val_host_realm_ts *realm, uint32_t irq, uint32
     } else {
          if (VAL_EXTRACT_BITS(rec_exit->gicv3_lrs[0], 62, 63) != GICV3_LR_STATE_ACTIVE)
         {
-            LOG(ERROR, "\tGIC list reg interrupt state check failed, received %x expected %x\n",
+            LOG(ERROR, "GIC list reg interrupt state check failed, received %x expected %x\n",
                          VAL_EXTRACT_BITS(rec_exit->gicv3_lrs[0], 62, 63), GICV3_LR_STATE_ACTIVE);
             val_set_status(RESULT_FAIL(VAL_ERROR_POINT(3)));
             return VAL_ERROR;
@@ -50,14 +50,14 @@ static bool host_realm_handle_irq(val_host_realm_ts *realm, uint32_t irq, uint32
         ret = val_host_rmi_rec_enter(realm->rec[0], realm->run[0]);
         if (ret)
         {
-            LOG(ERROR, "\tRec enter failed, ret=%x\n", ret, 0);
+            LOG(ERROR, "Rec enter failed, ret=%x\n", ret);
             val_set_status(RESULT_FAIL(VAL_ERROR_POINT(4)));
             return VAL_ERROR;
         }
 
         if (VAL_EXTRACT_BITS(rec_exit->gicv3_lrs[0], 62, 63) != GICV3_LR_STATE_INACTIVE)
         {
-            LOG(ERROR, "\tGIC list reg interrupt state check failed, received %x expected %x\n",
+            LOG(ERROR, "GIC list reg interrupt state check failed, received %x expected %x\n",
                         VAL_EXTRACT_BITS(rec_exit->gicv3_lrs[0], 62, 63), GICV3_LR_STATE_INACTIVE);
             val_set_status(RESULT_FAIL(VAL_ERROR_POINT(5)));
             return VAL_ERROR;
@@ -81,7 +81,7 @@ void gic_ctrl_list_host(void)
     /* Populate realm with one REC */
     if (val_host_realm_setup(&realm, true))
     {
-        LOG(ERROR, "\tRealm setup failed\n", 0, 0);
+        LOG(ERROR, "Realm setup failed\n");
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(6)));
         goto destroy_realm;
     }
@@ -89,7 +89,7 @@ void gic_ctrl_list_host(void)
     ret = val_host_rmi_rec_enter(realm.rec[0], realm.run[0]);
     if (ret)
     {
-        LOG(ERROR, "\tRec enter failed, ret=%x\n", ret, 0);
+        LOG(ERROR, "Rec enter failed, ret=%x\n", ret);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(7)));
         goto destroy_realm;
     }

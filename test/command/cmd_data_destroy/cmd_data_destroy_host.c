@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023-2024, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023-2025, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -83,7 +83,7 @@ static uint64_t rd_aux_live_prep_sequence(void)
     if (!val_host_rmm_supports_rtt_tree_per_plane() ||
         !val_host_rmm_supports_planes())
     {
-        LOG(ALWAYS, "\tNo support for RTT tree per plane\n", 0, 0);
+        LOG(ALWAYS, "No support for RTT tree per plane\n");
         return VAL_SKIP_CHECK;
     }
 
@@ -101,7 +101,7 @@ static uint64_t rd_aux_live_prep_sequence(void)
 
     if (val_host_realm_create_common(&realm_test[AUX_LIVE_REALM]))
     {
-        LOG(ERROR, "\tRealm create failed\n", 0, 0);
+        LOG(ERROR, "Realm create failed\n");
         return VAL_TEST_PREP_SEQ_FAILED;
     }
 
@@ -120,7 +120,7 @@ static uint64_t g_rec_ready_prep_sequence(uint64_t rd)
 
     if (val_host_rec_create_common(&realm, &rec_params))
     {
-        LOG(ERROR, "\tRec Create Failed\n", 0, 0);
+        LOG(ERROR, "Rec Create Failed\n");
         return VAL_TEST_PREP_SEQ_FAILED;
     }
 
@@ -134,7 +134,7 @@ static uint64_t ipa_valid_prep_sequence(void)
 
     if (create_mapping(IPA_ADDR_ASSIGNED, true, c_args.rd_valid))
     {
-        LOG(ERROR, "\tCouldn't create the assigned protected mapping\n", 0, 0);
+        LOG(ERROR, "Couldn't create the assigned protected mapping\n");
         return VAL_TEST_PREP_SEQ_FAILED;
     }
 
@@ -150,7 +150,7 @@ static uint64_t ipa_valid_prep_sequence(void)
 
     if (val_host_rmi_data_create(c_args.rd_valid, data, IPA_ADDR_ASSIGNED, src, flags))
     {
-        LOG(ERROR, "\tCouldn't complete the assigned protected mapping\n", 0, 0);
+        LOG(ERROR, "Couldn't complete the assigned protected mapping\n");
         return VAL_TEST_PREP_SEQ_FAILED;
     }
     /* save the PA before returning*/
@@ -172,7 +172,7 @@ static uint64_t g_rd_new_prep_sequence(uint16_t vmid)
 
     if (val_host_realm_create_common(&realm_init))
     {
-        LOG(ERROR, "\tRealm create failed\n", 0, 0);
+        LOG(ERROR, "Realm create failed\n");
         return VAL_TEST_PREP_SEQ_FAILED;
     }
     realm_test[vmid].rd = realm_init.rd;
@@ -312,7 +312,7 @@ static uint64_t intent_to_seq(struct stimulus *test_data, struct arguments *args
             break;
 
         default:
-            LOG(ERROR, "\n\tUnknown intent label encountered\n", 0, 0);
+            LOG(ERROR, "Unknown intent label encountered\n");
             return VAL_ERROR;
     }
     return VAL_SUCCESS;
@@ -332,25 +332,24 @@ void cmd_data_destroy_host(void)
 
     for (i = 0; i < (sizeof(test_data) / sizeof(struct stimulus)); i++)
     {
-        LOG(TEST, "\n\tCheck %d : ", i + 1, 0);
-        LOG(TEST, test_data[i].msg, 0, 0);
-        LOG(TEST, "; intent id : 0x%x \n", test_data[i].label, 0);
+        LOG(TEST, "Check %2d : %s; intent id : 0x%x \n",
+              i + 1, test_data[i].msg, test_data[i].label);
 
         ret = intent_to_seq(&test_data[i], &args);
         if (ret == VAL_SKIP_CHECK)
         {
-            LOG(TEST, "\tSkipping Check %d\n", i + 1, 0);
+            LOG(TEST, "Skipping Check %d\n", i + 1);
             continue;
         }
         else if (ret == VAL_ERROR) {
-            LOG(ERROR, "\n\t Intent to sequence failed \n", 0, 0);
+            LOG(ERROR, " Intent to sequence failed \n");
             val_set_status(RESULT_FAIL(VAL_ERROR_POINT(2)));
             goto exit;
         }
 
         ret = val_host_rmi_data_destroy(args.rd, args.ipa, &output_val);
         if (ret != PACK_CODE(test_data[i].status, test_data[i].index)) {
-            LOG(ERROR, "\tTest Failure!\n\tThe ABI call returned: %x\n\tExpected: %x\n",
+            LOG(ERROR, "Test Failure!The ABI call returned: %xExpected: %x\n",
                 ret, PACK_CODE(test_data[i].status, test_data[i].index));
             val_set_status(RESULT_FAIL(VAL_ERROR_POINT(3)));
             goto exit;
@@ -358,25 +357,25 @@ void cmd_data_destroy_host(void)
 
         /* Upon RMI_ERROR_RTT check for top == walk_top */
         else if (ret == RMI_ERROR_RTT && output_val.top != c_exp_output.top) {
-            LOG(ERROR, " \tUnexpected command output received, top value: 0x%x"
-                                                            , output_val.top, 0);
+            LOG(ERROR, " Unexpected command output received, top value: 0x%x\n"
+                                                            , output_val.top);
             val_set_status(RESULT_FAIL(VAL_ERROR_POINT(4)));
             goto exit;
         }
     }
 
-    LOG(TEST, "\n\tPositive Observability Check\n", 0, 0);
+    LOG(TEST, "Check %2d : Positive Observability\n", ++i);
 
     ret = val_host_rmi_data_destroy(c_args.rd_valid, c_args.ipa_valid, &output_val);
     if (ret != 0)
     {
-        LOG(ERROR, "\n\tDATA_DESTROY command failed with ret value: %d\n", ret, 0);
+        LOG(ERROR, "DATA_DESTROY command failed with ret value: %d\n", ret);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(5)));
         goto exit;
     }
 
     if (output_val.data != c_exp_output.data || output_val.top != IPA_ADDR_DATA) {
-        LOG(ERROR, "\n\tUnexpected output values, data: 0x%x, top: 0x%x\n",
+        LOG(ERROR, "Unexpected output values, data: 0x%x, top: 0x%x\n",
                                                      output_val.data, output_val.top);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(6)));
         goto exit;
@@ -386,15 +385,15 @@ void cmd_data_destroy_host(void)
     ret = val_host_rmi_rtt_read_entry(c_args.rd_valid, c_args.ipa_valid,
                                       3, &rtte);
     if (ret) {
-        LOG(ERROR, "\tREAD_ENTRY failed with ret value: %d\n", ret, 0);
+        LOG(ERROR, "READ_ENTRY failed with ret value: %d\n", ret);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(7)));
         goto exit;
     } else {
         if (rtte.state != RMI_UNASSIGNED || rtte.ripas != RMI_DESTROYED)
         {
-            LOG(TEST, "\tUnexpected HIPAS and RIPAS values received. HIPAS: %d, RIPAS: %d ",
+            LOG(TEST, "Unexpected HIPAS and RIPAS values received. HIPAS: %d, RIPAS: %d \n",
                                                                      rtte.state, rtte.ripas);
-            LOG(ERROR, "\tExpected. HIPAS: %d, RIPAS: %d ", RMI_UNASSIGNED, RMI_DESTROYED);
+            LOG(ERROR, "Expected. HIPAS: %d, RIPAS: %d \n", RMI_UNASSIGNED, RMI_DESTROYED);
             val_set_status(RESULT_FAIL(VAL_ERROR_POINT(8)));
             goto exit;
         }
@@ -403,14 +402,14 @@ void cmd_data_destroy_host(void)
     /* Check for RIPAS transition from ASSIGNED,DESTROYED */
     data = g_delegated_prep_sequence();
     if (data == VAL_TEST_PREP_SEQ_FAILED) {
-        LOG(ERROR, "\t Granule delegation failed", 0, 0);
+        LOG(ERROR, " Granule delegation failed\n");
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(9)));
         goto exit;
     }
 
     ret = val_host_rmi_data_create_unknown(c_args.rd_valid, data, c_args.ipa_valid);
     if (ret) {
-        LOG(ERROR, "\t DATA_CREATE_UNKNOWN failed with ret value %d\n", ret, 0);
+        LOG(ERROR, " DATA_CREATE_UNKNOWN failed with ret value %d\n", ret);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(10)));
         goto exit;
     }
@@ -418,7 +417,7 @@ void cmd_data_destroy_host(void)
     ret = val_host_rmi_data_destroy(c_args.rd_valid, c_args.ipa_valid, &output_val);
     if (ret != 0)
     {
-        LOG(ERROR, "\n\tDATA_DESTROY command failed with ret value: %d\n", ret, 0);
+        LOG(ERROR, "DATA_DESTROY command failed with ret value: %d\n", ret);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(11)));
         goto exit;
     }
@@ -426,15 +425,15 @@ void cmd_data_destroy_host(void)
     ret = val_host_rmi_rtt_read_entry(c_args.rd_valid, c_args.ipa_valid,
                                       3, &rtte);
     if (ret) {
-        LOG(ERROR, "\tREAD_ENTRY failed with ret value: %d\n", ret, 0);
+        LOG(ERROR, "READ_ENTRY failed with ret value: %d\n", ret);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(12)));
         goto exit;
     } else {
         if (rtte.state != RMI_UNASSIGNED || rtte.ripas != RMI_DESTROYED)
         {
-            LOG(TEST, "\tUnexpected HIPAS and RIPAS values received. HIPAS: %d, RIPAS: %d ",
+            LOG(TEST, "Unexpected HIPAS and RIPAS values received. HIPAS: %d, RIPAS: %d \n",
                                                                      rtte.state, rtte.ripas);
-            LOG(ERROR, "\tExpected. HIPAS: %d, RIPAS: %d ", RMI_UNASSIGNED, RMI_EMPTY);
+            LOG(ERROR, "Expected. HIPAS: %d, RIPAS: %d \n", RMI_UNASSIGNED, RMI_EMPTY);
             val_set_status(RESULT_FAIL(VAL_ERROR_POINT(13)));
             goto exit;
         }
@@ -443,7 +442,7 @@ void cmd_data_destroy_host(void)
     ret = val_host_rmi_rtt_read_entry(c_args.rd_valid, (4 * PAGE_SIZE),
                                       3, &rtte);
     if (ret) {
-        LOG(ERROR, "\tREAD_ENTRY failed with ret value: %d\n", ret, 0);
+        LOG(ERROR, "READ_ENTRY failed with ret value: %d\n", ret);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(16)));
         goto exit;
     }
@@ -451,7 +450,7 @@ void cmd_data_destroy_host(void)
     /* Check for RIPAS and HIPAS from RIPAS = EMPTY */
     uint64_t ipa = ipa_protected_assigned_empty_prep_sequence(c_args.rd_valid);
     if (ipa == VAL_TEST_PREP_SEQ_FAILED) {
-        LOG(ERROR, "\t Protected IPA preparation sequence failed", 0, 0);
+        LOG(ERROR, " Protected IPA preparation sequence failed\n");
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(14)));
         goto exit;
     }
@@ -459,7 +458,7 @@ void cmd_data_destroy_host(void)
     ret = val_host_rmi_rtt_read_entry(c_args.rd_valid, ipa,
                                       3, &rtte);
     if (ret) {
-        LOG(ERROR, "\tREAD_ENTRY failed with ret value: %d\n", ret, 0);
+        LOG(ERROR, "READ_ENTRY failed with ret value: %d\n", ret);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(16)));
         goto exit;
     }
@@ -467,7 +466,7 @@ void cmd_data_destroy_host(void)
     ret = val_host_rmi_data_destroy(c_args.rd_valid, ipa, &output_val);
     if (ret != 0)
     {
-        LOG(ERROR, "\n\tDATA_DESTROY command failed with ret value: %d\n", ret, 0);
+        LOG(ERROR, "DATA_DESTROY command failed with ret value: %d\n", ret);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(15)));
         goto exit;
     }
@@ -475,15 +474,15 @@ void cmd_data_destroy_host(void)
     ret = val_host_rmi_rtt_read_entry(c_args.rd_valid, ipa,
                                       3, &rtte);
     if (ret) {
-        LOG(ERROR, "\tREAD_ENTRY failed with ret value: %d\n", ret, 0);
+        LOG(ERROR, "READ_ENTRY failed with ret value: %d\n", ret);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(16)));
         goto exit;
     } else {
         if (rtte.state != RMI_UNASSIGNED || rtte.ripas != RMI_EMPTY)
         {
-            LOG(TEST, "\tUnexpected HIPAS and RIPAS values received. HIPAS: %d, RIPAS: %d ",
+            LOG(TEST, "Unexpected HIPAS and RIPAS values received. HIPAS: %d, RIPAS: %d \n",
                                                                      rtte.state, rtte.ripas);
-            LOG(ERROR, "\tExpected. HIPAS: %d, RIPAS: %d ", RMI_UNASSIGNED, RMI_EMPTY);
+            LOG(ERROR, "Expected. HIPAS: %d, RIPAS: %d \n", RMI_UNASSIGNED, RMI_EMPTY);
             val_set_status(RESULT_FAIL(VAL_ERROR_POINT(17)));
             goto exit;
         }

@@ -33,12 +33,12 @@ uint32_t val_host_realm_create_common(val_host_realm_ts *realm)
     realm->rd = (uint64_t)val_host_mem_alloc(PAGE_SIZE, PAGE_SIZE);
     if (!realm->rd)
     {
-        LOG(ERROR, "\tFailed to allocate memory for rd\n", 0, 0);
+        LOG(ERROR, "Failed to allocate memory for rd\n");
     } else {
         ret = val_host_rmi_granule_delegate(realm->rd);
         if (ret)
         {
-            LOG(ERROR, "\trd delegation failed, rd=0x%x, ret=0x%x\n", realm->rd, ret);
+            LOG(ERROR, "rd delegation failed, rd=0x%x, ret=0x%x\n", realm->rd, ret);
             goto free_rd;
         }
     }
@@ -47,13 +47,13 @@ uint32_t val_host_realm_create_common(val_host_realm_ts *realm)
     realm->rtt_l0_addr = (uint64_t)val_host_mem_alloc(PAGE_SIZE, PAGE_SIZE);
     if (!realm->rtt_l0_addr)
     {
-        LOG(ERROR, "\tFailed to allocate memory for rtt_addr\n", 0, 0);
+        LOG(ERROR, "Failed to allocate memory for rtt_addr\n");
         goto undelegate_rd;
     } else {
         ret = val_host_rmi_granule_delegate(realm->rtt_l0_addr);
         if (ret)
         {
-            LOG(ERROR, "\trtt delegation failed, rtt_addr=0x%x, ret=0x%x\n",
+            LOG(ERROR, "rtt delegation failed, rtt_addr=0x%x, ret=0x%x\n",
                 realm->rtt_l0_addr, ret);
             goto free_rtt;
         }
@@ -69,7 +69,7 @@ uint32_t val_host_realm_create_common(val_host_realm_ts *realm)
            (realm->num_s2_sl_rtts * PAGE_SIZE), (realm->num_s2_sl_rtts * PAGE_SIZE));
             if (!realm->rtt_aux_l0_addr[i])
             {
-                LOG(ERROR, "\tFailed to allocate memory for rtt_addr\n", 0, 0);
+                LOG(ERROR, "Failed to allocate memory for rtt_addr\n");
                 goto undelegate_rd;
             } else {
                 for (j = 0; j < realm->num_s2_sl_rtts; j++)
@@ -78,7 +78,7 @@ uint32_t val_host_realm_create_common(val_host_realm_ts *realm)
                                                                      + (j * PAGE_SIZE));
                     if (ret)
                     {
-                        LOG(ERROR, "\trtt delegation failed, rtt_addr=0x%x, ret=0x%x\n",
+                        LOG(ERROR, "rtt delegation failed, rtt_addr=0x%x, ret=0x%x\n",
                         realm->rtt_aux_l0_addr[i], ret);
                         goto free_rtt;
                     }
@@ -92,7 +92,7 @@ uint32_t val_host_realm_create_common(val_host_realm_ts *realm)
     params = val_host_mem_alloc(PAGE_SIZE, PAGE_SIZE);
     if (params == NULL)
     {
-        LOG(ERROR, "\tFailed to allocate memory for params\n", 0, 0);
+        LOG(ERROR, "Failed to allocate memory for params\n");
         goto undelegate_rtt;
     }
 
@@ -125,7 +125,7 @@ uint32_t val_host_realm_create_common(val_host_realm_ts *realm)
     /* Create realm */
     if (val_host_rmi_realm_create(realm->rd, (uint64_t)params))
     {
-        LOG(ERROR, "\tRealm create failed\n", 0, 0);
+        LOG(ERROR, "Realm create failed\n");
         goto free_params;
     }
 
@@ -140,7 +140,7 @@ undelegate_rtt:
     ret = val_host_rmi_granule_undelegate(realm->rtt_l0_addr);
     if (ret)
     {
-        LOG(WARN, "\trtt undelegation failed, rtt_addr=0x%x, ret=0x%x\n", realm->rtt_l0_addr, ret);
+        LOG(WARN, "rtt undelegation failed, rtt_addr=0x%x, ret=0x%x\n", realm->rtt_l0_addr, ret);
     }
 
 free_rtt:
@@ -150,7 +150,7 @@ undelegate_rd:
     ret = val_host_rmi_granule_undelegate(realm->rd);
     if (ret)
     {
-        LOG(WARN, "\trd undelegation failed, rd=0x%x, ret=0x%x\n", realm->rd, ret);
+        LOG(WARN, "rd undelegation failed, rd=0x%x, ret=0x%x\n", realm->rd, ret);
     }
 free_rd:
      val_host_mem_free((void *)realm->rd);
@@ -167,7 +167,7 @@ uint32_t val_host_rec_create_common(val_host_realm_ts *realm, val_host_rec_param
 
     if (realm->rec_count > VAL_MAX_REC_COUNT)
     {
-        LOG(ERROR, "\tmax supported recs are VAL_MAX_REC_COUNT\n", 0, 0);
+        LOG(ERROR, "max supported recs are VAL_MAX_REC_COUNT\n");
         return VAL_ERROR;
     }
 
@@ -175,12 +175,12 @@ uint32_t val_host_rec_create_common(val_host_realm_ts *realm, val_host_rec_param
     ret = val_host_rmi_rec_aux_count(realm->rd, &aux_count);
     if (ret)
     {
-        LOG(ERROR, "\tREC AUX count failed, ret=0x%x\n", ret, 0);
+        LOG(ERROR, "REC AUX count failed, ret=0x%x\n", ret);
         return VAL_ERROR;
     } else {
         if (aux_count > VAL_MAX_REC_AUX_GRANULES)
         {
-            LOG(ERROR, "\tmax supported aux granules are VAL_MAX_REC_AUX_GRANULES\n", 0, 0);
+            LOG(ERROR, "max supported aux granules are VAL_MAX_REC_AUX_GRANULES\n");
             return VAL_ERROR;
         }
 
@@ -190,7 +190,7 @@ uint32_t val_host_rec_create_common(val_host_realm_ts *realm, val_host_rec_param
     rec_params = val_host_mem_alloc(PAGE_SIZE, PAGE_SIZE);
     if (rec_params == NULL)
     {
-        LOG(ERROR, "\tFailed to allocate memory for rec_params\n", 0, 0);
+        LOG(ERROR, "Failed to allocate memory for rec_params\n");
         return VAL_ERROR;
     }
     val_memset(rec_params, 0x0, PAGE_SIZE);
@@ -215,7 +215,7 @@ uint32_t val_host_rec_create_common(val_host_realm_ts *realm, val_host_rec_param
         realm->run[i] = (uint64_t)val_host_mem_alloc(PAGE_SIZE, PAGE_SIZE);
         if (!realm->run[i])
         {
-            LOG(ERROR, "\tFailed to allocate memory for run[%d]\n", i, 0);
+            LOG(ERROR, "Failed to allocate memory for run[%d]\n", i);
             goto free_rec_params;
         }
         val_memset((void *)realm->run[i], 0x0, PAGE_SIZE);
@@ -224,13 +224,13 @@ uint32_t val_host_rec_create_common(val_host_realm_ts *realm, val_host_rec_param
         realm->rec[i] = (uint64_t)val_host_mem_alloc(PAGE_SIZE, PAGE_SIZE);
         if (!realm->rec[i])
         {
-            LOG(ERROR, "\tFailed to allocate memory for REC\n", 0, 0);
+            LOG(ERROR, "Failed to allocate memory for REC\n");
             goto free_rec_params;
         } else {
             ret = val_host_rmi_granule_delegate(realm->rec[i]);
             if (ret)
             {
-                LOG(ERROR, "\trec delegation failed, rec=0x%x, ret=0x%x\n", realm->rec[i], ret);
+                LOG(ERROR, "rec delegation failed, rec=0x%x, ret=0x%x\n", realm->rec[i], ret);
                 goto free_rec_params;
             }
         }
@@ -240,13 +240,13 @@ uint32_t val_host_rec_create_common(val_host_realm_ts *realm, val_host_rec_param
             rec_params->aux[j] = (uint64_t)val_host_mem_alloc(PAGE_SIZE, PAGE_SIZE);
             if (!rec_params->aux[j])
             {
-                LOG(ERROR, "\tFailed to allocate memory for aux rec\n", 0, 0);
+                LOG(ERROR, "Failed to allocate memory for aux rec\n");
                 goto free_rec_params;
             } else {
                 ret = val_host_rmi_granule_delegate(rec_params->aux[j]);
                 if (ret)
                 {
-                    LOG(ERROR, "\trec delegation failed, rec=0x%x, ret=0x%x\n",
+                    LOG(ERROR, "rec delegation failed, rec=0x%x, ret=0x%x\n",
                                          rec_params->aux[j], ret);
                     goto free_rec_params;
                 }
@@ -258,7 +258,7 @@ uint32_t val_host_rec_create_common(val_host_realm_ts *realm, val_host_rec_param
         ret = val_host_rmi_rec_create(realm->rd, realm->rec[i], (uint64_t)rec_params);
         if (ret)
         {
-            LOG(ERROR, "\tREC create failed, ret=0x%x\n", ret, 0);
+            LOG(ERROR, "REC create failed, ret=0x%x\n", ret);
             goto free_rec_params;
         }
     }
@@ -273,7 +273,7 @@ free_rec_params:
         ret = val_host_rmi_granule_undelegate(realm->rec[i]);
         if (ret)
         {
-            LOG(WARN, "\trec undelegation failed, rec=0x%x, ret=0x%x\n", realm->rec[i], ret);
+            LOG(WARN, "rec undelegation failed, rec=0x%x, ret=0x%x\n", realm->rec[i], ret);
         }
 
         val_host_mem_free((void *)realm->rec[i]);
@@ -284,7 +284,7 @@ free_rec_params:
             ret = val_host_rmi_granule_undelegate(realm->rec_aux_granules[j + (i * aux_count)]);
             if (ret)
             {
-                LOG(WARN, "\tgranule undelegation failed, PA=0x%x, ret=0x%x\n",
+                LOG(WARN, "granule undelegation failed, PA=0x%x, ret=0x%x\n",
                 realm->rec_aux_granules[j + (i * aux_count)], ret);
             }
             val_host_mem_free((void *)realm->rec_aux_granules[j + (i * aux_count)]);
@@ -336,7 +336,7 @@ uint64_t g_data_prep_sequence(uint64_t rd, uint64_t ipa)
     /* Pick an address that has rtte.state = ASSIGNED */
     if (create_mapping(ipa, true, rd))
     {
-        LOG(ERROR, "\tCouldn't create the assigned protected mapping\n", 0, 0);
+        LOG(ERROR, "Couldn't create the assigned protected mapping\n");
         return VAL_TEST_PREP_SEQ_FAILED;
     }
 
@@ -352,7 +352,7 @@ uint64_t g_data_prep_sequence(uint64_t rd, uint64_t ipa)
 
     if (val_host_rmi_data_create(rd, data, ipa, src, flags))
     {
-        LOG(ERROR, "\tCouldn't complete the assigned protected mapping\n", 0, 0);
+        LOG(ERROR, "Couldn't complete the assigned protected mapping\n");
         return VAL_TEST_PREP_SEQ_FAILED;
     }
     return data;
@@ -382,7 +382,7 @@ uint64_t ipa_protected_assigned_ram_prep_sequence(uint64_t rd1)
     /* Pick an address that has rtte.state = ASSIGNED */
     if (create_mapping(IPA_ADDR_PROTECTED_ASSIGNED_RAM, true, rd1))
     {
-        LOG(ERROR, "\tCouldn't create the assigned protected mapping\n", 0, 0);
+        LOG(ERROR, "Couldn't create the assigned protected mapping\n");
         return VAL_TEST_PREP_SEQ_FAILED;
     }
     uint64_t rd = rd1;
@@ -398,7 +398,7 @@ uint64_t ipa_protected_assigned_ram_prep_sequence(uint64_t rd1)
 
     if (val_host_rmi_data_create(rd, data, IPA_ADDR_PROTECTED_ASSIGNED_RAM, src, flags))
     {
-        LOG(ERROR, "\tCouldn't complete the assigned protected mapping\n", 0, 0);
+        LOG(ERROR, "Couldn't complete the assigned protected mapping\n");
         return VAL_TEST_PREP_SEQ_FAILED;
     }
 
@@ -412,7 +412,7 @@ uint64_t ipa_protected_assigned_empty_prep_sequence(uint64_t rd)
     /* Pick an address that has rtte.state = ASSIGNED */
     if (create_mapping(IPA_ADDR_PROTECTED_ASSIGNED_EMPTY, false, rd))
     {
-        LOG(ERROR, "\tCouldn't create the assigned protected mapping\n", 0, 0);
+        LOG(ERROR, "Couldn't create the assigned protected mapping\n");
         return VAL_TEST_PREP_SEQ_FAILED;
     }
 
@@ -422,7 +422,7 @@ uint64_t ipa_protected_assigned_empty_prep_sequence(uint64_t rd)
 
     if (val_host_rmi_data_create_unknown(rd, data, IPA_ADDR_PROTECTED_ASSIGNED_EMPTY))
     {
-        LOG(ERROR, "\tCouldn't complete the assigned protected mapping\n", 0, 0);
+        LOG(ERROR, "Couldn't complete the assigned protected mapping\n");
         return VAL_TEST_PREP_SEQ_FAILED;
     }
 
@@ -436,7 +436,7 @@ uint64_t ipa_protected_destroyed_prep_sequence(uint64_t rd1)
     /* Pick an address that has rtte.state = DESTROYED*/
     if (create_mapping(IPA_ADDR_DESTROYED, true, rd1))
     {
-        LOG(ERROR, "\tCouldn't create the assigned protected mapping\n", 0, 0);
+        LOG(ERROR, "Couldn't create the assigned protected mapping\n");
         return VAL_TEST_PREP_SEQ_FAILED;
     }
 
@@ -453,13 +453,13 @@ uint64_t ipa_protected_destroyed_prep_sequence(uint64_t rd1)
 
     if (val_host_rmi_data_create(rd, data, IPA_ADDR_DESTROYED, src, flags))
     {
-        LOG(ERROR, "\tCouldn't complete the assigned protected mapping\n", 0, 0);
+        LOG(ERROR, "Couldn't complete the assigned protected mapping\n");
         return VAL_TEST_PREP_SEQ_FAILED;
     }
 
     if (val_host_rmi_data_destroy(rd, IPA_ADDR_DESTROYED, &data_destroy))
     {
-        LOG(ERROR, "\tCouldn't complete the destroyed mapping\n", 0, 0);
+        LOG(ERROR, "Couldn't complete the destroyed mapping\n");
         return VAL_TEST_PREP_SEQ_FAILED;
     }
 
@@ -479,7 +479,7 @@ uint64_t ipa_unprotected_assinged_prep_sequence(uint64_t rd1)
     /* Pick an address that is in unprotected range and has rtte.state != UNASSIGNED */
     if (create_mapping(IPA_ADDR_UNPROTECTED, false, rd1))
     {
-        LOG(ERROR, "\tCouldn't create the unprotected mapping\n", 0, 0);
+        LOG(ERROR, "Couldn't create the unprotected mapping\n");
         return VAL_TEST_PREP_SEQ_FAILED;
     }
 
@@ -491,7 +491,7 @@ uint64_t ipa_unprotected_assinged_prep_sequence(uint64_t rd1)
 
     if (val_host_rmi_rtt_map_unprotected(rd1, IPA_ADDR_UNPROTECTED, MAP_LEVEL, desc))
     {
-        LOG(ERROR, "\tCouldn't complete the unprotected mapping\n", 0, 0);
+        LOG(ERROR, "Couldn't complete the unprotected mapping\n");
         return VAL_TEST_PREP_SEQ_FAILED;
     }
     return IPA_ADDR_UNPROTECTED;
@@ -502,7 +502,7 @@ uint64_t ipa_unprotected_unassigned_prep_sequence(uint64_t rd1)
     /* Pick an address that is within unprotected range and has rtte.state = UNASSIGNED */
     if (create_mapping(IPA_ADDR_UNPROTECTED_UNASSIGNED, false, rd1))
     {
-        LOG(ERROR, "\tUnassigned unprotected ipa mapping creation failed\n", 0, 0);
+        LOG(ERROR, "Unassigned unprotected ipa mapping creation failed\n");
         return VAL_TEST_PREP_SEQ_FAILED;
     }
     return IPA_ADDR_UNPROTECTED_UNASSIGNED;
@@ -512,7 +512,7 @@ uint64_t ipa_protected_unassigned_ram_prep_sequence(uint64_t rd)
 {
     if (create_mapping(IPA_ADDR_PROTECTED_UNASSIGNED_RAM, true, rd))
     {
-        LOG(ERROR, "\tProtected Unassinged ipa mapping creation failed\n", 0, 0);
+        LOG(ERROR, "Protected Unassinged ipa mapping creation failed\n");
         return VAL_TEST_PREP_SEQ_FAILED;
     }
     return IPA_ADDR_PROTECTED_UNASSIGNED_RAM;
@@ -522,7 +522,7 @@ uint64_t ipa_protected_unassigned_empty_prep_sequence(uint64_t rd)
 {
     if (create_mapping(IPA_ADDR_PROTECTED_UNASSIGNED_EMPTY, false, rd))
     {
-        LOG(ERROR, "\tProtected Unassinged ipa mapping creation failed\n", 0, 0);
+        LOG(ERROR, "Protected Unassinged ipa mapping creation failed\n");
         return VAL_TEST_PREP_SEQ_FAILED;
     }
     return IPA_ADDR_PROTECTED_UNASSIGNED_EMPTY;
@@ -533,7 +533,7 @@ uint64_t ipa_protected_aux_assigned_prep_sequence(uint64_t rd, uint64_t rtt_inde
     /* Pick an address that has rtte.state = ASSIGNED */
     if (create_mapping(IPA_ADDR_PROTECTED_AUX_ASSIGNED, true, rd))
     {
-        LOG(ERROR, "\tRTT creation failed\n", 0, 0);
+        LOG(ERROR, "RTT creation failed\n");
         return VAL_TEST_PREP_SEQ_FAILED;
     }
 
@@ -549,19 +549,19 @@ uint64_t ipa_protected_aux_assigned_prep_sequence(uint64_t rd, uint64_t rtt_inde
 
     if (val_host_rmi_data_create(rd, data, IPA_ADDR_PROTECTED_AUX_ASSIGNED, src, flags))
     {
-        LOG(ERROR, "\tDATA CREATE failed\n", 0, 0);
+        LOG(ERROR, "DATA CREATE failed\n");
         return VAL_TEST_PREP_SEQ_FAILED;
     }
 
     if (val_host_create_aux_mapping(rd, IPA_ADDR_PROTECTED_AUX_ASSIGNED, rtt_index))
     {
-        LOG(ERROR, "\tCouldn't create the assigned protected mapping\n", 0, 0);
+        LOG(ERROR, "Couldn't create the assigned protected mapping\n");
         return VAL_TEST_PREP_SEQ_FAILED;
     }
 
     if (val_host_rmi_rtt_aux_map_protected(rd, IPA_ADDR_PROTECTED_AUX_ASSIGNED, rtt_index).x0)
     {
-        LOG(ERROR, "\tAUX MAP PROTECTED failed\n", 0, 0);
+        LOG(ERROR, "AUX MAP PROTECTED failed\n");
         return VAL_TEST_PREP_SEQ_FAILED;
     }
 

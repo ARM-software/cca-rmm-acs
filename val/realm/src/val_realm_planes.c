@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2024-2025, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -73,7 +73,7 @@ uint64_t val_realm_plane_handle_exception(val_realm_rsi_plane_run_ts *run)
 **/
 uint64_t hvc_handle_realm_config(val_realm_rsi_plane_run_ts *run)
 {
-    LOG(DBG, "handling PSI realm_config\n", 0, 0);
+    LOG(DBG, "handling PSI realm_config\n");
     run->enter.gprs[0] = RSI_SUCCESS;
     run->enter.gprs[1] = val_realm_get_ipa_width();
 
@@ -123,7 +123,7 @@ uint64_t val_realm_run_plane(uint64_t plane_index, val_realm_rsi_plane_run_ts *r
         cmd_ret = val_realm_rsi_plane_enter(plane_index, (uint64_t)(run_ptr));
 
         if (cmd_ret.x0) {
-            LOG(ERROR, "Plane entry failed with : %d \n", cmd_ret.x0, 0);
+            LOG(ERROR, "Plane entry failed with : %d \n", cmd_ret.x0);
             return VAL_ERROR;
         }
 
@@ -150,7 +150,7 @@ uint64_t val_realm_plane_perm_init(uint64_t plane_idx, uint64_t perm_idx,
 
     cmd_ret = val_realm_rsi_mem_set_perm_value(plane_idx, perm_idx, S2_AP_RW_upX);
     if (cmd_ret.x0) {
-        LOG(ERROR, "MEM_SET_PERM_VALUE failed with : %d \n", cmd_ret.x0, 0);
+        LOG(ERROR, "MEM_SET_PERM_VALUE failed with : %d \n", cmd_ret.x0);
         return VAL_ERROR;
     }
 

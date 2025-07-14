@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2025, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -24,7 +24,7 @@ void measurement_immutable_rim_host(void)
     /* Populate realm with one REC*/
     if (val_host_realm_setup(&realm, 0))
     {
-        LOG(ERROR, "\tRealm setup failed\n", 0, 0);
+        LOG(ERROR, "Realm setup failed\n");
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(1)));
         goto destroy_realm;
     }
@@ -32,7 +32,7 @@ void measurement_immutable_rim_host(void)
     /* Add data granule */
     if (create_mapping(IPA_ADDR_UNASSIGNED, true, realm.rd))
     {
-        LOG(ERROR, "\tCouldn't create the assigned protected mapping\n", 0, 0);
+        LOG(ERROR, "Couldn't create the assigned protected mapping\n");
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(2)));
         goto destroy_realm;
     }
@@ -43,7 +43,7 @@ void measurement_immutable_rim_host(void)
 
     if (val_host_rmi_data_create(realm.rd, data, IPA_ADDR_UNASSIGNED, src, flags))
     {
-        LOG(ERROR, "\tCouldn't complete the assigned protected mapping\n", 0, 0);
+        LOG(ERROR, "Couldn't complete the assigned protected mapping\n");
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(3)));
         goto destroy_realm;
     }
@@ -52,7 +52,7 @@ void measurement_immutable_rim_host(void)
     ret = val_host_rmi_realm_activate(realm.rd);
     if (ret)
     {
-        LOG(ERROR, "\tRealm activate failed, ret=%x\n", ret, 0);
+        LOG(ERROR, "Realm activate failed, ret=%x\n", ret);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(4)));
         goto destroy_realm;
     }
@@ -61,7 +61,7 @@ void measurement_immutable_rim_host(void)
     ret = val_host_rmi_rec_enter(realm.rec[0], realm.run[0]);
     if (ret)
     {
-        LOG(ERROR, "\tRec enter failed, ret=%x\n", ret, 0);
+        LOG(ERROR, "Rec enter failed, ret=%x\n", ret);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(5)));
         goto destroy_realm;
     }
@@ -70,7 +70,7 @@ void measurement_immutable_rim_host(void)
     ret = val_host_rmi_data_destroy(realm.rd, IPA_ADDR_UNASSIGNED, &data_destroy);
     if (ret)
     {
-        LOG(ERROR, "\tData destroy failed, ret=%x\n", ret, 0);
+        LOG(ERROR, "Data destroy failed, ret=%x\n", ret);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(6)));
         goto destroy_realm;
     }
@@ -78,7 +78,7 @@ void measurement_immutable_rim_host(void)
     /* Add granule after activating realm */
     if (create_mapping(IPA_ADDR_UNASSIGNED1, false, realm.rd))
     {
-        LOG(ERROR, "\tCouldn't create the assigned protected mapping\n", 0, 0);
+        LOG(ERROR, "Couldn't create the assigned protected mapping\n");
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(7)));
         goto destroy_realm;
     }
@@ -86,7 +86,7 @@ void measurement_immutable_rim_host(void)
     uint64_t data_unknown = val_host_delegate_granule();
     if (val_host_rmi_data_create_unknown(realm.rd, data_unknown, IPA_ADDR_UNASSIGNED1))
     {
-        LOG(ERROR, "\tCouldn't complete the assigned protected mapping\n", 0, 0);
+        LOG(ERROR, "Couldn't complete the assigned protected mapping\n");
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(8)));
         goto destroy_realm;
     }
@@ -94,7 +94,7 @@ void measurement_immutable_rim_host(void)
     ret = val_host_rmi_rec_enter(realm.rec[0], realm.run[0]);
     if (ret)
     {
-        LOG(ERROR, "\tRec enter failed, ret=%x\n", ret, 0);
+        LOG(ERROR, "Rec enter failed, ret=%x\n", ret);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(9)));
         goto destroy_realm;
     }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023-2024, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023-2025, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -23,7 +23,7 @@ void pmu_overflow_host(void)
     /* Check that PMU is supported */
     if ((VAL_EXTRACT_BITS(dfr0, 8, 11) == 0x0))
     {
-        LOG(ERROR, "\tPMU not supported\n", 0, 0);
+        LOG(ERROR, "PMU not supported\n");
         val_set_status(RESULT_SKIP(VAL_SKIP_CHECK));
         goto destroy_realm;
     }
@@ -31,7 +31,7 @@ void pmu_overflow_host(void)
     /* Read Feature Register 0 and check for PMU support */
     val_host_rmi_features(0, &feature_reg);
     if (VAL_EXTRACT_BITS(feature_reg, 26, 26) == 0) {
-        LOG(ERROR, "\tPMU not supported\n", 0, 0);
+        LOG(ERROR, "PMU not supported\n");
         val_set_status(RESULT_SKIP(VAL_SKIP_CHECK));
         goto destroy_realm;
     }
@@ -49,7 +49,7 @@ void pmu_overflow_host(void)
     /* Populate realm with one REC */
     if (val_host_realm_setup(&realm, true))
     {
-        LOG(ERROR, "\tRealm setup failed\n", 0, 0);
+        LOG(ERROR, "Realm setup failed\n");
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(1)));
         goto destroy_realm;
     }
@@ -58,7 +58,7 @@ void pmu_overflow_host(void)
     ret = val_host_rmi_rec_enter(realm.rec[0], realm.run[0]);
     if (ret)
     {
-        LOG(ERROR, "\tRec enter failed, ret=%x\n", ret, 0);
+        LOG(ERROR, "Rec enter failed, ret=%x\n", ret);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(2)));
         goto destroy_realm;
     }
@@ -66,7 +66,7 @@ void pmu_overflow_host(void)
     if (rec_exit->exit_reason != RMI_EXIT_IRQ ||
                 rec_exit->pmu_ovf_status != RMI_PMU_OVERFLOW_ACTIVE)
     {
-        LOG(ERROR, "\tRec exit params mismatch, exit_reason=%x pmu_ovf_status %lx\n",
+        LOG(ERROR, "Rec exit params mismatch, exit_reason=%x pmu_ovf_status %lx\n",
                         rec_exit->exit_reason, rec_exit->pmu_ovf_status);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(3)));
         goto destroy_realm;
@@ -85,7 +85,7 @@ void pmu_overflow_host(void)
     ret = val_host_rmi_rec_enter(realm.rec[0], realm.run[0]);
     if (ret)
     {
-        LOG(ERROR, "\tRec enter failed, ret=%x\n", ret, 0);
+        LOG(ERROR, "Rec enter failed, ret=%x\n", ret);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(4)));
         goto destroy_realm;
     }
@@ -94,7 +94,7 @@ void pmu_overflow_host(void)
     if ((VAL_EXTRACT_BITS(rec_exit->gicv3_misr, GICV3_MISR_EL2_NP, GICV3_MISR_EL2_NP) != 0x1) ||
         VAL_EXTRACT_BITS(rec_exit->gicv3_hcr, GICV3_HCR_EL2_EOICOUNT, 31))
     {
-        LOG(ERROR, "\tNo pending maintence interrupt check failed: %lx\n", rec_exit->gicv3_misr, 0);
+        LOG(ERROR, "No pending maintence interrupt check failed: %lx\n", rec_exit->gicv3_misr);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(5)));
         goto destroy_realm;
     }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2025, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -17,13 +17,13 @@ static void secondary_cpu(void)
 
     uint64_t mpidr = val_read_mpidr() & PAL_MPIDR_AFFINITY_MASK, ret;
 
-    LOG(ALWAYS, "\tSecondary cpu with mpidr 0x%x booted\n", mpidr, 0);
+    LOG(TEST, "Secondary cpu with mpidr 0x%x booted\n", mpidr);
 
     /* Enter Realm-1 on secondary cpu */
     ret = val_host_rmi_rec_enter(realm.rec[1], realm.run[1]);
     if (ret)
     {
-        LOG(ERROR, "\tRec enter failed, ret=%x\n", ret, 0);
+        LOG(ERROR, "Rec enter failed, ret=%x\n", ret);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(1)));
     }
 
@@ -31,7 +31,7 @@ static void secondary_cpu(void)
     if (val_host_check_realm_exit_psci((val_host_rec_run_ts *)realm.run[1],
                                 PSCI_CPU_OFF))
     {
-        LOG(ERROR, "\tSomething went wrong\n", 0, 0);
+        LOG(ERROR, "Something went wrong\n");
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(2)));
     }
 
@@ -66,7 +66,7 @@ void cmd_multithread_realm_mp_host(void)
     /* Populate realm with two RECs*/
     if (val_host_realm_setup(&realm, 1))
     {
-        LOG(ERROR, "\tRealm setup failed\n", 0, 0);
+        LOG(ERROR, "Realm setup failed\n");
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(3)));
         goto destroy_realm;
     }
@@ -75,7 +75,7 @@ void cmd_multithread_realm_mp_host(void)
     ret = val_host_rmi_rec_enter(realm.rec[0], realm.run[0]);
     if (ret)
     {
-        LOG(ERROR, "\tRec enter failed, ret=%x\n", ret, 0);
+        LOG(ERROR, "Rec enter failed, ret=%x\n", ret);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(4)));
         goto destroy_realm;
     }
@@ -84,7 +84,7 @@ void cmd_multithread_realm_mp_host(void)
     if (val_host_check_realm_exit_psci((val_host_rec_run_ts *)realm.run[0],
                                 PSCI_CPU_ON_AARCH64))
     {
-        LOG(ERROR, "\tSomething went wrong\n", 0, 0);
+        LOG(ERROR, "Something went wrong\n");
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(5)));
         goto destroy_realm;
     }
@@ -93,7 +93,7 @@ void cmd_multithread_realm_mp_host(void)
     ret = val_host_rmi_psci_complete(realm.rec[0], realm.rec[1], PSCI_E_SUCCESS);
     if (ret)
     {
-        LOG(ERROR, "\tval_rmi_psci_complete, ret=%x\n", ret, 0);
+        LOG(ERROR, "val_rmi_psci_complete, ret=%x\n", ret);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(6)));
         goto destroy_realm;
     }
@@ -112,17 +112,17 @@ void cmd_multithread_realm_mp_host(void)
             continue;
         }
 
-        LOG(DBG, "\tPower up secondary cpu mpidr=%x\n", mpidr, 0);
+        LOG(DBG, "Power up secondary cpu mpidr=%x\n", mpidr);
         ret = val_host_power_on_cpu(i);
         if (ret != 0)
         {
-            LOG(ERROR, "\tval_power_on_cpu mpidr 0x%x returns %x\n", mpidr, ret);
+            LOG(ERROR, "val_power_on_cpu mpidr 0x%x returns %x\n", mpidr, ret);
             val_set_status(RESULT_FAIL(VAL_ERROR_POINT(7)));
             goto destroy_realm;
         }
 
         val_wait_for_event(&cpu_booted[i]);
-        LOG(DBG, "\tPowered off secondary cpu mpidr=%x\n", mpidr, 0);
+        LOG(DBG, "Powered off secondary cpu mpidr=%x\n", mpidr);
         break;
     }
 
@@ -130,12 +130,12 @@ void cmd_multithread_realm_mp_host(void)
     ret = val_host_rmi_rec_enter(realm.rec[0], realm.run[0]);
     if (ret)
     {
-        LOG(ERROR, "\tRec enter failed, ret=%x\n", ret, 0);
+        LOG(ERROR, "Rec enter failed, ret=%x\n", ret);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(8)));
         goto destroy_realm;
     } else if (val_host_check_realm_exit_host_call((val_host_rec_run_ts *)realm.run[0]))
     {
-        LOG(ERROR, "\tSomething went wrong\n", 0, 0);
+        LOG(ERROR, "Something went wrong\n");
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(9)));
         goto destroy_realm;
     }

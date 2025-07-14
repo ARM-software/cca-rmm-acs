@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2025, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -42,7 +42,7 @@ static uint64_t g_rd_new_prep_sequence(uint16_t vmid)
 
     if (val_host_realm_create_common(&realm_init))
     {
-        LOG(ERROR, "\tRealm create failed\n", 0, 0);
+        LOG(ERROR, "Realm create failed\n");
         return VAL_TEST_PREP_SEQ_FAILED;
     }
 
@@ -65,7 +65,7 @@ static uint64_t g_rec_ready_prep_sequence(void)
     rec_params.mpidr = 0;
 
     if (val_host_rec_create_common(&realm_test[REALM_VALID], &rec_params)) {
-        LOG(ERROR, "\n\t REC Create Failed \n", 0, 0);
+        LOG(ERROR, " REC Create Failed \n");
         return VAL_TEST_PREP_SEQ_FAILED;
     }
 
@@ -130,7 +130,7 @@ static uint64_t intent_to_seq(struct stimulus *test_data, struct arguments *args
 
         default:
             /* set status to failure */
-            LOG(ERROR, "\t\nUnknown intent label encountered\n", 0, 0);
+            LOG(ERROR, "Unknown intent label encountered\n");
             return VAL_ERROR;
     }
 
@@ -152,9 +152,8 @@ void cmd_rec_aux_count_host(void)
     /* Iterate over the input */
     for (i = 0; i < (sizeof(test_data) / sizeof(struct stimulus)); i++)
     {
-        LOG(TEST, "\n\tCheck %d : ", i + 1, 0);
-        LOG(TEST, test_data[i].msg, 0, 0);
-        LOG(TEST, "; intent id : 0x%x \n", test_data[i].label, 0);
+        LOG(TEST, "Check %2d : %s; intent id : 0x%x \n",
+              i + 1, test_data[i].msg, test_data[i].label);
 
         if (intent_to_seq(&test_data[i], &args)) {
             val_set_status(RESULT_FAIL(VAL_ERROR_POINT(2)));
@@ -165,20 +164,20 @@ void cmd_rec_aux_count_host(void)
 
         if (ret != PACK_CODE(test_data[i].status, test_data[i].index))
         {
-            LOG(ERROR, "\tTest Failure!\n\tThe ABI call returned: %x\n\tExpected: %x\n",
+            LOG(ERROR, "Test Failure!The ABI call returned: %xExpected: %x\n",
                 ret, PACK_CODE(test_data[i].status, test_data[i].index));
             val_set_status(RESULT_FAIL(VAL_ERROR_POINT(3)));
             goto exit;
         }
     }
 
-    LOG(TEST, "\n\tPositive Observability Check\n", 0, 0);
+    LOG(TEST, "Check %2d : Positive Observability\n", ++i);
 
     ret = val_host_rmi_rec_aux_count(c_args.rd_valid, &value);
     /* Valid call should give success if footprints have not changed */
     if (ret != 0)
     {
-        LOG(TEST, "\t\nERROR\n", 0, 0);
+        LOG(TEST, "ERROR\n");
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(4)));
         goto exit;
     }

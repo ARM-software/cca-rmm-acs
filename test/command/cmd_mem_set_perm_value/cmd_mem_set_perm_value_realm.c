@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2024-2025, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -39,7 +39,7 @@ static uint64_t perm_index_locked_prep_sequence(void)
 
     if (cmd_ret.x0)
     {
-        LOG(ERROR, "RSI_MEM_SET_PERM_VALUE failed with ret = %d\n", cmd_ret.x0, 0);
+        LOG(ERROR, "RSI_MEM_SET_PERM_VALUE failed with ret = %d\n", cmd_ret.x0);
         return VAL_TEST_PREP_SEQ_FAILED;
     }
 
@@ -53,7 +53,7 @@ static uint64_t perm_index_locked_prep_sequence(void)
 
         if (cmd_ret.x0 || cmd_ret.x2 == RSI_REJECT)
         {
-            LOG(ERROR, "RSI_MEM_SET_PERM_INDEX failed with ret = %d\n", cmd_ret.x0, 0);
+            LOG(ERROR, "RSI_MEM_SET_PERM_INDEX failed with ret = %d\n", cmd_ret.x0);
             return VAL_TEST_PREP_SEQ_FAILED;
         }
 
@@ -115,7 +115,7 @@ static uint64_t intent_to_seq(struct stimulus *test_data, struct arguments *args
             break;
 
         default:
-            LOG(ERROR, "\n\tUnknown intent label encountered\n", 0, 0);
+            LOG(ERROR, "Unknown intent label encountered\n");
             return VAL_ERROR;
     }
 
@@ -135,9 +135,8 @@ void cmd_mem_set_perm_value_realm(void)
 
     for (i = 0; i < (sizeof(test_data) / sizeof(struct stimulus)); i++)
     {
-        LOG(TEST, "\n\tCheck %d : ", i + 1, 0);
-        LOG(TEST, test_data[i].msg, 0, 0);
-        LOG(TEST, "; intent id : 0x%x \n", test_data[i].label, 0);
+        LOG(TEST, "Check %2d : %s; intent id : 0x%x \n",
+              i + 1, test_data[i].msg, test_data[i].label);
 
         if (intent_to_seq(&test_data[i], &args)) {
             val_set_status(RESULT_FAIL(VAL_ERROR_POINT(2)));
@@ -146,7 +145,7 @@ void cmd_mem_set_perm_value_realm(void)
 
         cmd_ret = val_realm_rsi_mem_set_perm_value(args.plane_index, args.perm_index, args.value);
         if (cmd_ret.x0 != PACK_CODE(test_data[i].status, test_data[i].index)) {
-            LOG(ERROR, "\tTest Failure!\n\tThe ABI call returned: %x\n\tExpected: %x\n",
+            LOG(ERROR, "Test Failure!The ABI call returned: %xExpected: %x\n",
                 cmd_ret.x0, PACK_CODE(test_data[i].status, test_data[i].index));
             val_set_status(RESULT_FAIL(VAL_ERROR_POINT(3)));
             goto exit;
@@ -154,12 +153,12 @@ void cmd_mem_set_perm_value_realm(void)
     }
 
 
-    LOG(TEST, "\n\tPositive Observability Check\n", 0, 0);
+    LOG(TEST, "Check %2d : Positive Observability\n", ++i);
     cmd_ret = val_realm_rsi_mem_set_perm_value(c_args.plane_index_valid,
                                          c_args.perm_index_valid, c_args.value_valid);
     if (cmd_ret.x0 != 0)
     {
-        LOG(ERROR, "\n\t Command failed. %x\n", cmd_ret.x0, 0);
+        LOG(ERROR, " Command failed. %x\n", cmd_ret.x0);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(4)));
         goto exit;
     }
@@ -168,8 +167,8 @@ void cmd_mem_set_perm_value_realm(void)
     cmd_ret = val_realm_rsi_mem_get_perm_value(c_args.plane_index_valid, c_args.perm_index_valid);
     if (cmd_ret.x0 || cmd_ret.x1 != S2_AP_RW_upX)
     {
-        LOG(ERROR, "\n\t Unexpected output for RSI_MEM_GET_PERM_VALUE, ret %%d, val = %x\n",
-                                                                                     cmd_ret.x0, 0);
+        LOG(ERROR, " Unexpected output for RSI_MEM_GET_PERM_VALUE, ret %%d, val = %x\n",
+                                                                                     cmd_ret.x0);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(5)));
         goto exit;
     }

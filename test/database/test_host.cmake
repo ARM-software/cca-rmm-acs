@@ -1,5 +1,5 @@
 #-------------------------------------------------------------------------------
-# Copyright (c) 2023-2024, Arm Limited or its affiliates. All rights reserved.
+# Copyright (c) 2023-2025, Arm Limited or its affiliates. All rights reserved.
 #
 # SPDX-License-Identifier: BSD-3-Clause
 #
@@ -28,12 +28,14 @@ list(APPEND TEST_INCLUDE
     ${ROOT_DIR}/plat/driver/src/
     ${ROOT_DIR}/test/database/
     ${ROOT_DIR}/test/common/
+    ${COMMON_VAL_PATH}/inc/
 )
 
 foreach(SUITE ${TEST_SUITE_LIST})
-    list(APPEND TEST_INCLUDE
-    ${ROOT_DIR}/test/${SUITE}/common/
-)
+    list(APPEND TEST_INCLUDE ${ROOT_DIR}/test/${SUITE}/common/)
+    if(NOT ${SUITE} STREQUAL "command")
+        list(APPEND TEST_INCLUDE ${ROOT_DIR}/test/command/common/)
+    endif()
 endforeach()
 
 if(${TEST_COMBINE})
@@ -59,6 +61,17 @@ file(GLOB TEST_SRC
 )
 endif()
 
+#Adding command test source files for SUITE_COVERAGE
+if(NOT ${SUITE} STREQUAL "command")
+    file(GLOB COMMAND_TEST_SRC
+    "${ROOT_DIR}/test/command/*/*_host.c"
+    "${ROOT_DIR}/test/command/*/*_host.S"
+    "${ROOT_DIR}/test/command/*/*/*_host.c"
+    "${ROOT_DIR}/test/command/common/*_host.c"
+)
+endif()
+
+list(APPEND TEST_SRC ${COMMAND_TEST_SRC})
 list(APPEND TEST_SRC
     ${ROOT_DIR}/test/database/test_database_host.c
 )
@@ -95,7 +108,7 @@ foreach(SUITE ${SUITE_LIST})
     # Get all the test folders from a given test component
     if(${SUITE} STREQUAL "planes")
         _get_sub_dir_list(TEST_LIST ${TEST_SOURCE_DIR}/${SUITE}/*/)
-    else()      
+    else()
         _get_sub_dir_list(TEST_LIST ${TEST_SOURCE_DIR}/${SUITE})
     endif()
     foreach(TEST ${TEST_LIST})

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023-2024, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023-2025, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -21,7 +21,7 @@ bool val_irq_current(void)
 {
     if (pal_irq_handler_dispatcher())
     {
-        LOG(ERROR, "Got unexpected interrupt.\n", 0, 0);
+        LOG(ERROR, "Got unexpected interrupt.\n");
         return false;
     }
 
@@ -50,44 +50,44 @@ static bool default_sync_current_exception(void)
     switch (ec)
     {
         case EC_DATA_ABORT_SAME_EL:
-            LOG(ERROR, "Data abort: pc=%x, esr=%x", elr, esr);
-            LOG(ERROR, ", ec=%x", ec, 0);
+            LOG(ERROR, "Data abort: pc=%x, esr=%x\n", elr, esr);
+            LOG(ERROR, ", ec=%x\n", ec);
 
             if (!(esr & (1U << 10)))
             { /* Check FnV bit. */
-                LOG(ERROR, ", far=%x\n", far, 0);
+                LOG(ERROR, ", far=%x\n", far);
             } else
             {
-                LOG(ERROR, ", far=invalid\n", 0, 0);
+                LOG(ERROR, ", far=invalid\n");
             }
 
             break;
 
         case EC_INSTRUCTION_ABORT_SAME_EL:
-            LOG(ERROR, "Instruction abort: pc=%x, esr=%x", elr, esr);
-            LOG(ERROR, ", ec=%x", ec, 0);
+            LOG(ERROR, "Instruction abort: pc=%x, esr=%x\n", elr, esr);
+            LOG(ERROR, ", ec=%x\n", ec);
 
             if (!(esr & (1U << 10)))
             { /* Check FnV bit. */
-                LOG(ERROR, ", far=%x\n", far, 0);
+                LOG(ERROR, ", far=%x\n", far);
             } else
             {
-                LOG(ERROR, ", far=invalid\n", 0, 0);
+                LOG(ERROR, ", far=invalid\n");
             }
 
             break;
 
         default:
-            LOG(ERROR, "Unknown sync exception elr=%x, esr=%x",
+            LOG(ERROR, "Unknown sync exception elr=%x, esr=%x\n",
                  elr, esr);
-            LOG(ERROR, ", ec=%x\n", ec, 0);
+            LOG(ERROR, ", ec=%x\n", ec);
 
             if (!(esr & (1U << 10)))
             { /* Check FnV bit. */
-                LOG(ERROR, ", far=%x\n", far, 0);
+                LOG(ERROR, ", far=%x\n", far);
             } else
             {
-                LOG(ERROR, ", far=invalid\n", 0, 0);
+                LOG(ERROR, ", far=invalid\n");
             }
     }
 

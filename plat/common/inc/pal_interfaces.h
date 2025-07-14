@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023-2025, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -16,7 +16,7 @@
 #include "pal_shemaphore.h"
 #include "pal_arch.h"
 #include "pal_arch_helpers.h"
-
+#include "pal_common_val_intf.h"
 
 /**
  *   @brief    - This function prints the given string and data onto the uart
@@ -26,38 +26,6 @@
  *   @return   - SUCCESS(0)/FAILURE(Any positive number)
 **/
 uint32_t pal_printf(const char *msg, uint64_t data1, uint64_t data2);
-
-/**
- *   @brief    - Writes into given non-volatile address.
- *   @param    - offset  : Offset into nvmem
- *   @param    - buffer  : Pointer to source address
- *   @param    - size    : Number of bytes
- *   @return   - SUCCESS/FAILURE
-**/
-uint32_t pal_nvm_write(uint32_t offset, void *buffer, size_t size);
-
-/**
- *   @brief    - Reads from given non-volatile address.
- *   @param    - offset  : Offset into nvmem
- *   @param    - buffer  : Pointer to destination address
- *   @param    - size    : Number of bytes
- *   @return   - SUCCESS/FAILURE
-**/
-uint32_t pal_nvm_read(uint32_t offset, void *buffer, size_t size);
-
-/**
- *   @brief    - Initializes and enable the hardware watchdog timer
- *   @param    - void
- *   @return   - SUCCESS/FAILURE
-**/
-uint32_t pal_watchdog_enable(void);
-
-/**
- *   @brief    - Disables the hardware watchdog timer
- *   @param    - void
- *   @return   - SUCCESS/FAILURE
-**/
-uint32_t pal_watchdog_disable(void);
 
 /**
  *   @brief    - Terminates the simulation at the end of all tests completion.

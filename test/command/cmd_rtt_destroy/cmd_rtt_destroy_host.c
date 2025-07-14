@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2025, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -56,7 +56,7 @@ static uint64_t ipa_folded_rtt_prep_sequence(void)
 
     if (create_mapping(IPA_FOLDED_RTT, true, realm[VALID_REALM].rd))
     {
-        LOG(ERROR, "\t Mapping creation failed\n", 0, 0);
+        LOG(ERROR, " Mapping creation failed\n");
         return VAL_TEST_PREP_SEQ_FAILED;
     }
 
@@ -64,7 +64,7 @@ static uint64_t ipa_folded_rtt_prep_sequence(void)
     phys = (uint64_t)val_host_mem_alloc(L2_SIZE, L2_SIZE);
     if (!phys)
     {
-        LOG(ERROR, "\tval_host_mem_alloc failed\n", 0, 0);
+        LOG(ERROR, "val_host_mem_alloc failed\n");
         return VAL_TEST_PREP_SEQ_FAILED;
     }
 
@@ -75,13 +75,13 @@ static uint64_t ipa_folded_rtt_prep_sequence(void)
     ret = val_host_map_protected_data_to_realm(&realm[VALID_REALM], &data_create);
     if (ret)
     {
-        LOG(ERROR, "\tval_host_map_protected_data_to_realm failed\n", 0, 0);
+        LOG(ERROR, "val_host_map_protected_data_to_realm failed\n");
         return VAL_TEST_PREP_SEQ_FAILED;
     }
 
     if (val_host_rmi_rtt_fold(realm[VALID_REALM].rd, IPA_FOLDED_RTT, MAP_LEVEL, &rtt))
     {
-        LOG(ERROR, "\t RTT Fold failed\n", 0, 0);
+        LOG(ERROR, " RTT Fold failed\n");
         return VAL_TEST_PREP_SEQ_FAILED;
 
     }
@@ -126,7 +126,7 @@ static uint64_t g_rec_ready_prep_sequence(uint64_t vmid)
 
     if (val_host_rec_create_common(&realm[vmid], &rec_params))
     {
-        LOG(ERROR, "\tREC Create Failed\n", 0, 0);
+        LOG(ERROR, "REC Create Failed\n");
         return VAL_TEST_PREP_SEQ_FAILED;
     }
 
@@ -145,7 +145,7 @@ static uint64_t g_rd_new_prep_sequence(uint16_t vmid)
 
     if (val_host_realm_create_common(&realm[vmid]))
     {
-        LOG(ERROR, "\tRealm create failed\n", 0, 0);
+        LOG(ERROR, "Realm create failed\n");
         return VAL_TEST_PREP_SEQ_FAILED;
     }
 
@@ -158,7 +158,7 @@ static uint64_t ipa_valid_prep_sequence(void)
 {
     if (create_mapping(IPA_NON_LIVE_RTT, false, realm[VALID_REALM].rd))
     {
-        LOG(ERROR, "\tUnassigned unprotected ipa mapping creation failed\n", 0, 0);
+        LOG(ERROR, "Unassigned unprotected ipa mapping creation failed\n");
         return VAL_TEST_PREP_SEQ_FAILED;
     }
 
@@ -304,7 +304,7 @@ static uint64_t intent_to_seq(struct stimulus *test_data, struct arguments *args
             break;
 
         default:
-            LOG(ERROR, "\n\tUnknown intent label encountered\n", 0, 0);
+            LOG(ERROR, "Unknown intent label encountered\n");
             return VAL_ERROR;
     }
 
@@ -325,9 +325,8 @@ void cmd_rtt_destroy_host(void)
 
     for (i = 0; i < (sizeof(test_data) / sizeof(struct stimulus)); i++)
     {
-        LOG(TEST, "\n\tCheck %d : ", i + 1, 0);
-        LOG(TEST, test_data[i].msg, 0, 0);
-        LOG(TEST, "; intent id : 0x%x \n", test_data[i].label, 0);
+        LOG(TEST, "Check %2d : %s; intent id : 0x%x \n",
+              i + 1, test_data[i].msg, test_data[i].label);
 
         if (intent_to_seq(&test_data[i], &args)) {
             val_set_status(RESULT_FAIL(VAL_ERROR_POINT(2)));
@@ -336,7 +335,7 @@ void cmd_rtt_destroy_host(void)
 
         ret = val_host_rmi_rtt_destroy(args.rd, args.ipa, args.level, &out_val);
         if (ret != PACK_CODE(test_data[i].status, test_data[i].index)) {
-            LOG(ERROR, "\tTest Failure!\n\tThe ABI call returned: %x\n\tExpected: %x\n",
+            LOG(ERROR, "Test Failure!The ABI call returned: %xExpected: %x\n",
                 ret, PACK_CODE(test_data[i].status, test_data[i].index));
             val_set_status(RESULT_FAIL(VAL_ERROR_POINT(3)));
             goto exit;
@@ -344,7 +343,7 @@ void cmd_rtt_destroy_host(void)
 
         /* Upon RMI_ERROR_RTT check for top == walk_top */
         else if (ret == RMI_ERROR_RTT && out_val.top != c_exp_output.top) {
-            LOG(ERROR, " \tUnexpected command output received. top value: 0x%x ", out_val.top, 0);
+            LOG(ERROR, " Unexpected command output received. top value: 0x%x \n", out_val.top);
             val_set_status(RESULT_FAIL(VAL_ERROR_POINT(4)));
             goto exit;
         }
@@ -354,26 +353,26 @@ void cmd_rtt_destroy_host(void)
     ret = val_host_rmi_rtt_read_entry(c_args.rd_valid, c_args.ipa_valid,
                                                          c_args.level_valid - 1, &rtte);
     if (ret) {
-        LOG(ERROR, "\n\tRead entry failed with ret value: %d\n", ret, 0);
+        LOG(ERROR, "Read entry failed with ret value: %d\n", ret);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(6)));
         goto exit;
     }
 
     c_exp_output.rtt = OA(rtte.desc);
 
-    LOG(TEST, "\n\tPositive Observability Check\n", 0, 0);
+    LOG(TEST, "Check %2d : Positive Observability\n", ++i);
 
     ret = val_host_rmi_rtt_destroy(c_args.rd_valid, c_args.ipa_valid, c_args.level_valid,
                                                                              &out_val);
     if (ret != 0)
     {
-        LOG(ERROR, "\n\t RTT_DESTROY failed with ret value: %d\n", ret, 0);
+        LOG(ERROR, " RTT_DESTROY failed with ret value: %d\n", ret);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(5)));
         goto exit;
     }
 
     if (out_val.rtt != c_exp_output.rtt || out_val.top != IPA_FOLDED_RTT) {
-        LOG(ERROR, "\n\tUnexpected Output Values. rtt = 0x%x, top = 0x%x\n",
+        LOG(ERROR, "Unexpected Output Values. rtt = 0x%x, top = 0x%x\n",
                                                              out_val.rtt, out_val.top);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(6)));
         goto exit;
@@ -383,16 +382,16 @@ void cmd_rtt_destroy_host(void)
     /* Check on successful command execution, HIPAS = UNASSINGNED & RIPAS == DESTROYED */
     ret = val_host_rmi_rtt_read_entry(c_args.rd_valid, c_args.ipa_valid, MAP_LEVEL - 1, &rtte);
     if (ret) {
-        LOG(ERROR, "\n\tREAD_ENTRY failed with ret value: %d\n", ret, 0);
+        LOG(ERROR, "READ_ENTRY failed with ret value: %d\n", ret);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(7)));
         goto exit;
     }
 
     if (rtte.state != RMI_UNASSIGNED || rtte.ripas != RMI_DESTROYED)
     {
-        LOG(ERROR, "\tUnexpected HIPAS and RIPAS values received. HIPAS: %d, RIPAS: %d ",
+        LOG(ERROR, "Unexpected HIPAS and RIPAS values received. HIPAS: %d, RIPAS: %d \n",
                                                                      rtte.state, rtte.ripas);
-        LOG(ERROR, "\tExpected. HIPAS: %d, RIPAS: %d ", RMI_UNASSIGNED, RMI_DESTROYED);
+        LOG(ERROR, "Expected. HIPAS: %d, RIPAS: %d \n", RMI_UNASSIGNED, RMI_DESTROYED);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(8)));
         goto exit;
     }
@@ -402,7 +401,7 @@ void cmd_rtt_destroy_host(void)
                                                                          c_args.level_valid);
     if (ret)
     {
-        LOG(ERROR, "\n\t RTT_CREATE failed with ret value: %d\n", ret, 0);
+        LOG(ERROR, " RTT_CREATE failed with ret value: %d\n", ret);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(9)));
         goto exit;
     }
@@ -413,7 +412,7 @@ exit:
                                                          VAL_RTT_MAX_LEVEL, &rtte);
 
     if (ret) {
-        LOG(ERROR, "\n\tREAD_ENTRY failed with ret value: %d\n", ret, 0);
+        LOG(ERROR, "READ_ENTRY failed with ret value: %d\n", ret);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(10)));
         return;
     }
@@ -425,7 +424,7 @@ exit:
                                     L2_SIZE);
         if (ret)
         {
-            LOG(ERROR, "\tval_host_create_rtt_level failed\n", 0, 0);
+            LOG(ERROR, "val_host_create_rtt_level failed\n");
             val_set_status(RESULT_FAIL(VAL_ERROR_POINT(12)));
             return;
         }

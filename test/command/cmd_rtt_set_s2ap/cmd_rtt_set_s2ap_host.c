@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2024-2025, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -67,14 +67,14 @@ static uint64_t g_rec_other_owner_prep_sequence(void)
 
     if (val_host_realm_create_common(&realm[INVALID_REALM]))
     {
-        LOG(ERROR, "\tRealm create failed\n", 0, 0);
+        LOG(ERROR, "Realm create failed\n");
         return VAL_TEST_PREP_SEQ_FAILED;
     }
 
     /* Populate realm with two RECs*/
     if (val_host_rec_create_common(&realm[INVALID_REALM], &rec_params))
     {
-        LOG(ERROR, "\tREC Create Failed\n", 0, 0);
+        LOG(ERROR, "REC Create Failed\n");
         return VAL_TEST_PREP_SEQ_FAILED;
     }
 
@@ -104,7 +104,7 @@ static uint64_t rd_valid_prep_sequence(void)
     /* Populate realm with two RECs*/
     if (val_host_realm_setup(&realm[VALID_REALM], 1))
     {
-        LOG(ERROR, "\tRealm setup failed\n", 0, 0);
+        LOG(ERROR, "Realm setup failed\n");
         return VAL_TEST_PREP_SEQ_FAILED;
     }
 
@@ -112,12 +112,12 @@ static uint64_t rd_valid_prep_sequence(void)
     ret = val_host_rmi_rec_enter(realm[VALID_REALM].rec[0], realm[VALID_REALM].run[0]);
     if (ret)
     {
-        LOG(ERROR, "\tREC_ENTER failed with ret value: %d\n", ret, 0);
+        LOG(ERROR, "REC_ENTER failed with ret value: %d\n", ret);
         return VAL_TEST_PREP_SEQ_FAILED;
     } else if (val_host_check_realm_exit_psci((val_host_rec_run_ts *)realm[VALID_REALM].run[0],
                                 PSCI_CPU_ON_AARCH64))
     {
-        LOG(ERROR, "\tREC exit not due to PSCI_CPU_ON\n", 0, 0);
+        LOG(ERROR, "REC exit not due to PSCI_CPU_ON\n");
         return VAL_TEST_PREP_SEQ_FAILED;
     }
 
@@ -126,7 +126,7 @@ static uint64_t rd_valid_prep_sequence(void)
                                                                              PSCI_E_SUCCESS);
     if (ret)
     {
-        LOG(ERROR, "\t PSCI_COMPLETE Failed, ret=%x\n", ret, 0);
+        LOG(ERROR, " PSCI_COMPLETE Failed, ret=%x\n", ret);
         return VAL_TEST_PREP_SEQ_FAILED;
     }
 
@@ -134,7 +134,7 @@ static uint64_t rd_valid_prep_sequence(void)
     ret = val_host_rmi_rec_enter(realm[VALID_REALM].rec[0], realm[VALID_REALM].run[0]);
     if (ret)
     {
-        LOG(ERROR, "\tREC_ENTER failed with ret value: %d\n", ret, 0);
+        LOG(ERROR, "REC_ENTER failed with ret value: %d\n", ret);
         return VAL_TEST_PREP_SEQ_FAILED;
     }
 
@@ -143,7 +143,7 @@ static uint64_t rd_valid_prep_sequence(void)
 
     /* Check that REC exit was due to S2AP change request */
     if (rec_exit->exit_reason != RMI_EXIT_S2AP_CHANGE) {
-        LOG(ERROR, "\tUnexpected REC exit, %d. ESR: %lx \n", rec_exit->exit_reason, rec_exit->esr);
+        LOG(ERROR, "Unexpected REC exit, %d. ESR: %lx \n", rec_exit->exit_reason, rec_exit->esr);
         return VAL_TEST_PREP_SEQ_FAILED;
     }
 
@@ -182,7 +182,7 @@ static uint64_t base_primary_unaligned_prep_sequence(void)
     ret = val_host_rmi_rec_enter(realm[VALID_REALM].rec[1], realm[VALID_REALM].run[1]);
     if (ret)
     {
-        LOG(ERROR, "\tREC_ENTER failed with ret value: %d\n", ret, 0);
+        LOG(ERROR, "REC_ENTER failed with ret value: %d\n", ret);
         return VAL_TEST_PREP_SEQ_FAILED;
     }
 
@@ -190,7 +190,7 @@ static uint64_t base_primary_unaligned_prep_sequence(void)
 
     /* Check that REC exit was due S2AP change request */
     if (rec_exit->exit_reason != RMI_EXIT_S2AP_CHANGE) {
-        LOG(ERROR, "\tUnexpected REC exit, %d. ESR: %lx \n", rec_exit->exit_reason, rec_exit->esr);
+        LOG(ERROR, "Unexpected REC exit, %d. ESR: %lx \n", rec_exit->exit_reason, rec_exit->esr);
         return VAL_TEST_PREP_SEQ_FAILED;
     }
 
@@ -204,20 +204,20 @@ static uint64_t base_auxiliary_unaligned_prep_sequence(void)
 
     if (!VAL_EXTRACT_BITS(realm[VALID_REALM].flags1, 0, 0))
     {
-        LOG(ALWAYS, "\n\tRealm is configured to use single RTT tree\n", 0, 0);
+        LOG(ALWAYS, "Realm is configured to use single RTT tree\n");
         return VAL_SKIP_CHECK;
     }
 
     ret = val_host_rmi_rec_enter(realm[VALID_REALM].rec[1], realm[VALID_REALM].run[1]);
     if (ret)
     {
-        LOG(ERROR, "\tREC_ENTER failed with ret value: %d\n", ret, 0);
+        LOG(ERROR, "REC_ENTER failed with ret value: %d\n", ret);
         return VAL_TEST_PREP_SEQ_FAILED;
     }
 
     /* Check that REC exit was due S2AP change request */
     if (rec_exit->exit_reason != RMI_EXIT_S2AP_CHANGE) {
-        LOG(ERROR, "\tUnexpected REC exit, %d. ESR: %lx \n", rec_exit->exit_reason, rec_exit->esr);
+        LOG(ERROR, "Unexpected REC exit, %d. ESR: %lx \n", rec_exit->exit_reason, rec_exit->esr);
         return VAL_TEST_PREP_SEQ_FAILED;
     }
 
@@ -235,7 +235,7 @@ static uint64_t base_auxiliary_unaligned_prep_sequence(void)
     cmd_ret = val_host_rmi_rtt_set_s2ap(realm[VALID_REALM].rd,
                                 realm[VALID_REALM].rec[1], ipa_base, rec_exit->s2ap_top);
     if (cmd_ret.x0) {
-        LOG(ERROR, "\nRMI_SET_S2AP failed with ret= 0x%x\n", cmd_ret.x0, 0);
+        LOG(ERROR, "RMI_SET_S2AP failed with ret= 0x%x\n", cmd_ret.x0);
         return VAL_TEST_PREP_SEQ_FAILED;
     }
 
@@ -243,7 +243,7 @@ static uint64_t base_auxiliary_unaligned_prep_sequence(void)
     cmd_ret = val_host_rmi_rtt_set_s2ap(realm[VALID_REALM].rd,
                                     realm[VALID_REALM].rec[1], ipa_base, rec_exit->s2ap_top);
     if (cmd_ret.x0) {
-        LOG(ERROR, "\nRMI_SET_S2AP failed with ret= 0x%x\n", cmd_ret.x0, 0);
+        LOG(ERROR, "RMI_SET_S2AP failed with ret= 0x%x\n", cmd_ret.x0);
         return VAL_TEST_PREP_SEQ_FAILED;
     }
 
@@ -445,7 +445,7 @@ static uint64_t intent_to_seq(struct stimulus *test_data, struct arguments *args
             break;
 
         default:
-            LOG(ERROR, "\n\tUnknown intent label encountered\n", 0, 0);
+            LOG(ERROR, "Unknown intent label encountered\n");
             return VAL_ERROR;
     }
 
@@ -461,7 +461,7 @@ void cmd_rtt_set_s2ap_host(void)
     /* Skip if RMM do not support planes */
     if (!val_host_rmm_supports_planes())
     {
-        LOG(ALWAYS, "\n\tPlanes feature not supported\n", 0, 0);
+        LOG(ALWAYS, "Planes feature not supported\n");
         val_set_status(RESULT_SKIP(VAL_SKIP_CHECK));
         goto exit;
     }
@@ -473,33 +473,32 @@ void cmd_rtt_set_s2ap_host(void)
 
     for (i = 0; i < (sizeof(test_data) / sizeof(struct stimulus)); i++)
     {
-        LOG(TEST, "\n\tCheck %d : ", i + 1, 0);
-        LOG(TEST, test_data[i].msg, 0, 0);
-        LOG(TEST, "; intent id : 0x%x \n", test_data[i].label, 0);
+        LOG(TEST, "Check %2d : %s; intent id : 0x%x \n",
+              i + 1, test_data[i].msg, test_data[i].label);
 
         ret = intent_to_seq(&test_data[i], &args);
 
         if (ret == VAL_SKIP_CHECK)
         {
-            LOG(TEST, "\tSkipping Check : %d\n", i + 1, 0);
+            LOG(TEST, "Skipping Check : %d\n", i + 1);
             continue;
         }
         else if (ret == VAL_ERROR) {
-            LOG(ERROR, "\n\t Intent to sequence failed \n", 0, 0);
+            LOG(ERROR, " Intent to sequence failed \n");
             val_set_status(RESULT_FAIL(VAL_ERROR_POINT(2)));
             goto exit;
         }
 
         cmd_ret = val_host_rmi_rtt_set_s2ap(args.rd, args.rec_ptr, args.base, args.top);
         if (cmd_ret.x0 != PACK_CODE(test_data[i].status, test_data[i].index)) {
-            LOG(ERROR, "\tTest Failure!\n\tThe ABI call returned: %x\n\tExpected: %x\n",
+            LOG(ERROR, "Test Failure!The ABI call returned: %xExpected: %x\n",
                 cmd_ret.x0, PACK_CODE(test_data[i].status, test_data[i].index));
             val_set_status(RESULT_FAIL(VAL_ERROR_POINT(3)));
             goto exit;
         }
     }
 
-    LOG(TEST, "\n\tPositive Observability Check\n", 0, 0);
+    LOG(TEST, "Check %2d : Positive Observability\n", ++i);
 
     base = c_args.base_valid;
     while (base != c_args.top_valid) {
@@ -507,7 +506,7 @@ void cmd_rtt_set_s2ap_host(void)
                                                             c_args.base_valid, c_args.top_valid);
         if (cmd_ret.x0 != 0)
         {
-            LOG(ERROR, "\n\t Command failed. %x\n", cmd_ret.x0, 0);
+            LOG(ERROR, " Command failed. %x\n", cmd_ret.x0);
             val_set_status(RESULT_FAIL(VAL_ERROR_POINT(4)));
             goto exit;
         }

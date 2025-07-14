@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023-2024, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023-2025, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -22,7 +22,7 @@ void cmd_rmi_version_host(void)
     /* Check for MBZ filed */
     if ((VAL_EXTRACT_BITS(rmi_ver_out.lower, 31, 63) != 0) ||
         (VAL_EXTRACT_BITS(rmi_ver_out.higher, 31, 63) != 0))  {
-        LOG(ERROR, "\tReceived non zero value for reserved field\n", 0, 0);
+        LOG(ERROR, "Received non zero value for reserved field\n");
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(1)));
         goto exit;
     }
@@ -34,8 +34,8 @@ void cmd_rmi_version_host(void)
         version_major = VAL_EXTRACT_BITS(rmi_ver_out.lower, 16, 30);
 
         if (version_major != RMI_ABI_VERSION_MAJOR || version_minor != RMI_ABI_VERSION_MINOR) {
-            LOG(ERROR, "\tRMI lower version : %d.%d \n", version_major, version_minor);
-            LOG(TEST, "\tExpected version : %d.%d \n", RMI_ABI_VERSION_MAJOR,
+            LOG(ERROR, "RMI lower version : %d.%d \n", version_major, version_minor);
+            LOG(TEST, "Expected version : %d.%d \n", RMI_ABI_VERSION_MAJOR,
                                                        RMI_ABI_VERSION_MINOR);
             val_set_status(RESULT_FAIL(VAL_ERROR_POINT(2)));
             goto exit;
@@ -43,13 +43,13 @@ void cmd_rmi_version_host(void)
     }
 
     else {
-        LOG(TEST, "\tINFO: RMI_ABI lower version : %d.%d \n",
+        LOG(TEST, "INFO: RMI_ABI lower version : %d.%d \n",
                             VAL_EXTRACT_BITS(rmi_ver_out.lower, 16, 30),
                             VAL_EXTRACT_BITS(rmi_ver_out.lower, 0, 15));
-        LOG(TEST, "\tINFO: RMI_ABI higher version : %d.%d \n",
+        LOG(TEST, "INFO: RMI_ABI higher version : %d.%d \n",
                             VAL_EXTRACT_BITS(rmi_ver_out.higher, 16, 30),
                             VAL_EXTRACT_BITS(rmi_ver_out.higher, 0, 15));
-        LOG(ERROR, "\tRMI ABI version is incompatibe with ACS, Expected : %d.%d \n",
+        LOG(ERROR, "RMI ABI version is incompatibe with ACS, Expected : %d.%d \n",
                                                  RMI_ABI_VERSION_MAJOR, RMI_ABI_VERSION_MINOR);
         assert(ret == RMI_SUCCESS);
     }

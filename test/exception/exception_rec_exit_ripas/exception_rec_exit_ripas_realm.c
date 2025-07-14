@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2025, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -26,10 +26,10 @@ void exception_rec_exit_ripas_realm(void)
     args = val_realm_rsi_ipa_state_set(ipa_base, ipa_base + size, ripas_val, flags);
     if (args.x0 || (args.x1 != (ipa_base + size)))
     {
-        LOG(ERROR, "\trsi_ipa_state_set failed x0 %lx x1 %lx\n", args.x0, args.x1);
+        LOG(ERROR, "rsi_ipa_state_set failed x0 %lx x1 %lx\n", args.x0, args.x1);
         status = VAL_ERROR_POINT(1);
     }
-    LOG(TEST, "\tRIPAS Value RAM --> EMPTY verified\n", 0, 0);
+    LOG(TEST, "RIPAS Value RAM --> EMPTY verified\n");
 
     /* scenario 2: EMPTY --> RAM */
     realm_host_call = val_realm_rsi_host_call_ripas(VAL_SWITCH_TO_HOST);
@@ -40,10 +40,10 @@ void exception_rec_exit_ripas_realm(void)
     args = val_realm_rsi_ipa_state_set(ipa_base, ipa_base + size, ripas_val, flags);
     if (args.x0 || (args.x1 != (ipa_base + size)))
     {
-        LOG(ERROR, "\trsi_ipa_state_set failed x0 %lx x1 %lx\n", args.x0, args.x1);
+        LOG(ERROR, "rsi_ipa_state_set failed x0 %lx x1 %lx\n", args.x0, args.x1);
         status = VAL_ERROR_POINT(2);
     }
-    LOG(TEST, "\tRIPAS RAM --> EMPTY verified\n", 0, 0);
+    LOG(TEST, "RIPAS RAM --> EMPTY verified\n");
 
     /* scenario 3: RAM --> EMPTY */
     realm_host_call = val_realm_rsi_host_call_ripas(VAL_SWITCH_TO_HOST);
@@ -54,11 +54,10 @@ void exception_rec_exit_ripas_realm(void)
     args = val_realm_rsi_ipa_state_set(ipa_base, ipa_base + size, ripas_val, flags);
     if (args.x0 || (args.x1 != (ipa_base + 0x1000)))
     {
-        LOG(ERROR, "\trsi_ipa_state_set failed x0 %lx x1 %lx\n", args.x0, args.x1);
+        LOG(ERROR, "rsi_ipa_state_set failed x0 %lx x1 %lx\n", args.x0, args.x1);
         status = VAL_ERROR_POINT(3);
     }
-    LOG(TEST, "\tRIPAS Value RAM --> EMPTY verified with the "
-                       "PARTIAL RIPAS SET\n", 0, 0);
+    LOG(TEST, "RIPAS Value RAM --> EMPTY verified with the PARTIAL RIPAS SET\n");
 
     /* scenario 4: RAM --> EMPTY */
     realm_host_call = val_realm_rsi_host_call_ripas(VAL_SWITCH_TO_HOST);
@@ -69,10 +68,10 @@ void exception_rec_exit_ripas_realm(void)
     args = val_realm_rsi_ipa_state_set(ipa_base, ipa_base + size, ripas_val, flags);
     if (args.x0 || (args.x1 != ipa_base))
     {
-        LOG(ERROR, "\trsi_ipa_state_set failed x0 %lx x1 %lx\n", args.x0, args.x1);
+        LOG(ERROR, "rsi_ipa_state_set failed x0 %lx x1 %lx\n", args.x0, args.x1);
         status = VAL_ERROR_POINT(3);
     }
-    LOG(TEST, "\tRIPAS Value RAM --> EMPTY verified with REJECT\n", 0, 0);
+    LOG(TEST, "RIPAS Value RAM --> EMPTY verified with REJECT\n");
     if (status)
     {
         val_set_status(RESULT_FAIL(status));

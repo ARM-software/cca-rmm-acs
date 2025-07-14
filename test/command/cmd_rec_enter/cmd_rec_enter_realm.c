@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023-2024, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023-2025, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -37,7 +37,7 @@ void cmd_rec_enter_realm(void)
     mem_desc.attributes = MT_RW_DATA | MT_REALM;
     if (val_realm_pgt_create(&mem_desc))
     {
-        LOG(ERROR, "\tVA to PA mapping failed\n", 0, 0);
+        LOG(ERROR, "VA to PA mapping failed\n");
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(7)));
         goto exit;
     }
@@ -49,7 +49,7 @@ void cmd_rec_enter_realm(void)
     ret = val_psci_cpu_on(REC_NUM(1), val_realm_get_secondary_cpu_entry(), CONTEXT_ID);
     if (ret)
     {
-        LOG(ERROR, "\n\tPSCI CPU ON failed with ret status : 0x%x \n", ret, 0);
+        LOG(ERROR, "PSCI CPU ON failed with ret status : 0x%x \n", ret);
         goto exit;
     }
 

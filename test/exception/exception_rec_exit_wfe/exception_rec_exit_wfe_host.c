@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023-2024, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023-2025, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -28,7 +28,7 @@ void exception_rec_exit_wfe_host(void)
     /* Populate realm with one RECs*/
     if (val_host_realm_setup(&realm, 1))
     {
-        LOG(ERROR, "\tRealm setup failed\n", 0, 0);
+        LOG(ERROR, "Realm setup failed\n");
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(1)));
         goto destroy_realm;
     }
@@ -44,7 +44,7 @@ void exception_rec_exit_wfe_host(void)
     ret = val_host_rmi_rec_enter(realm.rec[0], realm.run[0]);
     if (ret)
     {
-        LOG(ERROR, "\tRec enter failed, ret=%x\n", ret, 0);
+        LOG(ERROR, "Rec enter failed, ret=%x\n", ret);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(2)));
         goto destroy_realm;
     }
@@ -55,12 +55,12 @@ void exception_rec_exit_wfe_host(void)
     /* check for esr_el2 for the rec exit due to wfe */
     if (ec != ESR_EL2_EC_WFX || ESR_EL2_WFX_TI(rec_exit->esr) != ESR_EL2_WFX_TI_WFE)
     {
-        LOG(ERROR, "\tRec Exit not due to  WFE, ESR=%lx\n", rec_exit->esr, 0);
+        LOG(ERROR, "Rec Exit not due to  WFE, ESR=%lx\n", rec_exit->esr);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(3)));
         goto destroy_realm;
     }
 
-    LOG(ALWAYS, "\tWFE Trigger verified \n", 0, 0);
+    LOG(TEST, "WFE Trigger verified \n");
     *wfe_trig = true;
 
     /* populate the rec exit details into the rec enter and corrupt some possible gprs
@@ -72,13 +72,13 @@ void exception_rec_exit_wfe_host(void)
     ret = val_host_rmi_rec_enter(realm.rec[0], realm.run[0]);
     if (ret != 0)
     {
-        LOG(ERROR, "\tRec enter failed ret=%x\n", ret, 0);
+        LOG(ERROR, "Rec enter failed ret=%x\n", ret);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(4)));
     }
 
     /* Check that REC exit was due to host call from realm after completing test */
     if (rec_exit->exit_reason != RMI_EXIT_HOST_CALL) {
-        LOG(ERROR, "\tUnexpected REC exit, %d. ESR: %lx \n", rec_exit->exit_reason, rec_exit->esr);
+        LOG(ERROR, "Unexpected REC exit, %d. ESR: %lx \n", rec_exit->exit_reason, rec_exit->esr);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(5)));
         goto destroy_realm;
     }

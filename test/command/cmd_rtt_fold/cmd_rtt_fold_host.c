@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2025, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -55,7 +55,7 @@ static uint64_t ipa_folded_rtt_prep_sequence(void)
     phys = (uint64_t)val_host_mem_alloc(L2_SIZE, (2 * data_create.size));
     if (!phys)
     {
-        LOG(ERROR, "\tval_host_mem_alloc failed\n", 0, 0);
+        LOG(ERROR, "val_host_mem_alloc failed\n");
         return VAL_TEST_PREP_SEQ_FAILED;
     }
 
@@ -66,14 +66,14 @@ static uint64_t ipa_folded_rtt_prep_sequence(void)
     ret = val_host_map_protected_data_to_realm(&realm[VALID_REALM], &data_create);
     if (ret)
     {
-        LOG(ERROR, "\tval_host_map_protected_data_to_realm failed\n", 0, 0);
+        LOG(ERROR, "val_host_map_protected_data_to_realm failed\n");
         return VAL_TEST_PREP_SEQ_FAILED;
     }
 
     ret = val_host_rmi_rtt_fold(realm[VALID_REALM].rd, data_create.ipa, MAP_LEVEL, &rtt);
     if (ret)
     {
-        LOG(ERROR, "\tRTT_FOLD failed with ret value = %x\n", ret, 0);
+        LOG(ERROR, "RTT_FOLD failed with ret value = %x\n", ret);
         return VAL_TEST_PREP_SEQ_FAILED;
     }
 
@@ -90,7 +90,7 @@ static uint64_t g_rec_ready_prep_sequence(void)
 
     if (val_host_rec_create_common(&realm[VALID_REALM], &rec_params))
     {
-        LOG(ERROR, "\tCouldn't destroy the Realm\n", 0, 0);
+        LOG(ERROR, "Couldn't destroy the Realm\n");
         return VAL_TEST_PREP_SEQ_FAILED;
     }
 
@@ -106,7 +106,7 @@ static uint64_t ipa_valid_prep_sequence(void)
     phys = (uint64_t)val_host_mem_alloc(L2_SIZE, (2 * data_create.size));
     if (!phys)
     {
-        LOG(ERROR, "\tval_host_mem_alloc failed\n", 0, 0);
+        LOG(ERROR, "val_host_mem_alloc failed\n");
         return VAL_TEST_PREP_SEQ_FAILED;
     }
 
@@ -117,7 +117,7 @@ static uint64_t ipa_valid_prep_sequence(void)
     ret = val_host_map_protected_data_to_realm(&realm[VALID_REALM], &data_create);
     if (ret)
     {
-        LOG(ERROR, "\tval_host_map_protected_data_to_realm failed\n", 0, 0);
+        LOG(ERROR, "val_host_map_protected_data_to_realm failed\n");
         return VAL_TEST_PREP_SEQ_FAILED;
     }
 
@@ -136,7 +136,7 @@ static uint64_t g_rd_new_prep_sequence(uint16_t vmid)
 
     if (val_host_realm_create_common(&realm[VALID_REALM]))
     {
-        LOG(ERROR, "\tRealm create failed\n", 0, 0);
+        LOG(ERROR, "Realm create failed\n");
         return VAL_TEST_PREP_SEQ_FAILED;
     }
 
@@ -288,7 +288,7 @@ static uint64_t intent_to_seq(struct stimulus *test_data, struct arguments *args
             break;
 
         default:
-            LOG(ERROR, "\n\tUnknown intent label encountered\n", 0, 0);
+            LOG(ERROR, "Unknown intent label encountered\n");
             return VAL_ERROR;
     }
 
@@ -308,9 +308,8 @@ void cmd_rtt_fold_host(void)
 
     for (i = 0; i < (sizeof(test_data) / sizeof(struct stimulus)); i++)
     {
-        LOG(TEST, "\n\tCheck %d : ", i + 1, 0);
-        LOG(TEST, test_data[i].msg, 0, 0);
-        LOG(TEST, "; intent id : 0x%x \n", test_data[i].label, 0);
+        LOG(TEST, "Check %2d : %s; intent id : 0x%x \n",
+              i + 1, test_data[i].msg, test_data[i].label);
 
         if (intent_to_seq(&test_data[i], &args)) {
             val_set_status(RESULT_FAIL(VAL_ERROR_POINT(2)));
@@ -319,7 +318,7 @@ void cmd_rtt_fold_host(void)
 
         ret = val_host_rmi_rtt_fold(args.rd, args.ipa, args.level, &rtt);
         if (ret != PACK_CODE(test_data[i].status, test_data[i].index)) {
-            LOG(ERROR, "\tTest Failure!\n\tThe ABI call returned: %x\n\tExpected: %x\n",
+            LOG(ERROR, "Test Failure!The ABI call returned: %xExpected: %x\n",
                 ret, PACK_CODE(test_data[i].status, test_data[i].index));
             val_set_status(RESULT_FAIL(VAL_ERROR_POINT(3)));
             goto exit;
@@ -330,7 +329,7 @@ void cmd_rtt_fold_host(void)
     ret = val_host_rmi_rtt_read_entry(c_args.rd_valid, c_args.ipa_valid,
                                                          c_args.level_valid - 1, &rtte);
     if (ret) {
-        LOG(ERROR, "\n\tREAD_ENTRY failed with ret value: %d\n", ret, 0);
+        LOG(ERROR, "READ_ENTRY failed with ret value: %d\n", ret);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(4)));
         goto exit;
     }
@@ -341,23 +340,23 @@ void cmd_rtt_fold_host(void)
     ret = val_host_rmi_rtt_read_entry(c_args.rd_valid, c_args.ipa_valid,
                                                          c_args.level_valid, &fold);
     if (ret) {
-        LOG(ERROR, "\n\tREAD_ENTRY failed with ret value: %d\n", ret, 0);
+        LOG(ERROR, "READ_ENTRY failed with ret value: %d\n", ret);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(5)));
         goto exit;
     }
 
-    LOG(TEST, "\n\tPositive Observability Check\n", 0, 0);
+    LOG(TEST, "Check %2d : Positive Observability\n", ++i);
     ret = val_host_rmi_rtt_fold(c_args.rd_valid, c_args.ipa_valid, c_args.level_valid, &rtt);
     if (ret != 0)
     {
-        LOG(ERROR, "\n\t RTT_FOLD failed with ret value: %d\n", ret, 0);
+        LOG(ERROR, " RTT_FOLD failed with ret value: %d\n", ret);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(6)));
         goto exit;
     }
 
     if (rtt != c_exp_output.rtt)
     {
-        LOG(TEST, "\n\tUnexpected command output value. rtt : 0x%x\n", rtt, 0);
+        LOG(TEST, "Unexpected command output value. rtt : 0x%x\n", rtt);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(7)));
         goto exit;
     }
@@ -366,7 +365,7 @@ void cmd_rtt_fold_host(void)
     ret = val_host_rmi_rtt_read_entry(c_args.rd_valid, c_args.ipa_valid,
                                                          c_args.level_valid - 1, &rtte);
     if (ret) {
-        LOG(ERROR, "\n\tREAD_ENTRY failed with ret value: %d\n", ret, 0);
+        LOG(ERROR, "READ_ENTRY failed with ret value: %d\n", ret);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(8)));
         goto exit;
     }
@@ -374,7 +373,7 @@ void cmd_rtt_fold_host(void)
     /* Compare HIPAS, RIPAS and addr of parent RTTE to its child RTTE */
     if (rtte.state != fold.state || rtte.ripas != fold.ripas || rtte.desc != fold.desc)
     {
-        LOG(TEST, "\n\t Parent RTTE does not match with child RTTE \n", 0, 0);
+        LOG(TEST, " Parent RTTE does not match with child RTTE \n");
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(9)));
         goto exit;
     }
@@ -385,7 +384,7 @@ exit:
                                                          VAL_RTT_MAX_LEVEL, &rtte);
 
     if (ret) {
-        LOG(ERROR, "\n\tREAD_ENTRY failed with ret value: %d\n", ret, 0);
+        LOG(ERROR, "READ_ENTRY failed with ret value: %d\n", ret);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(10)));
         return;
     }
@@ -397,7 +396,7 @@ exit:
                                     L2_SIZE);
         if (ret)
         {
-            LOG(ERROR, "\tval_host_create_rtt_level failed\n", 0, 0);
+            LOG(ERROR, "val_host_create_rtt_level failed\n");
             val_set_status(RESULT_FAIL(VAL_ERROR_POINT(11)));
             return;
         }
@@ -407,7 +406,7 @@ exit:
                                                          VAL_RTT_MAX_LEVEL, &rtte);
 
     if (ret) {
-        LOG(ERROR, "\n\tREAD_ENTRY failed with ret value: %d\n", ret, 0);
+        LOG(ERROR, "READ_ENTRY failed with ret value: %d\n", ret);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(12)));
         return;
     }
@@ -419,7 +418,7 @@ exit:
                                     L2_SIZE);
         if (ret)
         {
-            LOG(ERROR, "\tval_host_create_rtt_level failed\n", 0, 0);
+            LOG(ERROR, "val_host_create_rtt_level failed\n");
             val_set_status(RESULT_FAIL(VAL_ERROR_POINT(13)));
             return;
         }

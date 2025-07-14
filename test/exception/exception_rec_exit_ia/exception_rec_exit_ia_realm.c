@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2025, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -28,7 +28,7 @@ void exception_rec_exit_ia_realm(void)
     mem_desc.attributes = MT_CODE | MT_REALM;
     if (val_realm_pgt_create(&mem_desc))
     {
-        LOG(ERROR, "\tVA to PA mapping failed for stage 1\n", 0, 0);
+        LOG(ERROR, "VA to PA mapping failed for stage 1\n");
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(1)));
         goto test_exit;
     }
@@ -36,7 +36,7 @@ void exception_rec_exit_ia_realm(void)
     func_ptr = (void *)(faulting_addr);
     func_ptr();
 
-    LOG(ERROR, "\tRec Exit due to IA not triggered\n", 0, 0);
+    LOG(ERROR, "Rec Exit due to IA not triggered\n");
     val_set_status(RESULT_FAIL(VAL_ERROR_POINT(2)));
 
 test_exit:

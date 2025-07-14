@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023-2024, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023-2025, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -77,7 +77,7 @@ static uint64_t g_rd_new_prep_sequence(uint16_t vmid)
 
     if (val_host_realm_create_common(&realm_init))
     {
-        LOG(ERROR, "\tRealm create failed\n", 0, 0);
+        LOG(ERROR, "Realm create failed\n");
         return VAL_TEST_PREP_SEQ_FAILED;
     }
     realm_test[vmid].rd = realm_init.rd;
@@ -96,7 +96,7 @@ static uint64_t ipa_valid_prep_sequence(void)
 
     if (create_mapping(IPA_ADDR_UNPROTECTED_UNASSIGNED, false, c_args.rd_valid))
     {
-        LOG(ERROR, "\tCouldn't create mapping\n", 0, 0);
+        LOG(ERROR, "Couldn't create mapping\n");
         return VAL_TEST_PREP_SEQ_FAILED;
     }
     return IPA_ADDR_UNPROTECTED_UNASSIGNED;
@@ -163,7 +163,7 @@ static uint64_t g_rec_ready_prep_sequence(uint64_t rd)
 
     if (val_host_rec_create_common(&realm, &rec_params))
     {
-        LOG(ERROR, "\tREC create failed\n", 0, 0);
+        LOG(ERROR, "REC create failed\n");
         return VAL_TEST_PREP_SEQ_FAILED;
     }
 
@@ -337,7 +337,7 @@ static uint64_t intent_to_seq(struct stimulus *test_data, struct arguments *args
 
         default:
             /* set status to failure */
-            LOG(ERROR, "\n\tUnknown intent label encountered\n", 0, 0);
+            LOG(ERROR, "Unknown intent label encountered\n");
             return VAL_ERROR;
     }
     return VAL_SUCCESS;
@@ -359,9 +359,8 @@ void cmd_rtt_map_unprotected_host(void)
     /* Iterate over the input */
     for (i = 0; i < (sizeof(test_data) / sizeof(struct stimulus)); i++)
     {
-        LOG(TEST, "\n\tCheck %d : ", i + 1, 0);
-        LOG(TEST, test_data[i].msg, 0, 0);
-        LOG(TEST, "; intent id : 0x%x \n", test_data[i].label, 0);
+        LOG(TEST, "Check %2d : %s; intent id : 0x%x \n",
+              i + 1, test_data[i].msg, test_data[i].label);
 
         if (intent_to_seq(&test_data[i], &args)) {
             val_set_status(RESULT_FAIL(VAL_ERROR_POINT(2)));
@@ -371,7 +370,7 @@ void cmd_rtt_map_unprotected_host(void)
         ret = val_host_rmi_rtt_map_unprotected(args.rd, args.ipa, args.level, args.desc);
 
         if (ret != PACK_CODE(test_data[i].status, test_data[i].index)) {
-            LOG(ERROR, "\tTest Failure!\n\tThe ABI call returned: %x\n\tExpected: %x\n",
+            LOG(ERROR, "Test Failure!The ABI call returned: %xExpected: %x\n",
                 ret, PACK_CODE(test_data[i].status, test_data[i].index));
             val_set_status(RESULT_FAIL(VAL_ERROR_POINT(3)));
             goto exit;
@@ -382,24 +381,24 @@ void cmd_rtt_map_unprotected_host(void)
     ret = val_host_rmi_rtt_read_entry(c_args.rd_valid, c_args.ipa_valid,
                                       c_args.level_valid, &rtte);
     if (ret) {
-        LOG(ERROR, "\tREAD_ENTRY failed with ret value: %d\n", ret, 0);
+        LOG(ERROR, "READ_ENTRY failed with ret value: %d\n", ret);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(4)));
         goto exit;
     } else {
         if (rtte.state != RMI_UNASSIGNED || rtte.desc == c_args.desc_valid) {
-            LOG(ERROR, "\tUnexpected RTT entry.\n", 0, 0);
-            LOG(ERROR, "\tState is: %d & desc is: %x\n", rtte.state, rtte.desc);
+            LOG(ERROR, "Unexpected RTT entry.\n");
+            LOG(ERROR, "State is: %d & desc is: %x\n", rtte.state, rtte.desc);
             val_set_status(RESULT_FAIL(VAL_ERROR_POINT(5)));
             goto exit;
         }
     }
 
-    LOG(TEST, "\n\tPositive Observability Check\n", 0, 0);
+    LOG(TEST, "Check %2d : Positive Observability\n", ++i);
     ret = val_host_rmi_rtt_map_unprotected(c_args.rd_valid, c_args.ipa_valid,
                                       c_args.level_valid, c_args.desc_valid);
     /* Valid call should give success if footprints have not changed */
     if (ret != 0) {
-        LOG(ERROR, "\n\tPositive Observability Check failed\n", 0, 0);
+        LOG(ERROR, "Positive Observability Check failed\n");
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(6)));
         goto exit;
     }
@@ -408,24 +407,24 @@ void cmd_rtt_map_unprotected_host(void)
     ret = val_host_rmi_rtt_read_entry(c_args.rd_valid, c_args.ipa_valid,
                                       c_args.level_valid, &rtte);
     if (ret) {
-        LOG(ERROR, "\tREAD_ENTRY failed with ret value: %d\n", ret, 0);
+        LOG(ERROR, "READ_ENTRY failed with ret value: %d\n", ret);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(7)));
         goto exit;
     } else {
         if (rtte.state != RMI_VALIDN_NS || rtte.desc != c_args.desc_valid) {
-            LOG(ERROR, "\tUnexpected RTT entry.\n", 0, 0);
-            LOG(ERROR, "\tState is: %d & desc is: %x\n", rtte.state, rtte.desc);
+            LOG(ERROR, "Unexpected RTT entry.\n");
+            LOG(ERROR, "State is: %d & desc is: %x\n", rtte.state, rtte.desc);
             val_set_status(RESULT_FAIL(VAL_ERROR_POINT(8)));
             goto exit;
         }
     }
 
-    LOG(TEST, "\n\tNegative Observability Check\n", 0, 0);
+    LOG(TEST, "Check %2d : Negative Observability\n", ++i);
     ret = val_host_rmi_rtt_map_unprotected(c_args.rd_valid, c_args.ipa_valid,
                                       c_args.level_valid, c_args.desc_valid);
     /* Now the command should fail with the same parameters (footprint has changed) */
     if (ret == 0) {
-        LOG(ERROR, "\n\t Negative Observablity Check failed", 0, 0);
+        LOG(ERROR, " Negative Observablity Check failed\n");
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(9)));
         goto exit;
     }

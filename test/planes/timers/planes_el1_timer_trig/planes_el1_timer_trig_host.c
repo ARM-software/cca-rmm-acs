@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (c) 2024, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2024-2025, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -23,7 +23,7 @@ void planes_el1_timer_trig_host(void)
     /* Skip if RMM do not support planes */
     if (!val_host_rmm_supports_planes())
     {
-        LOG(ALWAYS, "\n\tPlanes feature not supported\n", 0, 0);
+        LOG(ALWAYS, "Planes feature not supported\n");
         val_set_status(RESULT_SKIP(VAL_SKIP_CHECK));
         goto destroy_realm;
     }
@@ -44,11 +44,11 @@ void planes_el1_timer_trig_host(void)
 
     val_memcpy(&realm.flags1, &realm_flags, sizeof(realm.flags1));
 
-    LOG(DBG, "\t INFO: RTT tree per plane : %d\n", realm_flags.rtt_tree_pp, 0);
+    LOG(DBG, " INFO: RTT tree per plane : %d\n", realm_flags.rtt_tree_pp);
     /* Populate realm with one REC*/
     if (val_host_realm_setup(&realm, true))
     {
-        LOG(ERROR, "\tRealm setup failed\n", 0, 0);
+        LOG(ERROR, "Realm setup failed\n");
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(1)));
         goto destroy_realm;
     }
@@ -60,14 +60,14 @@ void planes_el1_timer_trig_host(void)
     ret = val_host_rmi_rec_enter(realm.rec[0], realm.run[0]);
     if (ret)
     {
-        LOG(ERROR, "\tRec enter failed, ret=%x\n", ret, 0);
+        LOG(ERROR, "Rec enter failed, ret=%x\n", ret);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(2)));
         goto destroy_realm;
     }
 
    /* Check that REC exit was due S2AP change request */
     if (rec_exit->exit_reason != RMI_EXIT_S2AP_CHANGE) {
-        LOG(ERROR, "\tUnexpected REC exit, %d. ESR: %lx \n", rec_exit->exit_reason, rec_exit->esr);
+        LOG(ERROR, "Unexpected REC exit, %d. ESR: %lx \n", rec_exit->exit_reason, rec_exit->esr);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(3)));
         goto destroy_realm;
     }
@@ -83,7 +83,7 @@ void planes_el1_timer_trig_host(void)
     if ((rec_exit->exit_reason != RMI_EXIT_IRQ) || (rec_exit->cntp_ctl != exp_cntp_ctl)
                                 || rec_exit->esr)
     {
-        LOG(ERROR, "\tRec exit params mismatch, exit_reason=%x esr %lx\n",
+        LOG(ERROR, "Rec exit params mismatch, exit_reason=%x esr %lx\n",
                         rec_exit->exit_reason, rec_exit->cntp_ctl);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(6)));
     }
@@ -98,14 +98,14 @@ void planes_el1_timer_trig_host(void)
     ret = val_host_rmi_rec_enter(realm.rec[0], realm.run[0]);
     if (ret)
     {
-        LOG(ERROR, "\tRec enter failed, ret=%x\n", ret, 0);
+        LOG(ERROR, "Rec enter failed, ret=%x\n", ret);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(7)));
         goto destroy_realm;
     }
 
     /* Check that REC exit was due to Host call form P0 after completing test */
     if (rec_exit->exit_reason != RMI_EXIT_HOST_CALL) {
-        LOG(ERROR, "\tUnexpected REC exit, %d. ESR: %lx \n", rec_exit->exit_reason, rec_exit->esr);
+        LOG(ERROR, "Unexpected REC exit, %d. ESR: %lx \n", rec_exit->exit_reason, rec_exit->esr);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(8)));
         goto destroy_realm;
     }

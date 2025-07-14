@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2025, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -20,5 +20,6 @@ void val_host_main(bool primary_cpu_boot);
 uint32_t val_host_execute_secure_payload(void);
 uint32_t val_host_realm_printf_msg_service(void);
 void val_host_set_reboot_flag(void);
-uint32_t val_host_get_last_run_test_info(val_test_info_ts *test_info);
+uint32_t val_host_get_last_run_test_info(test_info_t *test_info);
+
 #endif /* _VAL_HOST_FRAMEWORK_H_ */

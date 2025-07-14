@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2024-2025, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -27,7 +27,7 @@ static void p0_payload(void)
     if (val_realm_plane_perm_init(PLANE_1_INDEX, PLANE_1_PERMISSION_INDEX, p1_ipa_base,
                                                                              p1_ipa_top))
     {
-        LOG(ERROR, "Secondary plane permission initialization failed\n", 0, 0);
+        LOG(ERROR, "Secondary plane permission initialization failed\n");
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(1)));
         goto exit;
     }
@@ -50,7 +50,7 @@ static void p0_payload(void)
         ESR_EL2_EC(esr) != ESR_EL2_EC_SMC ||
         run_ptr.exit.gprs[0] != RSI_HOST_CALL)
     {
-        LOG(ERROR, "Invalid exit type: %d, ESR: 0x%lx",
+        LOG(ERROR, "Invalid exit type: %d, ESR: 0x%lx\n",
                                              run_ptr.exit.reason, run_ptr.exit.esr_el2);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(3)));
         goto exit;
@@ -65,7 +65,7 @@ static void p1_payload(void)
     /* Execute RSI_HOST_CALL */
     val_realm_rsi_host_call(VAL_SWITCH_TO_HOST);
 
-    LOG(ERROR, "HOST CALL was not intercepted, Exiting Plane\n", 0, 0);
+    LOG(ERROR, "HOST CALL was not intercepted, Exiting Plane\n");
     val_set_status(RESULT_FAIL(VAL_ERROR_POINT(4)));
     val_realm_return_to_p0();
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023-2024, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023-2025, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -33,7 +33,7 @@ static uint64_t validate_realm_pub_key(UsefulBufC KeyBstr)
     /* Realm public key is a CBOR map*/
     if (status == QCBOR_SUCCESS && item.uDataType != QCBOR_TYPE_MAP)
     {
-        LOG(ERROR, "Unidentified Realm Public Key format\n", 0, 0);
+        LOG(ERROR, "Unidentified Realm Public Key format\n");
         return VAL_ERROR;
     }
 
@@ -49,14 +49,14 @@ static uint64_t validate_realm_pub_key(UsefulBufC KeyBstr)
     /* Check if Decoding finished successfully */
     if (QCBORDecode_Finish(&ctx) != QCBOR_SUCCESS)
     {
-        LOG(ERROR, "Realm Public key decoding failed\n", 0, 0);
+        LOG(ERROR, "Realm Public key decoding failed\n");
         return VAL_ERROR;
     }
 
     /* The Realm Public Key object must contain key type */
     if (!pub_key_type_present)
     {
-        LOG(ERROR, "Key type should be present in the Realm Public Key object\n", 0, 0);
+        LOG(ERROR, "Key type should be present in the Realm Public Key object\n");
         return VAL_ERROR;
     }
 
@@ -96,13 +96,13 @@ static uint64_t parse_claims_realm_token(attestation_token_ts *attestation_token
                     /* Given challenge vs challenge in token */
                     if (UsefulBuf_Compare(item.val.string, completed_challenge))
                     {
-                        LOG(ERROR, "\tRealm challenge and given challenge are not same.", 0, 0);
+                        LOG(ERROR, "Realm challenge and given challenge are not same.\n");
                         return VAL_ERROR;
                     }
                 }
                 else
                 {
-                    LOG(ERROR, "\tRealm challenge is not in expected format.", 0, 0);
+                    LOG(ERROR, "Realm challenge is not in expected format.\n");
                     return VAL_ERROR;
                 }
             }
@@ -111,12 +111,12 @@ static uint64_t parse_claims_realm_token(attestation_token_ts *attestation_token
                 mandatory_realm_claims = mandatory_realm_claims + 1;
                 if (item.uDataType != QCBOR_TYPE_BYTE_STRING)
                 {
-                    LOG(ERROR, "\tRealm personalization value is not in expected format.", 0, 0);
+                    LOG(ERROR, "Realm personalization value is not in expected format.\n");
                     return VAL_ERROR;
                 }
                 if (item.val.string.len != CCA_BYTE_SIZE_64)
                 {
-                    LOG(ERROR, "\tRealm personalization value size is incorrect.", 0, 0);
+                    LOG(ERROR, "Realm personalization value size is incorrect.\n");
                     return VAL_ERROR;
                 }
                 attestation_token->rpv = item.val.string;
@@ -126,14 +126,14 @@ static uint64_t parse_claims_realm_token(attestation_token_ts *attestation_token
                 mandatory_realm_claims = mandatory_realm_claims + 1;
                 if (item.uDataType != QCBOR_TYPE_BYTE_STRING)
                 {
-                    LOG(ERROR, "\tRealm initial measurement is not in expected format.", 0, 0);
+                    LOG(ERROR, "Realm initial measurement is not in expected format.\n");
                     return VAL_ERROR;
                 }
                 if (item.val.string.len != CCA_BYTE_SIZE_32 &&
                     item.val.string.len != CCA_BYTE_SIZE_48 &&
                     item.val.string.len != CCA_BYTE_SIZE_64)
                 {
-                    LOG(ERROR, "\tRealm initial measurement is not in given size format.", 0, 0);
+                    LOG(ERROR, "Realm initial measurement is not in given size format.\n");
                     return VAL_ERROR;
                 }
                 attestation_token->realm_initial_measurement = item.val.string;
@@ -143,13 +143,13 @@ static uint64_t parse_claims_realm_token(attestation_token_ts *attestation_token
                 mandatory_realm_claims = mandatory_realm_claims + 1;
                 if (item.uDataType != QCBOR_TYPE_BYTE_STRING)
                 {
-                    LOG(ERROR, "\tRealm public key is not in expected format.", 0, 0);
+                    LOG(ERROR, "Realm public key is not in expected format.\n");
                     return VAL_ERROR;
                 }
 
                 /* Realm public key should be of type COSE_Key defined in RFC 8152 protocol*/
                 if (validate_realm_pub_key(item.val.string)) {
-                    LOG(ERROR, "\tRealm public key is not in expected format.", 0, 0);
+                    LOG(ERROR, "Realm public key is not in expected format.\n");
                     return VAL_ERROR;
                 }
             }
@@ -159,7 +159,7 @@ static uint64_t parse_claims_realm_token(attestation_token_ts *attestation_token
                 mandatory_realm_claims = mandatory_realm_claims + 1;
                 if (item.uDataType != QCBOR_TYPE_TEXT_STRING)
                 {
-                    LOG(ERROR, "\tRealm hash algo/public key hash algo id is \
+                    LOG(ERROR, "Realm hash algo/public key hash algo id is \
                                             not in expected format.", 0, 0);
                     return VAL_ERROR;
                 }
@@ -169,7 +169,7 @@ static uint64_t parse_claims_realm_token(attestation_token_ts *attestation_token
                 mandatory_realm_claims = mandatory_realm_claims + 1;
                 if (item.uDataType != QCBOR_TYPE_ARRAY)
                 {
-                    LOG(ERROR, "\tRealm extensible measurement is not in expected format.", 0, 0);
+                    LOG(ERROR, "Realm extensible measurement is not in expected format.\n");
                     return VAL_ERROR;
                 }
 
@@ -222,7 +222,7 @@ static uint64_t parse_claims_platform_token(attestation_token_ts *attestation_to
 
                 if (item.uDataType != QCBOR_TYPE_TEXT_STRING)
                 {
-                    LOG(ERROR, "\tPlatform token profile/verification-service/hash algo is \
+                    LOG(ERROR, "Platform token profile/verification-service/hash algo is \
                                                          not in expected format.", 0, 0);
                     return VAL_ERROR;
                 }
@@ -233,14 +233,14 @@ static uint64_t parse_claims_platform_token(attestation_token_ts *attestation_to
 
                 if (item.uDataType != QCBOR_TYPE_BYTE_STRING)
                 {
-                    LOG(ERROR, "\tPlatform challenge is not in expected format.", 0, 0);
+                    LOG(ERROR, "Platform challenge is not in expected format.\n");
                     return VAL_ERROR;
                 }
                 if (item.val.string.len != CCA_BYTE_SIZE_32 &&
                     item.val.string.len != CCA_BYTE_SIZE_48 &&
                     item.val.string.len != CCA_BYTE_SIZE_64)
                 {
-                    LOG(ERROR, "\tPlatform challenge size is incorrect.", 0, 0);
+                    LOG(ERROR, "Platform challenge size is incorrect.\n");
                     return VAL_ERROR;
                 }
                 attestation_token->platform_attest_challenge = item.val.string;
@@ -250,12 +250,12 @@ static uint64_t parse_claims_platform_token(attestation_token_ts *attestation_to
                 mandatory_platform_claims = mandatory_platform_claims + 1;
                 if (item.uDataType != QCBOR_TYPE_BYTE_STRING)
                 {
-                    LOG(ERROR, "\tPlatform implementation id is not in expected format.", 0, 0);
+                    LOG(ERROR, "Platform implementation id is not in expected format.\n");
                     return VAL_ERROR;
                 }
                 if (item.val.string.len != CCA_BYTE_SIZE_32)
                 {
-                    LOG(ERROR, "\tPlatform implementation id size is incorrect.", 0, 0);
+                    LOG(ERROR, "Platform implementation id size is incorrect.\n");
                     return VAL_ERROR;
                 }
             }
@@ -264,12 +264,12 @@ static uint64_t parse_claims_platform_token(attestation_token_ts *attestation_to
                 mandatory_platform_claims = mandatory_platform_claims + 1;
                 if (item.uDataType != QCBOR_TYPE_BYTE_STRING)
                 {
-                    LOG(ERROR, "\tPlatform instance id is not in expected format.", 0, 0);
+                    LOG(ERROR, "Platform instance id is not in expected format.\n");
                     return VAL_ERROR;
                 }
                 if (item.val.string.len != CCA_BYTE_SIZE_33)
                 {
-                    LOG(ERROR, "\tPlatform instance id size is incorrect.", 0, 0);
+                    LOG(ERROR, "Platform instance id size is incorrect.\n");
                     return VAL_ERROR;
                 }
             }
@@ -278,7 +278,7 @@ static uint64_t parse_claims_platform_token(attestation_token_ts *attestation_to
                 mandatory_platform_claims = mandatory_platform_claims + 1;
                 if (item.uDataType != QCBOR_TYPE_BYTE_STRING)
                 {
-                    LOG(ERROR, "\tPlatform config is not in expected format.", 0, 0);
+                    LOG(ERROR, "Platform config is not in expected format.\n");
                     return VAL_ERROR;
                 }            }
             else if (item.label.int64 == CCA_PLATFORM_LIFECYCLE)
@@ -286,7 +286,7 @@ static uint64_t parse_claims_platform_token(attestation_token_ts *attestation_to
                 mandatory_platform_claims = mandatory_platform_claims + 1;
                 if (item.uDataType != QCBOR_TYPE_INT64)
                 {
-                    LOG(ERROR, "\tPlatform lifecycle is not in expected format.", 0, 0);
+                    LOG(ERROR, "Platform lifecycle is not in expected format.\n");
                     return VAL_ERROR;
                 }            }
             else if (item.label.int64 == CCA_PLATFORM_SW_COMPONENTS)
@@ -294,7 +294,7 @@ static uint64_t parse_claims_platform_token(attestation_token_ts *attestation_to
                 mandatory_platform_claims = mandatory_platform_claims + 1;
                 if (item.uDataType != QCBOR_TYPE_ARRAY)
                 {
-                    LOG(ERROR, "\tSoftware components is not in expected format.", 0, 0);
+                    LOG(ERROR, "Software components is not in expected format.\n");
                     return VAL_ERROR;
                 }
                 sw_comp_count = item.val.uCount;
@@ -314,7 +314,7 @@ static uint64_t parse_claims_platform_token(attestation_token_ts *attestation_to
                             mandatory_sw_comp_fields++;
                             if (item.uDataType != QCBOR_TYPE_TEXT_STRING)
                             {
-                                LOG(ERROR, "\tSoftware component type/version/algorithm is \
+                                LOG(ERROR, "Software component type/version/algorithm is \
                                                          not in expected format.", 0, 0);
                                 return VAL_ERROR;
                             }
@@ -325,7 +325,7 @@ static uint64_t parse_claims_platform_token(attestation_token_ts *attestation_to
                             mandatory_sw_comp_fields++;
                             if (item.uDataType != QCBOR_TYPE_BYTE_STRING)
                             {
-                                LOG(ERROR, "\tSoftware component measurement value/signer is \
+                                LOG(ERROR, "Software component measurement value/signer is \
                                                             not in expected format.", 0, 0);
                                 return VAL_ERROR;
                             }
@@ -336,14 +336,14 @@ static uint64_t parse_claims_platform_token(attestation_token_ts *attestation_to
                             status = QCBORDecode_GetNext(decode_context, &item);
                             if (status != VAL_SUCCESS)
                             {
-                                LOG(ERROR, "\tNo next software components available.", 0, 0);
+                                LOG(ERROR, "No next software components available.\n");
                                 return VAL_ERROR;
                             }
                         }
                     } /*for (i = 0; i <= count; i++)*/
 
                     if (mandatory_sw_comp_fields < 2) {
-                        LOG(ERROR, "\t mandatory sw_components fields are absent\n", 0, 0);
+                        LOG(ERROR, " mandatory sw_components fields are absent\n");
                         return VAL_ERROR;
                     }
 
@@ -362,7 +362,7 @@ static uint64_t parse_claims_platform_token(attestation_token_ts *attestation_to
         return VAL_SUCCESS;
     else
     {
-        LOG(ERROR, "\tRealm challenge is not in expected format.", 0, 0);
+        LOG(ERROR, "Realm challenge is not in expected format.\n");
         return VAL_ERROR;
     }
 }
@@ -415,7 +415,7 @@ uint64_t val_attestation_verify_token(attestation_token_ts *attestation_token,
     if (item.uDataType != QCBOR_TYPE_MAP || item.val.uCount != 2 ||
         !QCBORDecode_IsTagged(&decode_context, &item, 399))
     {
-        LOG(ERROR, "\t Attestation token error formatting", 0, 0);
+        LOG(ERROR, " Attestation token error formatting\n");
         return VAL_ERROR;
     }
 
@@ -423,7 +423,7 @@ uint64_t val_attestation_verify_token(attestation_token_ts *attestation_token,
     QCBORDecode_GetNext(&decode_context, &item);
     if (item.uDataType != QCBOR_TYPE_BYTE_STRING || item.label.int64 != CCA_PLATFORM_TOKEN)
     {
-        LOG(ERROR, "\t Attestation token error formatting", 0, 0);
+        LOG(ERROR, " Attestation token error formatting\n");
         return VAL_ERROR;
     }
 
@@ -433,7 +433,7 @@ uint64_t val_attestation_verify_token(attestation_token_ts *attestation_token,
     QCBORDecode_GetNext(&decode_context, &item);
     if (item.uDataType != QCBOR_TYPE_BYTE_STRING  || item.label.int64 != CCA_REALM_TOKEN)
     {
-        LOG(ERROR, "\t Attestation token error formatting", 0, 0);
+        LOG(ERROR, " Attestation token error formatting\n");
         return VAL_ERROR;
     }
 
@@ -448,7 +448,7 @@ uint64_t val_attestation_verify_token(attestation_token_ts *attestation_token,
     if (item.uDataType != QCBOR_TYPE_ARRAY || item.val.uCount != 4 ||
             !QCBORDecode_IsTagged(&decode_context, &item, CBOR_TAG_COSE_SIGN1))
     {
-        LOG(ERROR, "\t Attestation token error formatting", 0, 0);
+        LOG(ERROR, " Attestation token error formatting\n");
         return VAL_ERROR;
     }
     status = QCBORDecode_GetNext(&decode_context, &item);
@@ -466,7 +466,7 @@ uint64_t val_attestation_verify_token(attestation_token_ts *attestation_token,
     status = QCBORDecode_GetNext(&decode_context, &item);
     if (item.uDataType != QCBOR_TYPE_MAP)
     {
-        LOG(ERROR, "\t Attestation token error formatting", 0, 0);
+        LOG(ERROR, " Attestation token error formatting\n");
         return VAL_ERROR;
     }
     /* Parse the payload and check the data type of each claim */
@@ -483,7 +483,7 @@ uint64_t val_attestation_verify_token(attestation_token_ts *attestation_token,
     if (item.uDataType != QCBOR_TYPE_ARRAY || item.val.uCount != 4 ||
             !QCBORDecode_IsTagged(&decode_context, &item, CBOR_TAG_COSE_SIGN1))
     {
-        LOG(ERROR, "\t Attestation token error formatting", 0, 0);
+        LOG(ERROR, " Attestation token error formatting\n");
         return VAL_ERROR;
     }
 
@@ -498,7 +498,7 @@ uint64_t val_attestation_verify_token(attestation_token_ts *attestation_token,
     status = QCBORDecode_GetNext(&decode_context, &item);
     if (item.uDataType != QCBOR_TYPE_MAP)
     {
-        LOG(ERROR, "\t Attestation token error formatting", 0, 0);
+        LOG(ERROR, " Attestation token error formatting\n");
         return VAL_ERROR;
     }
 
@@ -510,12 +510,12 @@ uint64_t val_attestation_verify_token(attestation_token_ts *attestation_token,
 
     if (mandatory_realm_claims != 7)
     {
-        LOG(ERROR, "\t mandatory realm claims are absent.", 0, 0);
+        LOG(ERROR, " mandatory realm claims are absent.\n");
         return VAL_ERROR;
     }
 
     if (!(mandatory_platform_claims >= 8)) {
-        LOG(ERROR, "\t mandatory platform claims are absent.", 0, 0);
+        LOG(ERROR, " mandatory platform claims are absent.\n");
         return VAL_ERROR;
     }
 

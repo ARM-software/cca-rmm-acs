@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2025, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -23,14 +23,14 @@ void attestation_rem_extend_check_realm(void)
     args = val_realm_rsi_measurement_read(1);
     if (args.x0)
     {
-        LOG(ERROR, "\tRSI measurement read failed, ret=%x\n", args.x0, 0);
+        LOG(ERROR, "RSI measurement read failed, ret=%x\n", args.x0);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(1)));
         goto exit;
     }
 
     /* Compare command output with zero initialized structure, REM values should not zero */
     if (!val_memcmp(&args, &zero_ref, sizeof(args))) {
-        LOG(ERROR, "\t Output arguments are zero \n", 0, 0);
+        LOG(ERROR, " Output arguments are zero \n");
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(2)));
         goto exit;
     }

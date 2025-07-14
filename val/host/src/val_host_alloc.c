@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023-2024, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023-2025, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -47,7 +47,7 @@ void *mem_alloc(size_t alignment, size_t size)
 
     if ((heap_top - heap_base) < size)
     {
-       LOG(ERROR, "Not enough space available\n", 0, 0);
+       LOG(ERROR, "Not enough space available\n");
        return NULL;
     }
 
@@ -82,13 +82,13 @@ void *val_host_mem_alloc(size_t alignment, size_t size)
 
   if (size <= 0)
   {
-    LOG(ERROR, "size must be non-zero value\n", 0, 0);
+    LOG(ERROR, "size must be non-zero value\n");
     return NULL;
   }
 
   if (!val_is_power_of_2((uint32_t)alignment))
   {
-    LOG(ERROR, "Alignment must be power of 2\n", 0, 0);
+    LOG(ERROR, "Alignment must be power of 2\n");
     return NULL;
   }
 

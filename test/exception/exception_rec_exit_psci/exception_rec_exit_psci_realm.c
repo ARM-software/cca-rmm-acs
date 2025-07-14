@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2025, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -89,7 +89,7 @@ void exception_rec_exit_psci_realm(void)
     mpidr = 1;
     /* get the second rec affinity*/
     affinity = EXCEPTION_AFFINITY_FROM_MPIDR(mpidr);
-    LOG(TEST, "\tAffinity info: mpidr : 0x%x, affinity : %d  \n",\
+    LOG(TEST, "Affinity info: mpidr : 0x%x, affinity : %d  \n",\
               mpidr, affinity);
     /* testing the rec exit dueto psci affinity info */
     val_psci_affinity_info(affinity, 0);
@@ -101,8 +101,8 @@ void exception_rec_exit_psci_realm(void)
     {
         if (gGPRS[index] != lGPRS[index])
         {
-            LOG(TEST, "\tPSCI check, the gprs value is corrupted, \
-                              hence testcase failed : line %d\n", __LINE__, 0);
+            LOG(TEST, "PSCI check, the gprs value is corrupted, \
+                              hence testcase failed : line %d\n", __LINE__);
             val_set_status(RESULT_FAIL(VAL_ERROR_POINT(1)));
             goto test_exit;
         }
@@ -112,13 +112,13 @@ void exception_rec_exit_psci_realm(void)
     ret = val_psci_cpu_on(affinity, val_realm_get_secondary_cpu_entry(), CONTEXT_ID);
     if (ret != PSCI_E_DENIED)
     {
-        LOG(ERROR, "\n\tInvalid PSCI return code : ret = 0x%x \n", ret, 0);
+        LOG(ERROR, "Invalid PSCI return code : ret = 0x%x \n", ret);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(2)));
         goto test_exit;
     }
 
 
-    LOG(ALWAYS, "\tREALM PSCI Trigger checks are verified \n", 0, 0);
+    LOG(TEST, "REALM PSCI Trigger checks are verified \n");
 
 test_exit:
     val_realm_return_to_host();

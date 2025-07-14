@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2025, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -50,7 +50,7 @@ static uint64_t g_rd_new_prep_sequence(uint16_t vmid)
 
     if (val_host_realm_create_common(&realm_init))
     {
-        LOG(ERROR, "\tRealm create failed\n", 0, 0);
+        LOG(ERROR, "Realm create failed\n");
         return VAL_TEST_PREP_SEQ_FAILED;
     }
     realm_test[vmid].rd = realm_init.rd;
@@ -71,7 +71,7 @@ static uint64_t g_rec_ready_prep_sequence(uint64_t rd)
 
     if (val_host_rec_create_common(&realm, &rec_params))
     {
-        LOG(ERROR, "\tREC Create failed\n", 0, 0);
+        LOG(ERROR, "REC Create failed\n");
         return VAL_TEST_PREP_SEQ_FAILED;
     }
     return realm.rec[0];
@@ -141,7 +141,7 @@ static uint64_t intent_to_seq(struct stimulus *test_data, struct arguments *args
             break;
 
         default:
-            LOG(ERROR, "\n\tUnknown intent label encountered\n", 0, 0);
+            LOG(ERROR, "Unknown intent label encountered\n");
             return VAL_ERROR;
     }
 
@@ -167,9 +167,8 @@ void cmd_granule_undelegate_host(void)
 
     for (i = 0; i < (sizeof(test_data) / sizeof(struct stimulus)); i++)
     {
-        LOG(TEST, "\n\tCheck %d : ", i + 1, 0);
-        LOG(TEST, test_data[i].msg, 0, 0);
-        LOG(TEST, "; intent id : 0x%x \n", test_data[i].label, 0);
+        LOG(TEST, "Check %2d : %s; intent id : 0x%x \n",
+              i + 1, test_data[i].msg, test_data[i].label);
 
         if (intent_to_seq(&test_data[i], &args)) {
             val_set_status(RESULT_FAIL(VAL_ERROR_POINT(3)));
@@ -179,28 +178,27 @@ void cmd_granule_undelegate_host(void)
         ret = val_host_rmi_granule_undelegate(args.addr);
 
         if (ret != PACK_CODE(test_data[i].status, test_data[i].index)) {
-            LOG(ERROR, "\tTest Failure!\n\tThe ABI call returned: %x\n\tExpected: %x\n",
+            LOG(ERROR, "Test Failure!The ABI call returned: %xExpected: %x\n",
                 ret, PACK_CODE(test_data[i].status, test_data[i].index));
             val_set_status(RESULT_FAIL(VAL_ERROR_POINT(3)));
             goto exit;
         }
     }
 
-    LOG(TEST, "\n\tPositive Observability Check\n", 0, 0);
+    LOG(TEST, "Check %2d : Positive Observability\n", ++i);
     ret = val_host_rmi_granule_undelegate(c_args.addr_valid);
     if (ret != 0)
     {
-        LOG(ERROR, "\n\tGranule undelegate command failed, ret value is: %x\n", ret, 0);
+        LOG(ERROR, "Granule undelegate command failed, ret value is: %x\n", ret);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(5)));
         goto exit;
     }
 
-    LOG(TEST, "\n\tNegative Observability Check\n", 0, 0);
+    LOG(TEST, "Check %2d : Negative Observability\n", ++i);
     ret = val_host_rmi_granule_undelegate(c_args.addr_valid);
     if (ret == 0)
     {
-        LOG(ERROR, "\n\tGranule undelegate command should have failed, ret value is: %x\n",
-                                                                                   ret, 0);
+        LOG(ERROR, "Granule undelegate command should have failed, ret value is: %x\n", ret);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(6)));
         goto exit;
     }
@@ -210,7 +208,7 @@ void cmd_granule_undelegate_host(void)
      */
     if (create_mapping(IPA_ADDR_DATA1, true, c_args_invalid.rd_gran))
     {
-        LOG(ERROR, "\tCouldn't create the mapping\n", 0, 0);
+        LOG(ERROR, "Couldn't create the mapping\n");
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(7)));
         goto exit;
     }
@@ -222,28 +220,28 @@ void cmd_granule_undelegate_host(void)
 
     if (val_host_rmi_data_create(c_args_invalid.rd_gran, data, IPA_ADDR_DATA1, src, flags))
     {
-        LOG(ERROR, "\tCouldn't complete the assigned protected mapping\n", 0, 0);
+        LOG(ERROR, "Couldn't complete the assigned protected mapping\n");
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(8)));
         goto exit;
     }
 
     if (val_host_rmi_data_destroy(c_args_invalid.rd_gran, IPA_ADDR_DATA1, &data_destroy))
     {
-        LOG(ERROR, "\tdata destroy failed\n", 0, 0);
+        LOG(ERROR, "data destroy failed\n");
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(9)));
         goto exit;
     }
 
     if (val_host_rmi_granule_undelegate(data))
     {
-        LOG(ERROR, "\tGranule undelegated failed\n", 0, 0);
+        LOG(ERROR, "Granule undelegated failed\n");
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(10)));
         goto exit;
     }
 
     if (!val_memcmp((void *)src, (void *)data, PAGE_SIZE))
     {
-        LOG(ERROR, "\t src and data contents are matched, i.e. contents are not wiped\n", 0, 0);
+        LOG(ERROR, " src and data contents are matched, i.e. contents are not wiped\n");
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(11)));
         goto exit;
     }
@@ -253,7 +251,7 @@ void cmd_granule_undelegate_host(void)
      */
     if (val_host_realm_destroy(c_args_invalid.rd_gran))
     {
-        LOG(ERROR, "\t realm destroy failed", 0, 0);
+        LOG(ERROR, " realm destroy failed\n");
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(12)));
         goto exit;
     }

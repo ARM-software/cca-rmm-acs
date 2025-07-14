@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023-2024, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023-2025, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -22,7 +22,7 @@ uint32_t validate_rec_exit_da(val_host_rec_exit_ts *rec_exit, uint64_t hpfar,
     /* Validate exit_reason */
     if (rec_exit->exit_reason != RMI_EXIT_SYNC)
     {
-        LOG(ERROR, "\tExit_reason mismatch: %x\n", rec_exit->exit_reason, 0);
+        LOG(ERROR, "Exit_reason mismatch: %x\n", rec_exit->exit_reason);
         return VAL_ERROR;
     }
 
@@ -30,7 +30,7 @@ uint32_t validate_rec_exit_da(val_host_rec_exit_ts *rec_exit, uint64_t hpfar,
     /* Validate exit HPFAR field */
     if (VAL_EXTRACT_BITS(hpfar, 8, 63) != rec_exit->hpfar)
     {
-        LOG(ERROR, "\tREC exit HPFAR mismatch: %x\n", rec_exit->hpfar, 0);
+        LOG(ERROR, "REC exit HPFAR mismatch: %x\n", rec_exit->hpfar);
         return VAL_ERROR;
     }
 
@@ -47,7 +47,7 @@ uint32_t validate_rec_exit_da(val_host_rec_exit_ts *rec_exit, uint64_t hpfar,
                     (VAL_EXTRACT_BITS(rec_exit->esr, 6, 6) == wnr) &&
                     (VAL_EXTRACT_BITS(rec_exit->esr, 10, 10) == ESR_FnV)))
                 {
-                    LOG(ERROR, "\tREC exit params mismatch\n", 0, 0);
+                    LOG(ERROR, "REC exit params mismatch\n");
                     return VAL_ERROR;
                 }
 
@@ -61,7 +61,7 @@ uint32_t validate_rec_exit_da(val_host_rec_exit_ts *rec_exit, uint64_t hpfar,
                     VAL_EXTRACT_BITS(rec_exit->esr, 21, 21) ||  //SSE
                     VAL_EXTRACT_BITS(rec_exit->esr, 25, 25))    //IL
                 {
-                    LOG(ERROR, "\tREC exit ESR MBZ fail: esr %lx\n", rec_exit->esr, 0);
+                    LOG(ERROR, "REC exit ESR MBZ fail: esr %lx\n", rec_exit->esr);
                     return VAL_ERROR;
                 }
                 break;
@@ -73,7 +73,7 @@ uint32_t validate_rec_exit_da(val_host_rec_exit_ts *rec_exit, uint64_t hpfar,
                     (VAL_EXTRACT_BITS(rec_exit->esr, 0, 5) == dfsc) &&
                     (VAL_EXTRACT_BITS(rec_exit->esr, 26, 31) == ESR_EC_LOWER_EL)))
                 {
-                    LOG(ERROR, "\tREC exit ESR params mismatch: %lx\n", rec_exit->esr, 0);
+                    LOG(ERROR, "REC exit ESR params mismatch: %lx\n", rec_exit->esr);
                     return VAL_ERROR;
                 }
 
@@ -92,7 +92,7 @@ uint32_t validate_rec_exit_da(val_host_rec_exit_ts *rec_exit, uint64_t hpfar,
                     VAL_EXTRACT_BITS(rec_exit->esr, 6, 6) ||   //WnR
                     VAL_EXTRACT_BITS(rec_exit->esr, 25, 25))    //IL
                 {
-                    LOG(ERROR, "\tREC exit ESR MBZ fail: esr %lx\n", rec_exit->esr, 0);
+                    LOG(ERROR, "REC exit ESR MBZ fail: esr %lx\n", rec_exit->esr);
                     return VAL_ERROR;
                 }
     }
@@ -100,43 +100,43 @@ uint32_t validate_rec_exit_da(val_host_rec_exit_ts *rec_exit, uint64_t hpfar,
     /* All other exit fields are zero */
     if (val_memcmp(((char *)&tmp_exit + 1), (void *)((char *)rec_exit + 1), 0xFF))
     {
-        LOG(ERROR, "\tDA: REC exit fields MBZ fail\n", 0, 0);
+        LOG(ERROR, "DA: REC exit fields MBZ fail\n");
         return VAL_ERROR;
     }
 
     if (val_memcmp(((char *)&tmp_exit + 0x108), (void *)((char *)rec_exit + 0x108), 0x8))
     {
-        LOG(ERROR, "\tDA: REC exit fields MBZ fail\n", 0, 0);
+        LOG(ERROR, "DA: REC exit fields MBZ fail\n");
         return VAL_ERROR;
     }
 
     if (val_memcmp(((char *)&tmp_exit + 0x118), (void *)((char *)rec_exit + 0x118), 0xE8))
     {
-        LOG(ERROR, "\tDA: REC exit fields MBZ fail\n", 0, 0);
+        LOG(ERROR, "DA: REC exit fields MBZ fail\n");
         return VAL_ERROR;
     }
 
     if (val_memcmp(((char *)&tmp_exit + 0x208), (void *)((char *)rec_exit + 0x208), 0xF8))
     {
-        LOG(ERROR, "\tDA: REC exit fields MBZ fail\n", 0, 0);
+        LOG(ERROR, "DA: REC exit fields MBZ fail\n");
         return VAL_ERROR;
     }
 
     if (val_memcmp(((char *)&tmp_exit + 0x398), (void *)((char *)rec_exit + 0x398), 0x68))
     {
-        LOG(ERROR, "\tDA: REC exit fields MBZ fail\n", 0, 0);
+        LOG(ERROR, "DA: REC exit fields MBZ fail\n");
         return VAL_ERROR;
     }
 
     if (val_memcmp(((char *)&tmp_exit + 0x420), (void *)((char *)rec_exit + 0x420), 0x2E0))
     {
-        LOG(ERROR, "\tDA: REC exit fields MBZ fail\n", 0, 0);
+        LOG(ERROR, "DA: REC exit fields MBZ fail\n");
         return VAL_ERROR;
     }
 
     if (val_memcmp(((char *)&tmp_exit + 0x701), (void *)((char *)rec_exit + 0x701), 0xFF))
     {
-        LOG(ERROR, "\tDA: REC exit fields MBZ fail\n", 0, 0);
+        LOG(ERROR, "DA: REC exit fields MBZ fail\n");
         return VAL_ERROR;
     }
 
@@ -153,7 +153,7 @@ uint32_t validate_rec_exit_ia(val_host_rec_exit_ts *rec_exit, uint64_t hpfar)
     /* Validate exit_reason */
     if (rec_exit->exit_reason != RMI_EXIT_SYNC)
     {
-        LOG(ERROR, "\tExit_reason mismatch: %x\n", rec_exit->exit_reason, 0);
+        LOG(ERROR, "Exit_reason mismatch: %x\n", rec_exit->exit_reason);
         return VAL_ERROR;
     }
 
@@ -163,7 +163,7 @@ uint32_t validate_rec_exit_ia(val_host_rec_exit_ts *rec_exit, uint64_t hpfar)
         (VAL_EXTRACT_BITS(rec_exit->esr, 0, 5) == ESR_ISS_IFSC_TTF_L3) &&
         (VAL_EXTRACT_BITS(rec_exit->esr, 26, 31) == ESR_IA_EC_LOWER_EL)))
     {
-        LOG(ERROR, "\tREC exit ESR params mismatch: %lx\n", rec_exit->esr, 0);
+        LOG(ERROR, "REC exit ESR params mismatch: %lx\n", rec_exit->esr);
         return VAL_ERROR;
     }
 
@@ -171,51 +171,51 @@ uint32_t validate_rec_exit_ia(val_host_rec_exit_ts *rec_exit, uint64_t hpfar)
     if (VAL_EXTRACT_BITS(rec_exit->esr, 7, 7) ||    //S1PTW
         VAL_EXTRACT_BITS(rec_exit->esr, 10, 10))    //FnV
     {
-        LOG(ERROR, "\tREC exit ESR MBZ params mismatch: %lx\n", rec_exit->esr, 0);
+        LOG(ERROR, "REC exit ESR MBZ params mismatch: %lx\n", rec_exit->esr);
         return VAL_ERROR;
     }
 
     /* Validate exit HPFAR field */
     if (VAL_EXTRACT_BITS(hpfar, 8, 63) != rec_exit->hpfar)
     {
-        LOG(ERROR, "\tREC exit HPFAR mismatch: %x\n", rec_exit->hpfar, 0);
+        LOG(ERROR, "REC exit HPFAR mismatch: %x\n", rec_exit->hpfar);
         return VAL_ERROR;
     }
 
     /* All other exit fields are zero */
     if (val_memcmp(((char *)&tmp_exit + 1), (void *)((char *)rec_exit + 1), 0xFF))
     {
-        LOG(ERROR, "\tIA: REC exit fields MBZ fail\n", 0, 0);
+        LOG(ERROR, "IA: REC exit fields MBZ fail\n");
         return VAL_ERROR;
     }
 
     if (val_memcmp(((char *)&tmp_exit + 0x108), (void *)((char *)rec_exit + 0x108), 0x8))
     {
-        LOG(ERROR, "\tIA: REC exit fields MBZ fail\n", 0, 0);
+        LOG(ERROR, "IA: REC exit fields MBZ fail\n");
         return VAL_ERROR;
     }
 
     if (val_memcmp(((char *)&tmp_exit + 0x118), (void *)((char *)rec_exit + 0x118), 0x1E7))
     {
-        LOG(ERROR, "\tIA: REC exit fields MBZ fail\n", 0, 0);
+        LOG(ERROR, "IA: REC exit fields MBZ fail\n");
         return VAL_ERROR;
     }
 
     if (val_memcmp(((char *)&tmp_exit + 0x398), (void *)((char *)rec_exit + 0x398), 0x68))
     {
-        LOG(ERROR, "\tIA: REC exit fields MBZ fail\n", 0, 0);
+        LOG(ERROR, "IA: REC exit fields MBZ fail\n");
         return VAL_ERROR;
     }
 
     if (val_memcmp(((char *)&tmp_exit + 0x420), (void *)((char *)rec_exit + 0x420), 0x2E0))
     {
-        LOG(ERROR, "\tIA: REC exit fields MBZ fail\n", 0, 0);
+        LOG(ERROR, "IA: REC exit fields MBZ fail\n");
         return VAL_ERROR;
     }
 
     if (val_memcmp(((char *)&tmp_exit + 0x701), (void *)((char *)rec_exit + 0x701), 0xFF))
     {
-        LOG(ERROR, "\tIA: REC exit fields MBZ fail\n", 0, 0);
+        LOG(ERROR, "IA: REC exit fields MBZ fail\n");
         return VAL_ERROR;
     }
 
@@ -265,7 +265,7 @@ uint64_t val_host_set_s2ap(val_host_realm_ts *realm)
             {
                     if (create_mapping(s2ap_ipa_base, false, realm->rd))
                     {
-                        LOG(ERROR, "\tRTT_AUX_CREATE failed\n", 0, 0);
+                        LOG(ERROR, "RTT_AUX_CREATE failed\n");
                         return VAL_ERROR;
                     }
                 continue;
@@ -276,7 +276,7 @@ uint64_t val_host_set_s2ap(val_host_realm_ts *realm)
                 {
                     if (val_host_create_aux_mapping(realm->rd, s2ap_ipa_base, i + 1))
                     {
-                        LOG(ERROR, "\tRTT_AUX_CREATE failed\n", 0, 0);
+                        LOG(ERROR, "RTT_AUX_CREATE failed\n");
                         return VAL_ERROR;
                     }
                 }
@@ -284,7 +284,7 @@ uint64_t val_host_set_s2ap(val_host_realm_ts *realm)
                 continue;
             }
             else if (RMI_STATUS(cmd_ret.x0) == RMI_ERROR_INPUT) {
-                LOG(ERROR, "\nRMI_SET_S2AP failed with ret= 0x%x\n", cmd_ret.x0, 0);
+                LOG(ERROR, "RMI_SET_S2AP failed with ret= 0x%x\n", cmd_ret.x0);
                 return VAL_ERROR;
             }
 
@@ -297,7 +297,7 @@ uint64_t val_host_set_s2ap(val_host_realm_ts *realm)
         ret = val_host_rmi_rec_enter(realm->rec[0], realm->run[0]);
         if (ret)
         {
-            LOG(ERROR, "\tRec enter failed, ret=%x\n", ret, 0);
+            LOG(ERROR, "Rec enter failed, ret=%x\n", ret);
             return VAL_ERROR;
         }
     }

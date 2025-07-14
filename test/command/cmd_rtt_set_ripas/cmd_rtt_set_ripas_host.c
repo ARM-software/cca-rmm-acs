@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023-2024, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023-2025, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -59,14 +59,14 @@ static uint64_t g_rec_other_owner_prep_sequence(void)
 
     if (val_host_realm_create_common(&realm[INVALID_REALM]))
     {
-        LOG(ERROR, "\tRealm create failed\n", 0, 0);
+        LOG(ERROR, "Realm create failed\n");
         return VAL_TEST_PREP_SEQ_FAILED;
     }
 
     /* Populate realm with two RECs*/
     if (val_host_rec_create_common(&realm[INVALID_REALM], &rec_params))
     {
-        LOG(ERROR, "\tREC Create Failed\n", 0, 0);
+        LOG(ERROR, "REC Create Failed\n");
         return VAL_TEST_PREP_SEQ_FAILED;
     }
 
@@ -95,7 +95,7 @@ static uint64_t rd_valid_prep_sequence(void)
     /* Populate realm with two RECs*/
     if (val_host_realm_setup(&realm[VALID_REALM], false))
     {
-        LOG(ERROR, "\tRealm setup failed\n", 0, 0);
+        LOG(ERROR, "Realm setup failed\n");
         return VAL_TEST_PREP_SEQ_FAILED;
     }
 
@@ -107,7 +107,7 @@ static uint64_t rd_valid_prep_sequence(void)
 
     if (val_host_realm_activate(&realm[VALID_REALM]))
     {
-        LOG(ERROR, "\tRealm Activate Failed\n", 0, 0);
+        LOG(ERROR, "Realm Activate Failed\n");
         return VAL_TEST_PREP_SEQ_FAILED;
     }
 
@@ -115,12 +115,12 @@ static uint64_t rd_valid_prep_sequence(void)
     ret = val_host_rmi_rec_enter(realm[VALID_REALM].rec[0], realm[VALID_REALM].run[0]);
     if (ret)
     {
-        LOG(ERROR, "\tREC_ENTER failed with ret value: %d\n", ret, 0);
+        LOG(ERROR, "REC_ENTER failed with ret value: %d\n", ret);
         return VAL_TEST_PREP_SEQ_FAILED;
     } else if (val_host_check_realm_exit_psci((val_host_rec_run_ts *)realm[VALID_REALM].run[0],
                                 PSCI_CPU_ON_AARCH64))
     {
-        LOG(ERROR, "\tREC exit not due to PSCI_CPU_ON\n", 0, 0);
+        LOG(ERROR, "REC exit not due to PSCI_CPU_ON\n");
         return VAL_TEST_PREP_SEQ_FAILED;
     }
 
@@ -129,7 +129,7 @@ static uint64_t rd_valid_prep_sequence(void)
                                                                              PSCI_E_SUCCESS);
     if (ret)
     {
-        LOG(ERROR, "\t PSCI_COMPLETE Failed, ret=%x\n", ret, 0);
+        LOG(ERROR, " PSCI_COMPLETE Failed, ret=%x\n", ret);
         return VAL_TEST_PREP_SEQ_FAILED;
     }
 
@@ -137,12 +137,12 @@ static uint64_t rd_valid_prep_sequence(void)
     ret = val_host_rmi_rec_enter(realm[VALID_REALM].rec[0], realm[VALID_REALM].run[0]);
     if (ret)
     {
-        LOG(ERROR, "\tREC_ENTER failed with ret value: %d\n", ret, 0);
+        LOG(ERROR, "REC_ENTER failed with ret value: %d\n", ret);
         return VAL_TEST_PREP_SEQ_FAILED;
     } else if (val_host_check_realm_exit_ripas_change(
                                     (val_host_rec_run_ts *)realm[VALID_REALM].run[0]))
     {
-        LOG(ERROR, "\tRipas change req failed\n", 0, 0);
+        LOG(ERROR, "Ripas change req failed\n");
         return VAL_TEST_PREP_SEQ_FAILED;
     }
 
@@ -166,12 +166,12 @@ static uint64_t base_unaligned_prep_sequence(void)
     ret = val_host_rmi_rec_enter(realm[VALID_REALM].rec[1], realm[VALID_REALM].run[1]);
     if (ret)
     {
-        LOG(ERROR, "\tREC_ENTER failed with ret value: %d\n", ret, 0);
+        LOG(ERROR, "REC_ENTER failed with ret value: %d\n", ret);
         return VAL_TEST_PREP_SEQ_FAILED;
     } else if (val_host_check_realm_exit_ripas_change(
                                     (val_host_rec_run_ts *)realm[VALID_REALM].run[1]))
     {
-        LOG(ERROR, "\tRipas change req failed\n", 0, 0);
+        LOG(ERROR, "Ripas change req failed\n");
         return VAL_TEST_PREP_SEQ_FAILED;
     }
 
@@ -187,12 +187,12 @@ static uint64_t top_rtt_unaligned_prep_sequence(void)
     ret = val_host_rmi_rec_enter(realm[VALID_REALM].rec[1], realm[VALID_REALM].run[1]);
     if (ret)
     {
-        LOG(ERROR, "\tREC_ENTER failed with ret value: %d\n", ret, 0);
+        LOG(ERROR, "REC_ENTER failed with ret value: %d\n", ret);
         return VAL_TEST_PREP_SEQ_FAILED;
     } else if (val_host_check_realm_exit_ripas_change(
                                     (val_host_rec_run_ts *)realm[VALID_REALM].run[1]))
     {
-        LOG(ERROR, "\tRipas change req failed\n", 0, 0);
+        LOG(ERROR, "Ripas change req failed\n");
         return VAL_TEST_PREP_SEQ_FAILED;
     }
 
@@ -208,19 +208,19 @@ static uint64_t ipa_aux_live_prep_sequence(void)
     if (!val_host_rmm_supports_rtt_tree_per_plane() ||
         !val_host_rmm_supports_planes())
     {
-        LOG(ALWAYS, "\tNo support for RTT tree per plane\n", 0, 0);
+        LOG(ALWAYS, "No support for RTT tree per plane\n");
         return VAL_SKIP_CHECK;
     }
 
     ret = val_host_rmi_rec_enter(realm[VALID_REALM].rec[1], realm[VALID_REALM].run[1]);
     if (ret)
     {
-        LOG(ERROR, "\tREC_ENTER failed with ret value: %d\n", ret, 0);
+        LOG(ERROR, "REC_ENTER failed with ret value: %d\n", ret);
         return VAL_TEST_PREP_SEQ_FAILED;
     } else if (val_host_check_realm_exit_ripas_change(
                                     (val_host_rec_run_ts *)realm[VALID_REALM].run[1]))
     {
-        LOG(ERROR, "\tRipas change req failed\n", 0, 0);
+        LOG(ERROR, "Ripas change req failed\n");
         return VAL_TEST_PREP_SEQ_FAILED;
     }
 
@@ -449,7 +449,7 @@ static uint64_t intent_to_seq(struct stimulus *test_data, struct arguments *args
             break;
 
         default:
-            LOG(ERROR, "\n\tUnknown intent label encountered\n", 0, 0);
+            LOG(ERROR, "Unknown intent label encountered\n");
             return VAL_ERROR;
     }
 
@@ -469,18 +469,17 @@ void cmd_rtt_set_ripas_host(void)
 
     for (i = 0; i < (sizeof(test_data) / sizeof(struct stimulus)); i++)
     {
-        LOG(TEST, "\n\tCheck %d : ", i + 1, 0);
-        LOG(TEST, test_data[i].msg, 0, 0);
-        LOG(TEST, "; intent id : 0x%x \n", test_data[i].label, 0);
+        LOG(TEST, "Check %2d : %s; intent id : 0x%x \n",
+              i + 1, test_data[i].msg, test_data[i].label);
 
         ret = intent_to_seq(&test_data[i], &args);
         if (ret == VAL_SKIP_CHECK)
         {
-            LOG(TEST, "\tSkipping Check %d\n", i + 1, 0);
+            LOG(TEST, "Skipping Check %d\n", i + 1);
             continue;
         }
         else if (ret == VAL_ERROR) {
-            LOG(ERROR, "\n\t Intent to sequence failed \n", 0, 0);
+            LOG(ERROR, " Intent to sequence failed \n");
             val_set_status(RESULT_FAIL(VAL_ERROR_POINT(2)));
             goto exit;
         }
@@ -488,27 +487,27 @@ void cmd_rtt_set_ripas_host(void)
         ret = val_host_rmi_rtt_set_ripas(args.rd, args.rec_ptr, args.base, args.top, &out_top);
 
         if (ret != PACK_CODE(test_data[i].status, test_data[i].index)) {
-            LOG(ERROR, "\tTest Failure!\n\tThe ABI call returned: %x\n\tExpected: %x\n",
+            LOG(ERROR, "Test Failure!The ABI call returned: %xExpected: %x\n",
                 ret, PACK_CODE(test_data[i].status, test_data[i].index));
             val_set_status(RESULT_FAIL(VAL_ERROR_POINT(3)));
             goto exit;
         }
     }
 
-    LOG(TEST, "\n\tNegative Observability Check\n", 0, 0);
+    LOG(TEST, "Check %2d : Negative Observability\n", ++i);
 
     ipa_base = c_args.base_valid;
     for (uint8_t i = 0; i < c_args.top_valid / PAGE_SIZE ; i++) {
         ret = val_host_rmi_rtt_read_entry(c_args.rd_valid,
                                       ipa_base, MAP_LEVEL, &rtte);
         if (ret) {
-            LOG(ERROR, "\tREAD_ENTRY failed with ret value: %d\n", ret, 0);
+            LOG(ERROR, "READ_ENTRY failed with ret value: %d\n", ret);
             val_set_status(RESULT_FAIL(VAL_ERROR_POINT(4)));
             goto exit;
         }
 
         if (rtte.walk_level == MAP_LEVEL && rtte.ripas != RMI_EMPTY) {
-            LOG(ERROR, "\n\t Unexpected RTT entry. walk level: %d, RIPAS : %d",
+            LOG(ERROR, " Unexpected RTT entry. walk level: %d, RIPAS : %d\n",
                                                              rtte.walk_level, rtte.ripas);
             val_set_status(RESULT_FAIL(VAL_ERROR_POINT(5)));
             goto exit;
@@ -516,12 +515,12 @@ void cmd_rtt_set_ripas_host(void)
         ipa_base += PAGE_SIZE;
     }
 
-    LOG(TEST, "\n\tPositive Observability Check\n", 0, 0);
+    LOG(TEST, "Check %2d : Positive Observability\n", ++i);
     ret = val_host_rmi_rtt_set_ripas(c_args.rd_valid, c_args.rec_ptr_valid, c_args.base_valid,
                                                                c_args.top_valid, &out_top);
     if (ret != 0)
     {
-        LOG(ERROR, "\n\t RTT_SET_RIPAS failed with ret value: %d\n", ret, 0);
+        LOG(ERROR, " RTT_SET_RIPAS failed with ret value: %d\n", ret);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(6)));
         goto exit;
     }
@@ -531,13 +530,13 @@ void cmd_rtt_set_ripas_host(void)
         ret = val_host_rmi_rtt_read_entry(c_args.rd_valid,
                                       ipa_base, MAP_LEVEL, &rtte);
         if (ret) {
-            LOG(ERROR, "\tREAD_ENTRY failed with ret value: %d\n", ret, 0);
+            LOG(ERROR, "READ_ENTRY failed with ret value: %d\n", ret);
             val_set_status(RESULT_FAIL(VAL_ERROR_POINT(7)));
             goto exit;
         }
 
         if (rtte.walk_level == MAP_LEVEL && rtte.ripas != RMI_RAM) {
-            LOG(ERROR, "\n\t Unexpected RTT entry. walk level: %d, RIPAS : %d",
+            LOG(ERROR, " Unexpected RTT entry. walk level: %d, RIPAS : %d\n",
                                                              rtte.walk_level, rtte.ripas);
             val_set_status(RESULT_FAIL(VAL_ERROR_POINT(8)));
             goto exit;

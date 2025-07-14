@@ -1,5 +1,5 @@
 #-------------------------------------------------------------------------------
-# Copyright (c) 2023-2024, Arm Limited or its affiliates. All rights reserved.
+# Copyright (c) 2023-2025, Arm Limited or its affiliates. All rights reserved.
 #
 # SPDX-License-Identifier: BSD-3-Clause
 #
@@ -51,13 +51,13 @@ function (create_executable EXE_NAME OUTPUT_DIR TEST)
 
     # Preprocess the scatter file for image layout symbols
     add_custom_command(OUTPUT CPP-LD--${EXE_NAME}${TEST}
-                    COMMAND ${CROSS_COMPILE}gcc -E -P -I${ROOT_DIR}/val/common/inc/ -I${ROOT_DIR}/plat/targets/${TARGET}/inc/ ${SCATTER_INPUT_FILE} -o ${SCATTER_OUTPUT_FILE} -DCMAKE_BUILD={CMAKE_BUILD}
-                    DEPENDS ${VAL_LIB} ${PAL_LIB} ${TEST_LIB})
+                    COMMAND ${CROSS_COMPILE}gcc -E -P -I${ROOT_DIR}/val/common/inc/ -I${COMMON_VAL_PATH}/inc/ -I${ROOT_DIR}/plat/targets/${TARGET}/inc/ ${SCATTER_INPUT_FILE} -o ${SCATTER_OUTPUT_FILE} -DCMAKE_BUILD={CMAKE_BUILD}
+                    DEPENDS ${VAL_LIB} ${COMMON_VAL_LIB} ${PAL_LIB} ${TEST_LIB})
     add_custom_target(CPP-LD-${EXE_NAME}${TEST} ALL DEPENDS CPP-LD--${EXE_NAME}${TEST})
 
     # Link the objects
     add_custom_command(OUTPUT ${EXE_NAME}${TEST}.elf
-                    COMMAND ${GNUARM_LINKER} ${CMAKE_LINKER_FLAGS} ${GNUARM_LINKER_FLAGS} -T ${SCATTER_OUTPUT_FILE} -o ${OUTPUT_DIR}/${EXE_NAME}.elf ${VAL_LIB}.a ${PAL_LIB}.a ${TEST_LIB}.a ${VAL_LIB}.a ${PAL_LIB}.a ${PAL_OBJ_LIST} ${XLAT_BUILD_DIR}/${XLAT-LIB}.a
+                    COMMAND ${GNUARM_LINKER} ${CMAKE_LINKER_FLAGS} ${GNUARM_LINKER_FLAGS} -T ${SCATTER_OUTPUT_FILE} -o ${OUTPUT_DIR}/${EXE_NAME}.elf ${VAL_LIB}.a ${COMMON_VAL_LIB}.a ${PAL_LIB}.a ${TEST_LIB}.a ${VAL_LIB}.a ${PAL_LIB}.a ${PAL_OBJ_LIST} ${XLAT_BUILD_DIR}/${XLAT-LIB}.a
                     DEPENDS CPP-LD-${EXE_NAME}${TEST})
     add_custom_target(${EXE_NAME}${TEST}_elf ALL DEPENDS ${EXE_NAME}${TEST}.elf)
 

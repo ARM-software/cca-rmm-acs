@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2025, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -22,7 +22,7 @@ void mm_ha_hd_access_realm(void)
     val_realm_rsi_host_call_t *gv_realm_host_call;
 
     /* Below code is executed for REC[0] only */
-    LOG(DBG, "\tIn realm_create_realm REC[0], mpdir=%x\n", val_read_mpidr(), 0);
+    LOG(DBG, "In realm_create_realm REC[0], mpdir=%x\n", val_read_mpidr());
 
     gv_realm_host_call = val_realm_rsi_host_call_ripas(VAL_SWITCH_TO_HOST);
     val_exception_setup(NULL, synchronous_exception_handler);
@@ -35,7 +35,7 @@ void mm_ha_hd_access_realm(void)
     mem_desc.attributes = MT_AF_CLEAR | MT_RW_DATA | MT_REALM;
     if (val_realm_pgt_create(&mem_desc))
     {
-        LOG(ERROR, "\tVA to PA mapping failed\n", 0, 0);
+        LOG(ERROR, "VA to PA mapping failed\n");
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(1)));
         goto exit;
     }
@@ -48,14 +48,14 @@ void mm_ha_hd_access_realm(void)
 
     if (g_sea_params.handler_abort)
     {
-        LOG(ERROR, "\tData abort triggered, DBM failed\n", 0, 0);
+        LOG(ERROR, "Data abort triggered, DBM failed\n");
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(2)));
         goto exit;
     }
 
     if (*(volatile uint32_t *)ipa_base != 0x100)
     {
-        LOG(ERROR, "\tDBM: write failed, data mismatch\n", 0, 0);
+        LOG(ERROR, "DBM: write failed, data mismatch\n");
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(3)));
         goto exit;
     }
@@ -65,7 +65,7 @@ void mm_ha_hd_access_realm(void)
     af_bit_set = ((page_desc & MT_AF_CLEAR) >> MT_AF_SHIFT);
     if (af_bit_set != 0x1)
     {
-        LOG(ERROR, "\tAF flag is not set 1\n", 0, 0);
+        LOG(ERROR, "AF flag is not set 1\n");
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(4)));
     }
 

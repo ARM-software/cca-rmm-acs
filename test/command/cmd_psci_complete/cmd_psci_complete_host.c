@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2025, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -50,14 +50,14 @@ static uint64_t g_calling_rec_no_request_prep_sequence(void)
 
     if (val_host_realm_create_common(&realm[INVALID_REALM]))
     {
-        LOG(ERROR, "\tRealm create failed\n", 0, 0);
+        LOG(ERROR, "Realm create failed\n");
         return VAL_TEST_PREP_SEQ_FAILED;
     }
 
     /* Populate realm with two RECs*/
     if (val_host_rec_create_common(&realm[INVALID_REALM], &rec_params))
     {
-        LOG(ERROR, "\tREC Create Failed\n", 0, 0);
+        LOG(ERROR, "REC Create Failed\n");
         return VAL_TEST_PREP_SEQ_FAILED;
     }
 
@@ -82,7 +82,7 @@ static uint64_t calling_rec_valid_prep_sequence(void)
     /* Populate realm with two RECs*/
     if (val_host_realm_setup(&realm[VALID_REALM], 1))
     {
-        LOG(ERROR, "\tRealm setup failed\n", 0, 0);
+        LOG(ERROR, "Realm setup failed\n");
         return VAL_TEST_PREP_SEQ_FAILED;
     }
 
@@ -90,7 +90,7 @@ static uint64_t calling_rec_valid_prep_sequence(void)
     ret = val_host_rmi_rec_enter(realm[VALID_REALM].rec[0], realm[VALID_REALM].run[0]);
     if (ret)
     {
-        LOG(ERROR, "\tRec enter failed, ret=%x\n", ret, 0);
+        LOG(ERROR, "Rec enter failed, ret=%x\n", ret);
         return VAL_TEST_PREP_SEQ_FAILED;
     }
 
@@ -98,7 +98,7 @@ static uint64_t calling_rec_valid_prep_sequence(void)
     if (val_host_check_realm_exit_psci((val_host_rec_run_ts *)realm[VALID_REALM].run[0],
                                 PSCI_CPU_ON_AARCH64))
     {
-        LOG(ERROR, "\tSomething went wrong\n", 0, 0);
+        LOG(ERROR, "Something went wrong\n");
         return VAL_TEST_PREP_SEQ_FAILED;
     }
 
@@ -267,7 +267,7 @@ static uint64_t intent_to_seq(struct stimulus *test_data, struct arguments *args
 
         default:
             /* set status to failure */
-            LOG(ERROR, "\t\nUnknown intent label encountered\n", 0, 0);
+            LOG(ERROR, "Unknown intent label encountered\n");
             return VAL_ERROR;
     }
 
@@ -288,9 +288,8 @@ void cmd_psci_complete_host(void)
     /* Iterate over the input */
     for (i = 0; i < (sizeof(test_data) / sizeof(struct stimulus)); i++)
     {
-        LOG(TEST, "\n\tCheck %d : ", i + 1, 0);
-        LOG(TEST, test_data[i].msg, 0, 0);
-        LOG(TEST, "; intent id : 0x%x \n", test_data[i].label, 0);
+        LOG(TEST, "Check %2d : %s; intent id : 0x%x \n",
+              i + 1, test_data[i].msg, test_data[i].label);
 
         if (intent_to_seq(&test_data[i], &args)) {
             val_set_status(RESULT_FAIL(VAL_ERROR_POINT(2)));
@@ -300,21 +299,21 @@ void cmd_psci_complete_host(void)
         ret = val_host_rmi_psci_complete(args.calling_rec, args.target_rec, args.status);
 
         if (ret != PACK_CODE(test_data[i].status, test_data[i].index)) {
-            LOG(ERROR, "\tTest Failure!\n\tThe ABI call returned: %x\n\tExpected: %x\n",
+            LOG(ERROR, "Test Failure!The ABI call returned: %xExpected: %x\n",
                 ret, PACK_CODE(test_data[i].status, test_data[i].index));
             val_set_status(RESULT_FAIL(VAL_ERROR_POINT(3)));
             goto exit;
         }
     }
 
-    LOG(TEST, "\n\tPositive Observability Check\n", 0, 0);
+    LOG(TEST, "Check %2d : Positive Observability\n", ++i);
 
     /* Execute the command with valid input arguments */
     ret = val_host_rmi_psci_complete(c_args.calling_rec_valid, c_args.target_rec_valid,
                                                                      c_args.status_valid);
 
     if (ret) {
-        LOG(ERROR, "\t Command Failed\n", 0, 0);
+        LOG(ERROR, " Command Failed\n");
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(4)));
         goto exit;
     }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2025, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -94,7 +94,7 @@ static uint64_t intent_to_seq(struct stimulus *test_data, struct arguments *args
 
         default:
             // set status to failure
-            LOG(ERROR, "\n\tUnknown intent label encountered\n", 0, 0);
+            LOG(ERROR, "Unknown intent label encountered\n");
             return VAL_ERROR;
     }
 
@@ -114,12 +114,11 @@ void cmd_ipa_state_set_realm(void)
     /* Iterate over the input */
     for (i = 0; i < (sizeof(test_data) / sizeof(struct stimulus)); i++)
     {
-        LOG(TEST, "\n\tCheck %d : ", i + 1, 0);
-        LOG(TEST, test_data[i].msg, 0, 0);
-        LOG(TEST, "; intent id : 0x%x \n", test_data[i].label, 0);
+        LOG(TEST, "Check %2d : %s; intent id : 0x%x \n",
+              i + 1, test_data[i].msg, test_data[i].label);
 
         if (intent_to_seq(&test_data[i], &args)) {
-            LOG(ERROR, "\n\tIntent to sequence failed\n", 0, 0);
+            LOG(ERROR, "Intent to sequence failed\n");
             val_set_status(RESULT_FAIL(VAL_ERROR_POINT(1)));
             goto exit;
         }
@@ -130,19 +129,19 @@ void cmd_ipa_state_set_realm(void)
 
         if (ret != test_data[i].status)
         {
-            LOG(ERROR, "\n\tUnexpected Command Return Status\n ret status : 0x%x \n", ret, 0);
+            LOG(ERROR, "Unexpected Command Return Status ret status : 0x%x \n", ret);
             val_set_status(RESULT_FAIL(VAL_ERROR_POINT(2)));
             goto exit;
         }
     }
 
-    LOG(TEST, "\n\tPostive Observability\n ", 0, 0);
+    LOG(TEST, "Check %2d : Positive Observability\n", ++i);
 
     cmd_ret = val_realm_rsi_ipa_state_set(c_args.base_valid, c_args.top_valid,
                                         c_args.ripas_valid, c_args.flags_valid);
     if (cmd_ret.x0)
     {
-        LOG(ERROR, "\n\tRSI_IPA_STATE_SET Failed with ret = 0x%x\n", cmd_ret.x0, 0);
+        LOG(ERROR, "RSI_IPA_STATE_SET Failed with ret = 0x%x\n", cmd_ret.x0);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(3)));
         goto exit;
     }
@@ -150,7 +149,7 @@ void cmd_ipa_state_set_realm(void)
     if ((cmd_ret.x1 != c_args.top_valid) || (cmd_ret.x2 != RSI_ACCEPT)
                             || (VAL_EXTRACT_BITS(cmd_ret.x2, 1, 63) != 0))
     {
-        LOG(ERROR, "\n\tPositive Observability failed.", 0, 0);
+        LOG(ERROR, "Positive Observability failed.\n");
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(4)));
         goto exit;
     }
@@ -160,14 +159,14 @@ void cmd_ipa_state_set_realm(void)
                                         c_args.ripas_valid, c_args.flags_valid);
     if (cmd_ret.x0)
     {
-        LOG(ERROR, "\n\tRSI_IPA_STATE_SET Failed with ret = 0x%x\n", cmd_ret.x0, 0);
+        LOG(ERROR, "RSI_IPA_STATE_SET Failed with ret = 0x%x\n", cmd_ret.x0);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(5)));
         goto exit;
     }
 
     if ((cmd_ret.x2 == RSI_REJECT) && (cmd_ret.x1 != IPA_RIPAS_REJECT))
     {
-        LOG(ERROR, "\n\tPositive Observability failed.", 0, 0);
+        LOG(ERROR, "Positive Observability failed.\n");
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(6)));
         goto exit;
     }

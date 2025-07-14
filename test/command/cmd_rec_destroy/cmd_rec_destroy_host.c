@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023-2024, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023-2025, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -70,7 +70,7 @@ static uint64_t g_rec_aux_prep_sequence(void)
 
     /* Create the REC */
     if (val_host_rmi_rec_create(rd, rec, (uint64_t)params)) {
-        LOG(ERROR, "\n\t REC create failed ", 0, 0);
+        LOG(ERROR, " REC create failed \n");
         return VAL_TEST_PREP_SEQ_FAILED;
     }
 
@@ -93,13 +93,13 @@ static uint64_t rec_valid_prep_sequence(void)
 
     if (val_host_realm_create_common(&realm[VALID_REALM]))
     {
-        LOG(ERROR, "\tRealm create failed\n", 0, 0);
+        LOG(ERROR, "Realm create failed\n");
         return VAL_TEST_PREP_SEQ_FAILED;
     }
 
     if (val_host_rec_create_common(&realm[VALID_REALM], &rec_params))
     {
-        LOG(ERROR, "\tRec create failed\n", 0, 0);
+        LOG(ERROR, "Rec create failed\n");
         return VAL_TEST_PREP_SEQ_FAILED;
     }
 
@@ -160,7 +160,7 @@ static uint64_t intent_to_seq(struct stimulus *test_data, struct arguments *args
             break;
 
         default:
-            LOG(ERROR, "\n\tUnknown intent label encountered\n", 0, 0);
+            LOG(ERROR, "Unknown intent label encountered\n");
             return VAL_ERROR;
     }
 
@@ -179,9 +179,8 @@ void cmd_rec_destroy_host(void)
 
     for (i = 0; i < (sizeof(test_data) / sizeof(struct stimulus)); i++)
     {
-        LOG(TEST, "\n\tCheck %d : ", i + 1, 0);
-        LOG(TEST, test_data[i].msg, 0, 0);
-        LOG(TEST, "; intent id : 0x%x \n", test_data[i].label, 0);
+        LOG(TEST, "Check %2d : %s; intent id : 0x%x \n",
+              i + 1, test_data[i].msg, test_data[i].label);
 
         if (intent_to_seq(&test_data[i], &args)) {
             val_set_status(RESULT_FAIL(VAL_ERROR_POINT(2)));
@@ -190,18 +189,18 @@ void cmd_rec_destroy_host(void)
 
         ret = val_host_rmi_rec_destroy(args.rec_ptr);
         if (ret != PACK_CODE(test_data[i].status, test_data[i].index)) {
-            LOG(ERROR, "\tTest Failure!\n\tThe ABI call returned: %x\n\tExpected: %x\n",
+            LOG(ERROR, "Test Failure!The ABI call returned: %xExpected: %x\n",
                 ret, PACK_CODE(test_data[i].status, test_data[i].index));
             val_set_status(RESULT_FAIL(VAL_ERROR_POINT(3)));
             goto exit;
         }
     }
 
-    LOG(TEST, "\n\tPositive Observability Check\n", 0, 0);
+    LOG(TEST, "Check %2d : Positive Observability\n", ++i);
     ret = val_host_rmi_rec_destroy(c_args.rec_ptr_valid);
     if (ret != 0)
     {
-        LOG(ERROR, "\n\t REC destroy failed. %x\n", ret, 0);
+        LOG(ERROR, " REC destroy failed. %x\n", ret);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(4)));
         goto exit;
     }

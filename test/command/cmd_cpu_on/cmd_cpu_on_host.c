@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2025, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -26,7 +26,7 @@ void cmd_cpu_on_host(void)
     /* Populate realm with two RECs*/
     if (val_host_realm_setup(&realm, 1))
     {
-        LOG(ERROR, "\tRealm setup failed\n", 0, 0);
+        LOG(ERROR, "Realm setup failed\n");
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(1)));
         goto destroy_realm;
     }
@@ -35,7 +35,7 @@ void cmd_cpu_on_host(void)
     ret = val_host_rmi_rec_enter(realm.rec[0], realm.run[0]);
     if (ret)
     {
-        LOG(ERROR, "\tRec enter failed, ret=%x\n", ret, 0);
+        LOG(ERROR, "Rec enter failed, ret=%x\n", ret);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(2)));
         goto destroy_realm;
     }
@@ -47,7 +47,7 @@ void cmd_cpu_on_host(void)
     if (val_host_check_realm_exit_psci((val_host_rec_run_ts *)realm.run[0],
                                 PSCI_CPU_ON_AARCH64))
     {
-        LOG(ERROR, "\tREC exit not due to PSCI_CPU_ON\n", 0, 0);
+        LOG(ERROR, "REC exit not due to PSCI_CPU_ON\n");
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(3)));
         goto destroy_realm;
     }
@@ -56,7 +56,7 @@ void cmd_cpu_on_host(void)
     ret = val_host_rmi_psci_complete(realm.rec[0], realm.rec[REC_RUNNABLE], PSCI_E_SUCCESS);
     if (ret)
     {
-        LOG(ERROR, "\t PSCI_COMPLETE Failed, ret=%x\n", ret, 0);
+        LOG(ERROR, " PSCI_COMPLETE Failed, ret=%x\n", ret);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(4)));
         goto destroy_realm;
     }
@@ -65,7 +65,7 @@ void cmd_cpu_on_host(void)
     ret = val_host_rmi_rec_enter(realm.rec[0], realm.run[0]);
     if (ret)
     {
-        LOG(ERROR, "\tRec enter failed, ret=%x\n", ret, 0);
+        LOG(ERROR, "Rec enter failed, ret=%x\n", ret);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(5)));
         goto destroy_realm;
     }
@@ -76,7 +76,7 @@ void cmd_cpu_on_host(void)
     if (val_host_check_realm_exit_psci((val_host_rec_run_ts *)realm.run[0],
                                 PSCI_CPU_ON_AARCH64))
     {
-        LOG(ERROR, "\tREC exit not due to PSCI_CPU_ON\n", 0, 0);
+        LOG(ERROR, "REC exit not due to PSCI_CPU_ON\n");
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(6)));
         goto destroy_realm;
     }
@@ -85,7 +85,7 @@ void cmd_cpu_on_host(void)
     ret = val_host_rmi_psci_complete(realm.rec[0], realm.rec[REC_RUNNABLE], PSCI_E_SUCCESS);
     if (ret)
     {
-        LOG(ERROR, "\t PSCI_COMPLETE Failed, ret=%x\n", ret, 0);
+        LOG(ERROR, " PSCI_COMPLETE Failed, ret=%x\n", ret);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(7)));
         goto destroy_realm;
     }
@@ -94,7 +94,7 @@ void cmd_cpu_on_host(void)
     ret = val_host_rmi_rec_enter(realm.rec[0], realm.run[0]);
     if (ret)
     {
-        LOG(ERROR, "\tRec enter failed, ret=%x\n", ret, 0);
+        LOG(ERROR, "Rec enter failed, ret=%x\n", ret);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(8)));
         goto destroy_realm;
     }
@@ -105,7 +105,7 @@ void cmd_cpu_on_host(void)
     if (val_host_check_realm_exit_psci((val_host_rec_run_ts *)realm.run[0],
                                 PSCI_CPU_ON_AARCH64))
     {
-        LOG(ERROR, "\tREC exit not due to PSCI_CPU_ON\n", 0, 0);
+        LOG(ERROR, "REC exit not due to PSCI_CPU_ON\n");
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(9)));
         goto destroy_realm;
     }
@@ -114,7 +114,7 @@ void cmd_cpu_on_host(void)
     ret = val_host_rmi_psci_complete(realm.rec[0], realm.rec[REC_NOT_RUNNABLE], PSCI_E_SUCCESS);
     if (ret)
     {
-        LOG(ERROR, "\tPSCI_COMPLETE Failed, ret=%x\n", ret, 0);
+        LOG(ERROR, "PSCI_COMPLETE Failed, ret=%x\n", ret);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(10)));
         goto destroy_realm;
     }
@@ -123,7 +123,7 @@ void cmd_cpu_on_host(void)
     ret = val_host_rmi_rec_enter(realm.rec[0], realm.run[0]);
     if (ret)
     {
-        LOG(ERROR, "\tRec enter failed, ret=%x\n", ret, 0);
+        LOG(ERROR, "Rec enter failed, ret=%x\n", ret);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(11)));
         goto destroy_realm;
     }
@@ -134,7 +134,7 @@ void cmd_cpu_on_host(void)
     if (val_host_check_realm_exit_psci((val_host_rec_run_ts *)realm.run[0],
                                 PSCI_CPU_ON_AARCH64))
     {
-        LOG(ERROR, "\tREC exit not due to PSCI_CPU_ON\n", 0, 0);
+        LOG(ERROR, "REC exit not due to PSCI_CPU_ON\n");
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(12)));
         goto destroy_realm;
     }
@@ -143,7 +143,7 @@ void cmd_cpu_on_host(void)
     ret = val_host_rmi_psci_complete(realm.rec[0], realm.rec[REC_NOT_RUNNABLE], PSCI_E_SUCCESS);
     if (ret)
     {
-        LOG(ERROR, "\tPSCI_COMPLETE Failed, ret=%x\n", ret, 0);
+        LOG(ERROR, "PSCI_COMPLETE Failed, ret=%x\n", ret);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(13)));
         goto destroy_realm;
     }
@@ -152,7 +152,7 @@ void cmd_cpu_on_host(void)
     ret = val_host_rmi_rec_enter(realm.rec[0], realm.run[0]);
     if (ret)
     {
-        LOG(ERROR, "\tRec enter failed, ret=%x\n", ret, 0);
+        LOG(ERROR, "Rec enter failed, ret=%x\n", ret);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(14)));
         goto destroy_realm;
     }
