@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2025 Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2025, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -30,7 +30,7 @@ void gic_timer_nsel2_trig_host(void)
 
     if (val_irq_register_handler(IRQ_PHY_TIMER_EL2, timer_handler))
     {
-        LOG(ERROR, "\tIRQ_PHY_TIMER_EL2 interrupt register failed\n", 0, 0);
+        LOG(ERROR, "IRQ_PHY_TIMER_EL2 interrupt register failed\n");
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(1)));
         goto destroy_realm;
     }
@@ -44,7 +44,7 @@ void gic_timer_nsel2_trig_host(void)
     /* Populate realm with one REC */
     if (val_host_realm_setup(&realm, true))
     {
-        LOG(ERROR, "\tRealm setup failed\n", 0, 0);
+        LOG(ERROR, "Realm setup failed\n");
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(2)));
         goto free_irq;
     }
@@ -85,18 +85,18 @@ void gic_timer_nsel2_trig_host(void)
     ret = val_host_rmi_rec_enter(realm.rec[0], realm.run[0]);
     if (ret)
     {
-        LOG(ERROR, "\tRec enter failed, ret=%x\n", ret, 0);
+        LOG(ERROR, "Rec enter failed, ret=%x\n", ret);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(5)));
         goto free_irq;
     }
 
     if ((rec_exit->exit_reason != RMI_EXIT_IRQ) || rec_exit->esr)
     {
-        LOG(ERROR, "\tRec exit params mismatch, exit_reason=%x esr %lx\n",
+        LOG(ERROR, "Rec exit params mismatch, exit_reason=%x esr %lx\n",
                         rec_exit->exit_reason, rec_exit->esr);
         if (!handler_flag)
         {
-	    LOG(ERROR, "\ttimer interrupt not triggered\n", 0, 0);
+	    LOG(ERROR, "timer interrupt not triggered\n");
         }
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(6)));
         goto free_irq;
@@ -110,7 +110,7 @@ free_irq:
 
     if (val_irq_unregister_handler(IRQ_PHY_TIMER_EL2))
     {
-        LOG(ERROR, "\tIRQ_PHY_TIMER_EL2 interrupt unregister failed\n", 0, 0);
+        LOG(ERROR, "IRQ_PHY_TIMER_EL2 interrupt unregister failed\n");
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(7)));
     }
 

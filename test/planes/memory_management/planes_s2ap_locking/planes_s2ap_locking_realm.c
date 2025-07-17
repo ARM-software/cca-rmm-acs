@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2024-2025, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -24,7 +24,7 @@ void planes_s2ap_locking_realm(void)
 
     if (cmd_ret.x0 != RSI_ERROR_INPUT)
     {
-        LOG(ERROR, "Unexpected output for RSI_MEM_SET_PERM_VALUE, ret = %d\n", cmd_ret.x0, 0);
+        LOG(ERROR, "Unexpected output for RSI_MEM_SET_PERM_VALUE, ret = %d\n", cmd_ret.x0);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(1)));
         goto exit;
     }
@@ -38,7 +38,7 @@ void planes_s2ap_locking_realm(void)
 
     if (val_realm_plane_perm_init(PLANE_1_INDEX, PERM_INDEX_1, p1_ipa_base, p1_ipa_top))
     {
-        LOG(ERROR, "Unexpected output for RSI_MEM_SET_PERM_{VALUE,INDEX}", 0, 0);
+        LOG(ERROR, "Unexpected output for RSI_MEM_SET_PERM_{VALUE,INDEX}\n");
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(2)));
         goto exit;
     }
@@ -48,7 +48,7 @@ void planes_s2ap_locking_realm(void)
 
     if (cmd_ret.x0 != RSI_ERROR_INPUT)
     {
-        LOG(ERROR, "Unexpected output for RSI_MEM_SET_PERM_VALUE, ret = %d\n", cmd_ret.x0, 0);
+        LOG(ERROR, "Unexpected output for RSI_MEM_SET_PERM_VALUE, ret = %d\n", cmd_ret.x0);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(3)));
         goto exit;
     }

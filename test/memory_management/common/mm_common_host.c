@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2025, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -18,8 +18,8 @@ uint32_t val_host_init_ripas_delegate(val_host_realm_ts *realm,
             data_create->ipa + data_create->size,
             VAL_RTT_MAX_LEVEL, data_create->rtt_alignment))
     {
-        LOG(ERROR, "\tval_host_ripas_init failed, ipa=0x%x\n",
-                data_create->ipa + i * PAGE_SIZE, 0);
+        LOG(ERROR, "val_host_ripas_init failed, ipa=0x%x\n",
+                data_create->ipa + i * PAGE_SIZE);
         return VAL_ERROR;
     }
 
@@ -28,7 +28,7 @@ uint32_t val_host_init_ripas_delegate(val_host_realm_ts *realm,
     {
         if (val_host_rmi_granule_delegate(phys))
         {
-            LOG(ERROR, "\tGranule delegation failed, PA=0x%x\n", phys, 0);
+            LOG(ERROR, "Granule delegation failed, PA=0x%x\n", phys);
             return VAL_ERROR;
         }
         phys += PAGE_SIZE;

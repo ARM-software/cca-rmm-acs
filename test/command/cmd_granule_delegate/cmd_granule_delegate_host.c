@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2025, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -47,7 +47,7 @@ static uint64_t g_rd_new_prep_sequence(uint16_t vmid)
 
     if (val_host_realm_create_common(&realm_init))
     {
-        LOG(ERROR, "\tRealm create failed\n", 0, 0);
+        LOG(ERROR, "Realm create failed\n");
         return VAL_TEST_PREP_SEQ_FAILED;
     }
     realm_test[vmid].rd = realm_init.rd;
@@ -68,7 +68,7 @@ static uint64_t g_rec_ready_prep_sequence(uint64_t rd)
 
     if (val_host_rec_create_common(&realm, &rec_params))
     {
-        LOG(ERROR, "\tREC create failed\n", 0, 0);
+        LOG(ERROR, "REC create failed\n");
         return VAL_TEST_PREP_SEQ_FAILED;
     }
     return realm.rec[0];
@@ -147,7 +147,7 @@ static uint64_t intent_to_seq(struct stimulus *test_data, struct arguments *args
             break;
 
         default:
-            LOG(ERROR, "\n\tUnknown intent label encountered\n", 0, 0);
+            LOG(ERROR, "Unknown intent label encountered\n");
             return VAL_ERROR;
     }
 
@@ -172,9 +172,8 @@ void cmd_granule_delegate_host(void)
 
     for (i = 0; i < (sizeof(test_data) / sizeof(struct stimulus)); i++)
     {
-        LOG(TEST, "\n\tCheck %d : ", i + 1, 0);
-        LOG(TEST, test_data[i].msg, 0, 0);
-        LOG(TEST, "; intent id : 0x%x \n", test_data[i].label, 0);
+        LOG(TEST, "Check %2d : %s; intent id : 0x%x \n",
+              i + 1, test_data[i].msg, test_data[i].label);
 
         if (intent_to_seq(&test_data[i], &args)) {
             val_set_status(RESULT_FAIL(VAL_ERROR_POINT(3)));
@@ -184,7 +183,7 @@ void cmd_granule_delegate_host(void)
         ret = val_host_rmi_granule_delegate(args.addr);
 
         if (ret != PACK_CODE(test_data[i].status, test_data[i].index)) {
-            LOG(ERROR, "\tTest Failure!\n\tThe ABI call returned: %x\n\tExpected: %x\n",
+            LOG(ERROR, "Test Failure!The ABI call returned: %xExpected: %x\n",
                 ret, PACK_CODE(test_data[i].status, test_data[i].index));
             val_set_status(RESULT_FAIL(VAL_ERROR_POINT(3)));
             goto exit;
@@ -197,20 +196,20 @@ void cmd_granule_delegate_host(void)
     uint64_t *addr = (uint64_t *)g_unaligned_prep_sequence(c_args.addr_valid);
     *addr = 0x01;       // writing to non-secure addr
 
-    LOG(TEST, "\n\tPositive Observability Check\n", 0, 0);
+    LOG(TEST, "Check %2d : Positive Observability\n", ++i);
     ret = val_host_rmi_granule_delegate(c_args.addr_valid);
     if (ret != 0)
     {
-        LOG(ERROR, "\n\tGranule delegate command failed, ret value is: %x\n", ret, 0);
+        LOG(ERROR, "Granule delegate command failed, ret value is: %x\n", ret);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(5)));
         goto exit;
     }
 
-    LOG(TEST, "\n\tNegative Observability Check\n", 0, 0);
+    LOG(TEST, "Check %2d : Negative Observability\n", ++i);
     ret = val_host_rmi_granule_delegate(c_args.addr_valid);
     if (ret == 0)
     {
-        LOG(ERROR, "\n\tGranule delegate command should failed, ret value is: %x\n", ret, 0);
+        LOG(ERROR, "Granule delegate command should failed, ret value is: %x\n", ret);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(6)));
         goto exit;
     }

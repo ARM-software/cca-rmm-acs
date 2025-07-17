@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2025, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -32,7 +32,7 @@ void attestation_realm_measurement_type_realm(void)
 
     if (args.x0)
     {
-        LOG(ERROR, "\tToken init failed, ret=%x\n", args.x0, 0);
+        LOG(ERROR, "Token init failed, ret=%x\n", args.x0);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(1)));
         goto exit;
     }
@@ -57,7 +57,7 @@ void attestation_realm_measurement_type_realm(void)
 
     if (args.x0)
     {
-        LOG(ERROR, "\tToken continue failed, ret=%x\n", args.x0, 0);
+        LOG(ERROR, "Token continue failed, ret=%x\n", args.x0);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(2)));
         goto exit;
     }
@@ -66,7 +66,7 @@ void attestation_realm_measurement_type_realm(void)
                         ATTEST_CHALLENGE_SIZE_64, token, token_size);
     if (ret != VAL_SUCCESS)
     {
-        LOG(ERROR, "\tattestation token verification failed, ret=%x\n", ret, 0);
+        LOG(ERROR, "attestation token verification failed, ret=%x\n", ret);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(3)));
         goto exit;
     }
@@ -75,7 +75,7 @@ void attestation_realm_measurement_type_realm(void)
         attestation_token.realm_initial_measurement.len != CCA_BYTE_SIZE_48 &&
         attestation_token.realm_initial_measurement.len != CCA_BYTE_SIZE_64)
     {
-        LOG(ERROR, "\tRealm initial measurement is not in given size format.", 0, 0);
+        LOG(ERROR, "Realm initial measurement is not in given size format.\n");
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(4)));
         goto exit;
     }

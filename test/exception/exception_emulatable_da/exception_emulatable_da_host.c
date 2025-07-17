@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023-2024, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023-2025, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -25,7 +25,7 @@ void exception_emulatable_da_host(void)
     /* Populate realm with one REC*/
     if (val_host_realm_setup(&realm, 1))
     {
-        LOG(ERROR, "\tRealm setup failed\n", 0, 0);
+        LOG(ERROR, "Realm setup failed\n");
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(1)));
         goto destroy_realm;
     }
@@ -34,12 +34,12 @@ void exception_emulatable_da_host(void)
     ret = val_host_rmi_rec_enter(realm.rec[0], realm.run[0]);
     if (ret)
     {
-        LOG(ERROR, "\tRec enter failed, ret=%x\n", ret, 0);
+        LOG(ERROR, "Rec enter failed, ret=%x\n", ret);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(2)));
         goto destroy_realm;
     } else if (val_host_check_realm_exit_host_call((val_host_rec_run_ts *)realm.run[0]))
     {
-        LOG(ERROR, "\tREC_EXIT: HOST_CALL params mismatch\n", 0, 0);
+        LOG(ERROR, "REC_EXIT: HOST_CALL params mismatch\n");
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(3)));
         goto destroy_realm;
     }
@@ -48,7 +48,7 @@ void exception_emulatable_da_host(void)
     index = val_host_map_ns_shared_region(&realm, 0x1000, mem_attr);
     if (!index)
     {
-        LOG(ERROR, "\tval_host_map_ns_shared_region failed\n", 0, 0);
+        LOG(ERROR, "val_host_map_ns_shared_region failed\n");
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(4)));
         goto destroy_realm;
     }
@@ -57,7 +57,7 @@ void exception_emulatable_da_host(void)
                                             realm.granules[index].level, &top);
     if (ret)
     {
-        LOG(ERROR, "\tval_rmi_rtt_unmap_unprotected failed, ipa=0x%x, ret=0x%x\n",
+        LOG(ERROR, "val_rmi_rtt_unmap_unprotected failed, ipa=0x%x, ret=0x%x\n",
                                                              realm.granules[index].ipa, ret);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(5)));
         goto destroy_realm;
@@ -73,7 +73,7 @@ void exception_emulatable_da_host(void)
     ret = val_host_rmi_rec_enter(realm.rec[0], realm.run[0]);
     if (ret)
     {
-        LOG(ERROR, "\tRec enter failed, ret=%x\n", ret, 0);
+        LOG(ERROR, "Rec enter failed, ret=%x\n", ret);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(6)));
         goto destroy_realm;
     }
@@ -82,7 +82,7 @@ void exception_emulatable_da_host(void)
     if (validate_rec_exit_da(rec_exit, realm.granules[index].ipa,
                             ESR_ISS_DFSC_TTF_L3, EMULATABLE_DA, ESR_WnR_WRITE))
     {
-        LOG(ERROR, "\tREC exit ESR params mismatch\n", 0, 0);
+        LOG(ERROR, "REC exit ESR params mismatch\n");
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(7)));
         goto destroy_realm;
     }
@@ -91,7 +91,7 @@ void exception_emulatable_da_host(void)
     write_data = rec_exit->gprs[0];
     if (write_data != 0x333)
     {
-        LOG(ERROR, "\tEmulatable write data mismatch\n", 0, 0);
+        LOG(ERROR, "Emulatable write data mismatch\n");
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(8)));
         goto destroy_realm;
     }
@@ -102,7 +102,7 @@ void exception_emulatable_da_host(void)
     ret = val_host_rmi_rec_enter(realm.rec[0], realm.run[0]);
     if (ret)
     {
-        LOG(ERROR, "\tRec enter failed, ret=%x\n", ret, 0);
+        LOG(ERROR, "Rec enter failed, ret=%x\n", ret);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(9)));
         goto destroy_realm;
     }
@@ -111,7 +111,7 @@ void exception_emulatable_da_host(void)
     if (validate_rec_exit_da(rec_exit, realm.granules[index].ipa,
                             ESR_ISS_DFSC_TTF_L3, EMULATABLE_DA, ESR_WnR_READ))
     {
-        LOG(ERROR, "\tREC exit ESR MBZ params mismatch\n", 0, 0);
+        LOG(ERROR, "REC exit ESR MBZ params mismatch\n");
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(10)));
         goto destroy_realm;
     }
@@ -122,7 +122,7 @@ void exception_emulatable_da_host(void)
     ret = val_host_rmi_rec_enter(realm.rec[0], realm.run[0]);
     if (ret)
     {
-        LOG(ERROR, "\tRec enter failed, ret=%x\n", ret, 0);
+        LOG(ERROR, "Rec enter failed, ret=%x\n", ret);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(11)));
         goto destroy_realm;
     }

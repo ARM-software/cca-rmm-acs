@@ -61,9 +61,11 @@ The following tools are required to build the ACS: <br />
 
 ### Download source
 
-To download the main branch of the repository, type the following command: <br />
+To download the main branch of the repository, type the following commands: <br />
 ~~~
 git clone https://github.com/ARM-software/cca-rmm-acs.git
+cd cca-rmm-acs/
+git submodule update --init
 ~~~
 
 
@@ -73,7 +75,7 @@ git clone https://github.com/ARM-software/cca-rmm-acs.git
 To build the ACS for your target platform, perform the following steps:<br />
 
 ```
-cd rmm-acs
+cd cca-rmm-acs
 mkdir build
 cd build
 cmake ../ -G"<generator_name>" -DCROSS_COMPILE=<path-to-aarch64-gcc>/bin/aarch64-none-elf- -DTARGET=<platform_name>  -DTEST_COMBINE=ON -DSREC_CAT=<path-to-srec_cat>/bin/srec_cat
@@ -95,10 +97,11 @@ make
 - -DSECURE_TEST_ENABLE=<value_to_enable_secure_test> Enable secure test macro definition and it will run secure test in regression. Valid value is 1. By default this macro will not define and secure test will not run in regression.
 - -DRMM_SPEC_VER=<value_to_select_specification_version> Select the Specification version to test against. Current supported values are RMM_V_1_0, RMM_V_1_1 and ALL. If this flag is not set during compilation, ALL is selected by default.
 - -DUART_NS_OVERRIDE=<value_of_uart_base_address> To override the default NS UART base address defined in the plat/targets/*
+- -DSUITE_COVERAGE=<value_to_select_suite_coverage> To add feature related command ABIs with specified -DSUITE. Supported values are all(feature scenario tests + feature command ABIs), command(feature command ABIs only) and none(feature scenario tests only). The default value is -DSUITE_COVERGAE=none. Currently supported for -DSUITE=planes;mec feature.
 
 *To compile tests for tgt_tfa_fvp platform*:<br />
 ```
-cd rmm-acs
+cd cca-rmm-acs
 mkdir build
 cd build
 cmake ../ -G"Unix Makefiles" -DCROSS_COMPILE=<path-to-aarch64-gcc>/bin/aarch64-none-elf- -DTARGET=tgt_tfa_fvp -DTEST_COMBINE=ON -DSREC_CAT=<path_to_srec_cat>

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2024-2025, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -36,7 +36,7 @@ void planes_s2ap_enforced_by_p0_realm(void)
     {
         if (val_realm_pgt_create(&mem_desc))
         {
-            LOG(ERROR, "\tVA to PA mapping failed\n", 0, 0);
+            LOG(ERROR, "VA to PA mapping failed\n");
             val_set_status(RESULT_FAIL(VAL_ERROR_POINT(1)));
             goto exit;
         }
@@ -59,7 +59,7 @@ void planes_s2ap_enforced_by_p0_realm(void)
         {
             cmd_ret = val_realm_rsi_mem_set_perm_value(j + 1, i + 1, overlay_val[i][j]);
             if (cmd_ret.x0) {
-                LOG(ERROR, "MEM_SET_PERM_VALUE failed with : %d \n", cmd_ret.x0, 0);
+                LOG(ERROR, "MEM_SET_PERM_VALUE failed with : %d \n", cmd_ret.x0);
                 LOG(TEST, "plane_idx  : %d, perm_idx : %d \n", j + 1, i + 1);
                 val_set_status(RESULT_FAIL(VAL_ERROR_POINT(2)));
                 goto exit;
@@ -109,7 +109,7 @@ void planes_s2ap_enforced_by_p0_realm(void)
             if (run_ptr.exit.reason != RSI_EXIT_SYNC      ||
                 ESR_EL2_EC(esr) != test_data[i].esr_el2_ec[j])
             {
-                LOG(ERROR, "Invalid exit type: %d, ESR: 0x%lx",
+                LOG(ERROR, "Invalid exit type: %d, ESR: 0x%lx\n",
                                              run_ptr.exit.reason, run_ptr.exit.esr_el2);
                 val_set_status(RESULT_FAIL(VAL_ERROR_POINT(5)));
                 goto exit;

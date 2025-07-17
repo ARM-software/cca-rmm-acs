@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2025, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -33,7 +33,7 @@ void attestation_rec_exit_irq_host(void)
 
     if (val_irq_register_handler(IRQ_PHY_TIMER_EL2, timer_handler))
     {
-        LOG(ERROR, "\tIRQ_PHY_TIMER_EL2 interrupt register failed\n", 0, 0);
+        LOG(ERROR, "IRQ_PHY_TIMER_EL2 interrupt register failed\n");
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(1)));
         goto destroy_realm;
     }
@@ -47,7 +47,7 @@ void attestation_rec_exit_irq_host(void)
     /* Populate realm with one REC */
     if (val_host_realm_setup(&realm, true))
     {
-        LOG(ERROR, "\tRealm setup failed\n", 0, 0);
+        LOG(ERROR, "Realm setup failed\n");
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(2)));
         goto free_irq;
     }
@@ -57,7 +57,7 @@ void attestation_rec_exit_irq_host(void)
     ret = val_host_rmi_rec_enter(realm.rec[0], realm.run[0]);
     if (ret)
     {
-        LOG(ERROR, "\tRec enter failed, ret=%x\n", ret, 0);
+        LOG(ERROR, "Rec enter failed, ret=%x\n", ret);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(3)));
         goto free_irq;
     }
@@ -69,7 +69,7 @@ void attestation_rec_exit_irq_host(void)
         ret = val_host_rmi_rec_enter(realm.rec[0], realm.run[0]);
         if (ret)
         {
-            LOG(ERROR, "\tRec enter failed, ret=%x\n", ret, 0);
+            LOG(ERROR, "Rec enter failed, ret=%x\n", ret);
             val_set_status(RESULT_FAIL(VAL_ERROR_POINT(4)));
             goto free_irq;
         }
@@ -77,7 +77,7 @@ void attestation_rec_exit_irq_host(void)
         if ((rec_exit->exit_reason == RMI_EXIT_HOST_CALL) &&
             *shared_err_flag == 1)
         {
-            LOG(ERROR, "\tToken init/continue failed.\n", 0, 0);
+            LOG(ERROR, "Token init/continue failed.\n");
             val_set_status(RESULT_FAIL(VAL_ERROR_POINT(2)));
             goto free_irq;
         }
@@ -89,9 +89,9 @@ void attestation_rec_exit_irq_host(void)
 
             if (handler_flag == 1)
             {
-                LOG(TEST, "\tTimer Interrupt triggered\n", 0, 0);
+                LOG(TEST, "Timer Interrupt triggered\n");
             } else {
-                LOG(ERROR, "\tTimer interrupt not triggered\n", 0, 0);
+                LOG(ERROR, "Timer interrupt not triggered\n");
                 val_set_status(RESULT_FAIL(VAL_ERROR_POINT(5)));
                 goto free_irq;
             }
@@ -99,7 +99,7 @@ void attestation_rec_exit_irq_host(void)
             ret = val_host_rmi_rec_enter(realm.rec[0], realm.run[0]);
             if (ret)
             {
-                LOG(ERROR, "\tRec enter failed, ret=%x\n", ret, 0);
+                LOG(ERROR, "Rec enter failed, ret=%x\n", ret);
                 val_set_status(RESULT_FAIL(VAL_ERROR_POINT(6)));
                 goto free_irq;
             }
@@ -119,8 +119,8 @@ void attestation_rec_exit_irq_host(void)
 
     if (*test_shared_region_flag != 1)
     {
-        LOG(ALWAYS, "\tTried %d combinations but interrupt didnt triggered \
-                                         for exact test scenario\n", i, 0);
+        LOG(ALWAYS, "Tried %d combinations but interrupt didnt triggered \
+                                         for exact test scenario\n", i);
         val_set_status(RESULT_SKIP(VAL_SKIP_CHECK));
         goto free_irq;
     }
@@ -133,7 +133,7 @@ free_irq:
 
     if (val_irq_unregister_handler(IRQ_PHY_TIMER_EL2))
     {
-        LOG(ERROR, "\tIRQ_PHY_TIMER_EL2 interrupt unregister failed\n", 0, 0);
+        LOG(ERROR, "IRQ_PHY_TIMER_EL2 interrupt unregister failed\n");
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(7)));
     }
 

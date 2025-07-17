@@ -1,5 +1,5 @@
 #-------------------------------------------------------------------------------
-# Copyright (c) 2023-2024, Arm Limited or its affiliates. All rights reserved.
+# Copyright (c) 2023-2025, Arm Limited or its affiliates. All rights reserved.
 #
 # SPDX-License-Identifier: BSD-3-Clause
 #
@@ -30,6 +30,7 @@ target_include_directories(${VAL_LIB} PRIVATE
     ${ROOT_DIR}/plat/targets/${TARGET}/inc/
     ${ROOT_DIR}/plat/driver/inc/
     ${ROOT_DIR}/test/database/
+    ${COMMON_VAL_PATH}/inc/
 )
 
 unset(VAL_SRC)

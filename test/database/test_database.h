@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2025, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -19,6 +19,7 @@ typedef void (*test_fptr_t)(void);
 /* Structure to hold all test info */
 typedef struct {
     char                suite_name[PRINT_LIMIT];
+    char                sub_suite_name[PRINT_LIMIT];
     char                test_name[PRINT_LIMIT];
     test_fptr_t         host_fn; /* Host Test function */
     test_fptr_t         realm_fn; /* Realm Test function */
@@ -30,17 +31,17 @@ typedef struct {
     extern  void testname##_realm(void);\
     extern  void testname##_secure(void);
 
-#define HOST_TEST_ONLY(suitename, testname) \
-    {"Suite="#suitename" : ", #testname, testname##_host, NULL, NULL}
+#define HOST_TEST_ONLY(suitename, sub_suite_name, testname) \
+    {"Suite="#suitename" : Test=", #sub_suite_name, #testname, testname##_host, NULL, NULL}
 
-#define REALM_TEST_ONLY(suitename, testname) \
-    {" "#suitename, #testname, NULL, testname##_realm, NULL}
+#define REALM_TEST_ONLY(suitename, sub_suite_name, testname) \
+    {" "#suitename, #sub_suite_name,  #testname, NULL, testname##_realm, NULL}
 
-#define SECURE_TEST_ONLY(suitename, testname) \
-    {" "#suitename, #testname, NULL, NULL, testname##_secure}
+#define SECURE_TEST_ONLY(suitename, sub_suite_name, testname) \
+    {" "#suitename, #sub_suite_name, #testname, NULL, NULL, testname##_secure}
 
-#define DUMMY_TEST(suitename, testname) \
-    {" ", " ", NULL, NULL, NULL}
+#define DUMMY_TEST(suitename, sub_suite_name, testname) \
+    {" ", " ", " ", NULL, NULL, NULL}
 
 #define TEST_FUNC_DECLARATION
 #include "test_list.h"

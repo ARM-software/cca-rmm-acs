@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2024-2025, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -26,7 +26,7 @@ void planes_rec_exit_da_ripas_destroyed_host(void)
     /* Skip if RMM do not support planes */
     if (!val_host_rmm_supports_planes())
     {
-        LOG(ALWAYS, "\n\tPlanes feature not supported\n", 0, 0);
+        LOG(ALWAYS, "Planes feature not supported\n");
         val_set_status(RESULT_SKIP(VAL_SKIP_CHECK));
         goto destroy_realm;
     }
@@ -45,11 +45,11 @@ void planes_rec_exit_da_ripas_destroyed_host(void)
 
     val_memcpy(&realm.flags1, &realm_flags, sizeof(realm.flags1));
 
-    LOG(DBG, "\t INFO: RTT tree per plane : %d\n", realm_flags.rtt_tree_pp, 0);
+    LOG(DBG, " INFO: RTT tree per plane : %d\n", realm_flags.rtt_tree_pp);
     /* Populate realm with one REC*/
     if (val_host_realm_setup(&realm, false))
     {
-        LOG(ERROR, "\tRealm setup failed\n", 0, 0);
+        LOG(ERROR, "Realm setup failed\n");
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(1)));
         goto destroy_realm;
     }
@@ -59,7 +59,7 @@ void planes_rec_exit_da_ripas_destroyed_host(void)
     phys = (uint64_t)val_host_mem_alloc(PAGE_SIZE, (2 * data_create.size));
     if (!phys)
     {
-        LOG(ERROR, "\tval_host_mem_alloc failed\n", 0, 0);
+        LOG(ERROR, "val_host_mem_alloc failed\n");
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(2)));
         goto destroy_realm;
     }
@@ -71,7 +71,7 @@ void planes_rec_exit_da_ripas_destroyed_host(void)
     ret = val_host_map_protected_data_to_realm(&realm, &data_create);
     if (ret)
     {
-        LOG(ERROR, "\tval_host_map_protected_data_to_realm failed\n", 0, 0);
+        LOG(ERROR, "val_host_map_protected_data_to_realm failed\n");
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(3)));
         goto destroy_realm;
     }
@@ -87,7 +87,7 @@ void planes_rec_exit_da_ripas_destroyed_host(void)
 
             if (cmd_ret.x0)
             {
-                LOG(ERROR, "RTT_AUX_UNMAP_PRTOTECTED failed, ret=%d\n", cmd_ret.x0, 0);
+                LOG(ERROR, "RTT_AUX_UNMAP_PRTOTECTED failed, ret=%d\n", cmd_ret.x0);
                 val_set_status(RESULT_FAIL(VAL_ERROR_POINT(4)));
                 goto destroy_realm;
             }
@@ -97,7 +97,7 @@ void planes_rec_exit_da_ripas_destroyed_host(void)
     ret = val_host_rmi_data_destroy(realm.rd, TEST_IPA, &data_destroy);
     if (ret)
     {
-        LOG(ERROR, "\tData destroy failed, ipa=0x%lx, ret=0x%x\n", TEST_IPA, ret);
+        LOG(ERROR, "Data destroy failed, ipa=0x%lx, ret=0x%x\n", TEST_IPA, ret);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(5)));
         goto destroy_realm;
     }
@@ -105,7 +105,7 @@ void planes_rec_exit_da_ripas_destroyed_host(void)
     /* Activate realm */
     if (val_host_realm_activate(&realm))
     {
-        LOG(ERROR, "\tRealm activate failed\n", 0, 0);
+        LOG(ERROR, "Realm activate failed\n");
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(6)));
         goto destroy_realm;
     }
@@ -117,14 +117,14 @@ void planes_rec_exit_da_ripas_destroyed_host(void)
     ret = val_host_rmi_rec_enter(realm.rec[0], realm.run[0]);
     if (ret)
     {
-        LOG(ERROR, "\tRec enter failed, ret=%x\n", ret, 0);
+        LOG(ERROR, "Rec enter failed, ret=%x\n", ret);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(7)));
         goto destroy_realm;
     }
 
     /* Check that REC Exit was due to host call because of P0 requesting for test IPA */
     if (rec_exit->exit_reason != RMI_EXIT_HOST_CALL) {
-        LOG(ERROR, "\tUnexpected REC exit, %d. ESR: %lx \n", rec_exit->exit_reason, rec_exit->esr);
+        LOG(ERROR, "Unexpected REC exit, %d. ESR: %lx \n", rec_exit->exit_reason, rec_exit->esr);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(8)));
         goto destroy_realm;
     }
@@ -137,14 +137,14 @@ void planes_rec_exit_da_ripas_destroyed_host(void)
     ret = val_host_rmi_rec_enter(realm.rec[0], realm.run[0]);
     if (ret)
     {
-        LOG(ERROR, "\tRec enter failed, ret=%x\n", ret, 0);
+        LOG(ERROR, "Rec enter failed, ret=%x\n", ret);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(9)));
         goto destroy_realm;
     }
 
     /* Check that REC exit was due S2AP change request */
     if (rec_exit->exit_reason != RMI_EXIT_S2AP_CHANGE) {
-        LOG(ERROR, "\tUnexpected REC exit, %d. ESR: %lx \n", rec_exit->exit_reason, rec_exit->esr);
+        LOG(ERROR, "Unexpected REC exit, %d. ESR: %lx \n", rec_exit->exit_reason, rec_exit->esr);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(10)));
         goto destroy_realm;
     }
@@ -161,7 +161,7 @@ void planes_rec_exit_da_ripas_destroyed_host(void)
     if (validate_rec_exit_da(rec_exit, TEST_IPA, ESR_ISS_DFSC_TTF_L3,
                                 NON_EMULATABLE_DA, ESR_WnR_WRITE))
     {
-        LOG(ERROR, "\tREC exit DA: params mismatch\n", 0, 0);
+        LOG(ERROR, "REC exit DA: params mismatch\n");
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(12)));
         goto destroy_realm;
     }

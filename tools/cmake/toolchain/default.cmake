@@ -1,5 +1,5 @@
 #-------------------------------------------------------------------------------
-# Copyright (c) 2023, Arm Limited or its affiliates. All rights reserved.
+# Copyright (c) 2023,2025 Arm Limited or its affiliates. All rights reserved.
 #
 # SPDX-License-Identifier: BSD-3-Clause
 #
@@ -13,3 +13,4 @@ set(SUITE_DFLT all)
 set(ENABLE_PIE_DFLT ON)
 set(TEST_COMBINE_DFLT OFF)
 set(CMAKE_BUILD_TYPE_DFLT Release)
+set(SUITE_COVERAGE_DFLT none)

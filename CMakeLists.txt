@@ -36,6 +36,7 @@ include(${ROOT_DIR}/tools/cmake/toolchain/utils.cmake)
 include(${ROOT_DIR}/tools/cmake/toolchain/default.cmake)
 include(${ROOT_DIR}/tools/cmake/common/CMakeExternal.cmake)
 include(${ROOT_DIR}/tools/cmake/common/CMakeHelpers.cmake)
+include(${ROOT_DIR}/tools/cmake/common/CommonVAL.cmake)
 ####
 
 
@@ -47,6 +48,8 @@ list(APPEND TEST_COMBINE_LIST ON OFF)
 list(APPEND CMAKE_BUILD_TYPE_LIST Release Debug)
 list(APPEND ARM_ARCH_MAJOR_LIST 8 9)
 list(APPEND SECURE_TEST_ENABLE_LIST 1)
+list(APPEND SUITE_COVERAGE_LIST all command none)
+list(APPEND SUITE_COVERAGE_FEATURE_LIST planes mec)
 
 ###
 
@@ -205,6 +208,36 @@ endif()
 #Check if RMM_SPEC_VER is set correctly and add definitions accordingly
 CheckSpecVersionAndAddDefinitions(${RMM_SPEC_VER})
 
+#Check if SUITE_COVERAGE is set
+if(NOT DEFINED SUITE_COVERAGE)
+    set(SUITE_COVERAGE ${SUITE_COVERAGE_DFLT} CACHE INTERNAL "Defaulting suite to ${SUITE_COVERAGE}" FORCE)
+    message(STATUS "[ACS] : Defaulting SUITE_COVERAGE to ${SUITE_COVERAGE}")
+else()
+    set(SUITE_COVERAGE ${SUITE_COVERAGE} CACHE INTERNAL "SUITE_COVERAGE is set to ${SUITE_COVERAGE}" FORCE)
+
+    if(NOT ${SUITE_COVERAGE} IN_LIST SUITE_COVERAGE_LIST)
+        message(FATAL_ERROR "[ACS] : Error: Unspported value for -DSUITE_COVERAGE=${SUITE_COVERAGE}, supported values are : ${SUITE_COVERAGE_LIST}")
+    elseif(NOT ${SUITE} IN_LIST SUITE_COVERAGE_FEATURE_LIST)
+        message(FATAL_ERROR "[ACS] : Error:  SUITE_COVERAGE is unspported for ${SUITE}, SUITE_COVERAGE is supported for -DSUITE= : ${SUITE_COVERAGE_FEATURE_LIST}")
+    else()
+        message(STATUS "[ACS] : SUITE_COVERAGE is set to ${SUITE_COVERAGE}")
+    endif()
+endif()
+
+#Add the defination based on SUITE_COVERAGE value
+if("${SUITE}" IN_LIST SUITE_COVERAGE_FEATURE_LIST)
+    if("${SUITE_COVERAGE}" STREQUAL "all")
+        add_definitions(-Dd_${SUITE}_command)
+        add_definitions(-Dd_${SUITE})
+    elseif(("${SUITE_COVERAGE}" STREQUAL "command"))
+        add_definitions(-Dd_${SUITE}_command)
+    elseif(("${SUITE_COVERAGE}" STREQUAL "none"))
+        add_definitions(-Dd_${SUITE})
+    endif()
+else()
+    add_definitions(-Dd_${SUITE})
+endif()
+
 if(((${SUITE} STREQUAL "attestation_measurement") OR (${SUITE} STREQUAL "all")) AND (NOT EXISTS ${RMM_ACS_TARGET_QCBOR}))
 execute_process(COMMAND ${GIT_EXECUTABLE} clone ${QCBOR_GIT_REPO_LINK} ${RMM_ACS_TARGET_QCBOR}
 	RESULT_VARIABLE qcbor_clone_result
@@ -233,7 +266,6 @@ include(${ROOT_DIR}/tools/cmake/toolchain/common.cmake)
 # Global macro to identify the ACS test suite cmake build
 add_definitions(-DCMAKE_BUILD)
 add_definitions(-DVERBOSITY=${VERBOSE})
-add_definitions(-Dd_${SUITE})
 add_definitions(-DPLAT_XLAT_TABLES_DYNAMIC)
 
 if(${TEST_COMBINE})

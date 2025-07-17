@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2025, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -48,7 +48,7 @@ static uint64_t rec_create(uint64_t rd)
 
     /* Create the REC */
     if (val_host_rmi_rec_create(rd, rec, (uint64_t)params)) {
-        LOG(ERROR, "\n\t REC create failed ", 0, 0);
+        LOG(ERROR, " REC create failed \n");
         return VAL_ERROR;
     }
 
@@ -69,7 +69,7 @@ void measurement_rim_order_host(void)
     /* Populate realm with one REC*/
     if (val_host_realm_setup(&realm1, 0))
     {
-        LOG(ERROR, "\tRealm setup failed\n", 0, 0);
+        LOG(ERROR, "Realm setup failed\n");
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(1)));
         goto destroy_realm;
     }
@@ -77,7 +77,7 @@ void measurement_rim_order_host(void)
     /* Create rec */
     if (rec_create(realm1.rd))
     {
-        LOG(ERROR, "\tREC create failed\n", 0, 0);
+        LOG(ERROR, "REC create failed\n");
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(2)));
         goto destroy_realm;
     }
@@ -85,14 +85,14 @@ void measurement_rim_order_host(void)
     /* Add data granule */
     if (create_mapping(IPA_ADDR_UNASSIGNED, true, realm1.rd))
     {
-        LOG(ERROR, "\tCouldn't create the assigned protected mapping\n", 0, 0);
+        LOG(ERROR, "Couldn't create the assigned protected mapping\n");
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(3)));
     }
 
     uint64_t data1 = val_host_delegate_granule();
     if (data1 == VAL_ERROR)
     {
-        LOG(ERROR, "\t Delegation failed \n", 0, 0);
+        LOG(ERROR, " Delegation failed \n");
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(13)));
         goto destroy_realm;
     }
@@ -100,7 +100,7 @@ void measurement_rim_order_host(void)
     uint64_t src1 = val_host_undelegate_granule();
     if (src1 == VAL_ERROR)
     {
-        LOG(ERROR, "\t Memory allocation failed \n", 0, 0);
+        LOG(ERROR, " Memory allocation failed \n");
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(13)));
         goto destroy_realm;
     }
@@ -111,7 +111,7 @@ void measurement_rim_order_host(void)
 
     if (val_host_rmi_data_create(realm1.rd, data1, IPA_ADDR_UNASSIGNED, src1, flags1))
     {
-        LOG(ERROR, "\tData create failed.\n", 0, 0);
+        LOG(ERROR, "Data create failed.\n");
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(4)));
         goto destroy_realm;
     }
@@ -120,7 +120,7 @@ void measurement_rim_order_host(void)
     ret = val_host_rmi_realm_activate(realm1.rd);
     if (ret)
     {
-        LOG(ERROR, "\tRealm activate failed, ret=%x\n", ret, 0);
+        LOG(ERROR, "Realm activate failed, ret=%x\n", ret);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(5)));
         goto destroy_realm;
     }
@@ -128,7 +128,7 @@ void measurement_rim_order_host(void)
     ret = val_host_rmi_rec_enter(realm1.rec[0], realm1.run[0]);
     if (ret)
     {
-        LOG(ERROR, "\tRec enter failed, ret=%x\n", ret, 0);
+        LOG(ERROR, "Rec enter failed, ret=%x\n", ret);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(6)));
         goto destroy_realm;
     }
@@ -146,7 +146,7 @@ void measurement_rim_order_host(void)
     /* Populate realm with one REC*/
     if (val_host_realm_setup(&realm2, 0))
     {
-        LOG(ERROR, "\tRealm setup failed\n", 0, 0);
+        LOG(ERROR, "Realm setup failed\n");
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(7)));
         goto destroy_realm;
     }
@@ -154,7 +154,7 @@ void measurement_rim_order_host(void)
     /* Add data granule */
     if (create_mapping(IPA_ADDR_UNASSIGNED, true, realm2.rd))
     {
-        LOG(ERROR, "\tCouldn't create the assigned protected mapping\n", 0, 0);
+        LOG(ERROR, "Couldn't create the assigned protected mapping\n");
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(8)));
         goto destroy_realm;
     }
@@ -162,7 +162,7 @@ void measurement_rim_order_host(void)
     uint64_t data2 = val_host_delegate_granule();
     if (data1 == VAL_ERROR)
     {
-        LOG(ERROR, "\t Delegation failed \n", 0, 0);
+        LOG(ERROR, " Delegation failed \n");
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(13)));
         goto destroy_realm;
     }
@@ -170,7 +170,7 @@ void measurement_rim_order_host(void)
     uint64_t src2 = val_host_undelegate_granule();
     if (src2 == VAL_ERROR)
     {
-        LOG(ERROR, "\t Memory allocation failed \n", 0, 0);
+        LOG(ERROR, " Memory allocation failed \n");
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(13)));
         goto destroy_realm;
     }
@@ -181,7 +181,7 @@ void measurement_rim_order_host(void)
 
     if (val_host_rmi_data_create(realm2.rd, data2, IPA_ADDR_UNASSIGNED, src2, flags2))
     {
-        LOG(ERROR, "\tData create failed.\n", 0, 0);
+        LOG(ERROR, "Data create failed.\n");
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(9)));
         goto destroy_realm;
     }
@@ -189,7 +189,7 @@ void measurement_rim_order_host(void)
     /* Create rec */
     if (rec_create(realm2.rd))
     {
-        LOG(ERROR, "\tREC create failed\n", 0, 0);
+        LOG(ERROR, "REC create failed\n");
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(10)));
         goto destroy_realm;
     }
@@ -198,7 +198,7 @@ void measurement_rim_order_host(void)
     ret = val_host_rmi_realm_activate(realm2.rd);
     if (ret)
     {
-        LOG(ERROR, "\tRealm activate failed, ret=%x\n", ret, 0);
+        LOG(ERROR, "Realm activate failed, ret=%x\n", ret);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(11)));
         goto destroy_realm;
     }
@@ -207,7 +207,7 @@ void measurement_rim_order_host(void)
     ret = val_host_rmi_rec_enter(realm2.rec[0], realm2.run[0]);
     if (ret)
     {
-        LOG(ERROR, "\tRec enter failed, ret=%x\n", ret, 0);
+        LOG(ERROR, "Rec enter failed, ret=%x\n", ret);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(12)));
         goto destroy_realm;
     }
@@ -216,7 +216,7 @@ void measurement_rim_order_host(void)
 
     /* Compare command output with zero initialized structure */
     if (!val_memcmp(rec_exit1->gprs, rec_exit2->gprs, sizeof(rec_exit1->gprs))) {
-        LOG(ERROR, "\t RIM values are same \n", 0, 0);
+        LOG(ERROR, " RIM values are same \n");
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(13)));
         goto destroy_realm;
     }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2024-2025, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -37,7 +37,7 @@ void cmd_rtt_set_s2ap_realm(void)
         /* Set Overlay value RW_upX for (plane_idx, perm_idx) = (2, 2) */
         cmd_ret = val_realm_rsi_mem_set_perm_value(PLANE_INDEX_2, PERMISSION_INDEX_2, S2_AP_RW_upX);
         if (cmd_ret.x0) {
-            LOG(ERROR, "MEM_SET_PERM_VALUE failed with : %d \n", cmd_ret.x0, 0);
+            LOG(ERROR, "MEM_SET_PERM_VALUE failed with : %d \n", cmd_ret.x0);
             val_set_status(RESULT_FAIL(VAL_ERROR_POINT(1)));
             goto exit;
         }
@@ -59,7 +59,7 @@ void cmd_rtt_set_s2ap_realm(void)
         {
             cmd_ret = val_realm_rsi_mem_set_perm_value(i + 1, PERMISSION_INDEX_3, S2_AP_RW_upX);
             if (cmd_ret.x0) {
-                LOG(ERROR, "MEM_SET_PERM_VALUE failed with : %d \n", cmd_ret.x0, 0);
+                LOG(ERROR, "MEM_SET_PERM_VALUE failed with : %d \n", cmd_ret.x0);
                 val_set_status(RESULT_FAIL(VAL_ERROR_POINT(3)));
                 goto exit;
             }
@@ -90,7 +90,7 @@ void cmd_rtt_set_s2ap_realm(void)
     ret = val_psci_cpu_on(REC_NUM(1), val_realm_get_secondary_cpu_entry(), CONTEXT_ID);
     if (ret)
     {
-        LOG(ERROR, "\n\tPSCI CPU ON failed with ret status : 0x%x \n", ret, 0);
+        LOG(ERROR, "PSCI CPU ON failed with ret status : 0x%x \n", ret);
         goto exit;
     }
 
@@ -99,7 +99,7 @@ void cmd_rtt_set_s2ap_realm(void)
     {
         cmd_ret = val_realm_rsi_mem_set_perm_value(i + 1, PERMISSION_INDEX_1, S2_AP_RW_upX);
         if (cmd_ret.x0) {
-            LOG(ERROR, "MEM_SET_PERM_VALUE failed with : %d \n", cmd_ret.x0, 0);
+            LOG(ERROR, "MEM_SET_PERM_VALUE failed with : %d \n", cmd_ret.x0);
             val_set_status(RESULT_FAIL(VAL_ERROR_POINT(5)));
             goto exit;
         }

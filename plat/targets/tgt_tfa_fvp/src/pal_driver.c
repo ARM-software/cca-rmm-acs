@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023-2025, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -9,8 +9,6 @@
 #include "pal_pl011_uart.h"
 #include "pal_sp805_watchdog.h"
 #include "pal_nvm.h"
-
-#define pal_uart_putc(x) pal_driver_uart_pl011_putc(x)
 
 uint32_t pal_printf(const char *msg, uint64_t data1, uint64_t data2)
 {

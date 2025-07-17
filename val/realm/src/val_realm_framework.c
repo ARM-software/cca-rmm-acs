@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023-2024, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023-2025, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -31,34 +31,6 @@ uint64_t val_realm_get_secondary_cpu_entry(void)
 }
 
 /**
- *   @brief    This function prints the given string and data onto the uart
- *   @param    msg      - Input String
- *   @param    data1    - Value for first format specifier
- *   @param    data2    - Value for second format specifier
- *   @return   SUCCESS(0)/FAILURE
-**/
-uint32_t val_realm_printf(const char *msg, uint64_t data1, uint64_t data2)
-{
-    size_t length = 0;
-
-    while (msg[length] != '\0')
-    {
-      ++length;
-    }
-
-    /* Write realm message to shared printf location */
-    val_memcpy((char *)(val_get_shared_region_base() + REALM_PRINTF_MSG_OFFSET),
-                (char *)msg,
-                length+1);
-    *(uint64_t *)(val_get_shared_region_base() + REALM_PRINTF_DATA1_OFFSET) = (uint64_t)data1;
-    *(uint64_t *)(val_get_shared_region_base() + REALM_PRINTF_DATA2_OFFSET) = (uint64_t)data2;
-
-    /* Print from realm through RSI_HOST_CALL */
-    val_realm_rsi_host_call((uint16_t)VAL_REALM_PRINT_MSG);
-    return VAL_SUCCESS;
-}
-
-/**
  *   @brief    Sends control back to host by executing hvc #n
  *   @param    void
  *   @return   void
@@ -81,7 +53,7 @@ static void val_realm_test_dispatch(void)
     fn_ptr = (test_fptr_t)(test_list[val_get_curr_test_num()].realm_fn);
     if (fn_ptr == NULL)
     {
-        LOG(ERROR, "Invalid realm test address\n", 0, 0);
+        LOG(ERROR, "Invalid realm test address\n");
         pal_terminate_simulation();
     }
 
@@ -136,6 +108,16 @@ static uint64_t val_realm_init(void)
 }
 
 /**
+ *   @brief    Passes relam IPA width and initializes Common VAL functionalities.
+ *   @param    ipa_width      - Realm IPA width
+ *   @return   Void
+**/
+static void val_realm_common_val_init(uint64_t ipa_width)
+{
+    val_base_addr_ipa(ipa_width);
+}
+
+/**
  *   @brief    C entry function for endpoint
  *   @param    primary_cpu_boot     - Boolean value for primary cpu boot
  *   @return   void (Never returns)
@@ -146,9 +128,10 @@ void val_realm_main(bool primary_cpu_boot)
         goto shutdown;
 
     val_set_running_in_realm_flag();
-    val_set_security_state_flag(2);
+    val_set_security_state_flag(SEC_STATE_REALM);
 
     uint64_t ipa_width = val_realm_get_ipa_width();
+    val_realm_common_val_init(ipa_width);
 
     xlat_ctx_t  *realm_xlat_ctx = val_realm_get_xlat_ctx();
 
@@ -171,6 +154,6 @@ void val_realm_main(bool primary_cpu_boot)
     val_realm_test_dispatch();
 
 shutdown:
-    LOG(ALWAYS, "REALM : Entering standby.. \n", 0, 0);
+    LOG(ALWAYS, "REALM : Entering standby.. \n");
     pal_terminate_simulation();
 }

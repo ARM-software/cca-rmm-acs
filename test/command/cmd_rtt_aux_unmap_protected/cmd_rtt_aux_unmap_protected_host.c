@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2024-2025, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -55,7 +55,7 @@ static uint64_t rd_rtt_tree_single_prep_sequence(void)
     /* SKIP thie test case if RMM do not support both single and shared RTT configuration */
     if (VAL_EXTRACT_BITS(featreg0, 43, 44) != RMI_PLANE_RTT_AUX_SINGLE)
     {
-        LOG(ALWAYS, "\n\tRMM does not support shared RTT tree configuration\n", 0, 0);
+        LOG(ALWAYS, "RMM does not support shared RTT tree configuration\n");
         return VAL_SKIP_CHECK;
     }
 
@@ -72,7 +72,7 @@ static uint64_t rd_rtt_tree_single_prep_sequence(void)
 
     if (val_host_realm_create_common(&realm[SINGLE_RTT_TREE_REALM]))
     {
-        LOG(ERROR, "\tRealm create failed\n", 0, 0);
+        LOG(ERROR, "Realm create failed\n");
         return VAL_TEST_PREP_SEQ_FAILED;
     }
 
@@ -109,7 +109,7 @@ static uint64_t rd_valid_prep_sequence(void)
 
     if (val_host_realm_create_common(&realm[VALID_REALM]))
     {
-        LOG(ERROR, "\tRealm create failed\n", 0, 0);
+        LOG(ERROR, "Realm create failed\n");
         return VAL_TEST_PREP_SEQ_FAILED;
     }
 
@@ -244,7 +244,7 @@ static uint64_t intent_to_seq(struct stimulus *test_data, struct arguments *args
             break;
 
         default:
-            LOG(ERROR, "\n\tUnknown intent label encountered\n", 0, 0);
+            LOG(ERROR, "Unknown intent label encountered\n");
             return VAL_ERROR;
     }
 
@@ -260,7 +260,7 @@ void cmd_rtt_aux_unmap_protected_host(void)
     /* Skip if RMM do not support planes */
     if (!val_host_rmm_supports_planes())
     {
-        LOG(ALWAYS, "\n\tPlanes feature not supported\n", 0, 0);
+        LOG(ALWAYS, "Planes feature not supported\n");
         val_set_status(RESULT_SKIP(VAL_SKIP_CHECK));
         goto exit;
     }
@@ -269,7 +269,7 @@ void cmd_rtt_aux_unmap_protected_host(void)
     if (!val_host_rmm_supports_rtt_tree_per_plane())
     {
         val_set_status(RESULT_SKIP(VAL_SKIP_CHECK));
-        LOG(ALWAYS, "\tNo support for RTT tree per plane, Skipping Test\n", 0, 0);
+        LOG(ALWAYS, "No support for RTT tree per plane, Skipping Test\n");
         goto exit;
     }
 
@@ -280,37 +280,36 @@ void cmd_rtt_aux_unmap_protected_host(void)
 
     for (i = 0; i < (sizeof(test_data) / sizeof(struct stimulus)); i++)
     {
-        LOG(TEST, "\n\tCheck %d : ", i + 1, 0);
-        LOG(TEST, test_data[i].msg, 0, 0);
-        LOG(TEST, "; intent id : 0x%x \n", test_data[i].label, 0);
+        LOG(TEST, "Check %2d : %s; intent id : 0x%x \n",
+              i + 1, test_data[i].msg, test_data[i].label);
 
         ret = intent_to_seq(&test_data[i], &args);
         if (ret == VAL_SKIP_CHECK)
         {
-            LOG(TEST, "\tSkipping Check %d\n", i + 1, 0);
+            LOG(TEST, "Skipping Check %d\n", i + 1);
             continue;
         }
         else if (ret == VAL_ERROR) {
-            LOG(ERROR, "\n\t Intent to sequence failed \n", 0, 0);
+            LOG(ERROR, " Intent to sequence failed \n");
             val_set_status(RESULT_FAIL(VAL_ERROR_POINT(2)));
             goto exit;
         }
 
         cmd_ret = val_host_rmi_rtt_aux_unmap_protected(args.rd, args.ipa, args.index);
         if (cmd_ret.x0 != PACK_CODE(test_data[i].status, test_data[i].index)) {
-            LOG(ERROR, "\tTest Failure!\n\tThe ABI call returned: %x\n\tExpected: %x\n",
+            LOG(ERROR, "Test Failure!The ABI call returned: %xExpected: %x\n",
                 cmd_ret.x0, PACK_CODE(test_data[i].status, test_data[i].index));
             val_set_status(RESULT_FAIL(VAL_ERROR_POINT(3)));
             goto exit;
         }
     }
 
-    LOG(TEST, "\n\tPositive Observability Check\n", 0, 0);
+    LOG(TEST, "Check %2d : Positive Observability\n", ++i);
     cmd_ret = val_host_rmi_rtt_aux_unmap_protected(c_args.rd_valid, c_args.ipa_valid,
                                                                      c_args.index_valid);
     if (cmd_ret.x0 != 0)
     {
-        LOG(ERROR, "\n\t Command failed. %x\n", cmd_ret.x0, 0);
+        LOG(ERROR, " Command failed. %x\n", cmd_ret.x0);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(4)));
         goto exit;
     }
@@ -321,7 +320,7 @@ void cmd_rtt_aux_unmap_protected_host(void)
                                                                      c_args.index_valid);
     if (cmd_ret.x0 != 0)
     {
-        LOG(ERROR, "\n\t Command failed. %x\n", cmd_ret.x0, 0);
+        LOG(ERROR, " Command failed. %x\n", cmd_ret.x0);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(5)));
         goto exit;
     }

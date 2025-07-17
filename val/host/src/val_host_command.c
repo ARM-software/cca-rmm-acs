@@ -1,5 +1,5 @@
  /*
- * Copyright (c) 2023-2024, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023-2025, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -30,7 +30,7 @@ uint64_t create_mapping(uint64_t ipa, bool ripas_init, uint64_t rd1)
 
     /* Try a maximum walk and check where to create the next table entry */
     if (val_host_rmi_rtt_read_entry(rd, ipa, MAP_LEVEL, &rtte)) {
-        LOG(ERROR, "\tReadEntry query failed!", 0, 0);
+        LOG(ERROR, "ReadEntry query failed!\n");
         return VAL_ERROR;
     }
 
@@ -47,7 +47,7 @@ uint64_t create_mapping(uint64_t ipa, bool ripas_init, uint64_t rd1)
         uint64_t ipa_aligned = (ipa / L0_SIZE) * L0_SIZE;
 
         if (val_host_rmi_rtt_create(rd, rtt_l1, ipa_aligned, 1)) {
-            LOG(ERROR, "\trtt_l1 creation failed\n", 0, 0);
+            LOG(ERROR, "rtt_l1 creation failed\n");
             return VAL_ERROR;
         }
     }
@@ -60,7 +60,7 @@ uint64_t create_mapping(uint64_t ipa, bool ripas_init, uint64_t rd1)
         uint64_t ipa_aligned = (ipa / L1_SIZE) * L1_SIZE;
 
         if (val_host_rmi_rtt_create(rd, rtt_l2, ipa_aligned, 2)) {
-            LOG(ERROR, "\trtt_l2 creation failed\n", 0, 0);
+            LOG(ERROR, "rtt_l2 creation failed\n");
             return VAL_ERROR;
         }
     }
@@ -73,7 +73,7 @@ uint64_t create_mapping(uint64_t ipa, bool ripas_init, uint64_t rd1)
         uint64_t ipa_aligned = (ipa / L2_SIZE) * L2_SIZE;
 
         if (val_host_rmi_rtt_create(rd, rtt_l3, ipa_aligned, MAP_LEVEL)) {
-            LOG(ERROR, "\trtt_l3 creation failed\n", 0, 0);
+            LOG(ERROR, "rtt_l3 creation failed\n");
             return VAL_ERROR;
         }
     }
@@ -81,7 +81,7 @@ uint64_t create_mapping(uint64_t ipa, bool ripas_init, uint64_t rd1)
         uint64_t ipa_aligned = (ipa / L3_SIZE) * L3_SIZE;
 
         if (val_host_rmi_rtt_init_ripas(rd, ipa_aligned, ipa_aligned + PAGE_SIZE, &out_top)) {
-            LOG(ERROR, "\tRIPAS initialization failed\n", 0, 0);
+            LOG(ERROR, "RIPAS initialization failed\n");
             return VAL_ERROR;
         }
     }
@@ -96,14 +96,13 @@ uint64_t val_host_delegate_granule(void)
 
     if (gran != NULL) {
         if (val_host_rmi_granule_delegate((uint64_t)gran)) {
-            LOG(ERROR, "\tError! granule couldn't be delegated!\n", 0, 0);
+            LOG(ERROR, "Error! granule couldn't be delegated!\n");
             return VAL_ERROR;
         } else {
-            LOG(DBG, "\tallocation: granule @ address: %x\n",
-                (uint64_t)gran, 0);
+            LOG(DBG, "allocation: granule @ address: %x\n", (uint64_t)gran);
         }
     } else {
-        LOG(ERROR, "\tError! granule couldn't be allocated!\n", 0, 0);
+        LOG(ERROR, "Error! granule couldn't be allocated!\n");
         return VAL_ERROR;
     }
 
@@ -117,7 +116,7 @@ uint64_t val_host_undelegate_granule(void)
 
     if (gran == NULL)
     {
-        LOG(ERROR, "\t Error : Granule couldn't be allocated!\n", 0, 0);
+        LOG(ERROR, " Error : Granule couldn't be allocated!\n");
         return VAL_ERROR;
     }
     return (uint64_t)gran;
@@ -141,7 +140,7 @@ uint64_t val_host_create_aux_mapping(uint64_t rd, uint64_t ipa, uint64_t index)
 
     if (RMI_STATUS(cmd_ret.x0) == RMI_ERROR_INPUT)
     {
-        LOG(ERROR, "\tRTT_AUX_CREATE failed with ret=0x%x\n", cmd_ret.x0, 0);
+        LOG(ERROR, "RTT_AUX_CREATE failed with ret=0x%x\n", cmd_ret.x0);
         return VAL_ERROR;
     }
 
@@ -164,7 +163,7 @@ uint64_t val_host_create_aux_mapping(uint64_t rd, uint64_t ipa, uint64_t index)
 
         if (cmd_ret.x0)
         {
-            LOG(ERROR, "\tRTT_AUX_CREATE failed with ret=0x%x\n", cmd_ret.x0, 0);
+            LOG(ERROR, "RTT_AUX_CREATE failed with ret=0x%x\n", cmd_ret.x0);
             return VAL_ERROR;
         }
 

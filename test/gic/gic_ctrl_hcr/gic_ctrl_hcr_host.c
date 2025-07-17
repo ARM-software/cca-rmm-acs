@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2025, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -22,7 +22,7 @@ void gic_ctrl_hcr_host(void)
     /* Populate realm with one REC */
     if (val_host_realm_setup(&realm, true))
     {
-        LOG(ERROR, "\tRealm setup failed\n", 0, 0);
+        LOG(ERROR, "Realm setup failed\n");
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(1)));
         goto destroy_realm;
     }
@@ -30,7 +30,7 @@ void gic_ctrl_hcr_host(void)
     ret = val_host_rmi_rec_enter(realm.rec[0], realm.run[0]);
     if (ret)
     {
-        LOG(ERROR, "\tRec enter failed, ret=%x\n", ret, 0);
+        LOG(ERROR, "Rec enter failed, ret=%x\n", ret);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(2)));
         goto destroy_realm;
     }
@@ -48,7 +48,7 @@ void gic_ctrl_hcr_host(void)
     ret = val_host_rmi_rec_enter(realm.rec[0], realm.run[0]);
     if (ret)
     {
-        LOG(ERROR, "\tRec enter failed, ret=%x\n", ret, 0);
+        LOG(ERROR, "Rec enter failed, ret=%x\n", ret);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(3)));
         goto destroy_realm;
     }
@@ -57,7 +57,7 @@ void gic_ctrl_hcr_host(void)
     if ((VAL_EXTRACT_BITS(rec_exit->gicv3_misr, GICV3_MISR_EL2_NP, GICV3_MISR_EL2_NP) != 0x1) ||
         VAL_EXTRACT_BITS(rec_exit->gicv3_hcr, GICV3_HCR_EL2_EOICOUNT, 31))
     {
-        LOG(ERROR, "\tNo pending maintence interrupt check failed: %lx\n", rec_exit->gicv3_misr, 0);
+        LOG(ERROR, "No pending maintence interrupt check failed: %lx\n", rec_exit->gicv3_misr);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(4)));
         goto destroy_realm;
     }
@@ -79,7 +79,7 @@ void gic_ctrl_hcr_host(void)
     ret = val_host_rmi_rec_enter(realm.rec[0], realm.run[0]);
     if (ret)
     {
-        LOG(ERROR, "\tRec enter failed, ret=%x\n", ret, 0);
+        LOG(ERROR, "Rec enter failed, ret=%x\n", ret);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(5)));
         goto destroy_realm;
     }
@@ -88,7 +88,7 @@ void gic_ctrl_hcr_host(void)
     if ((VAL_EXTRACT_BITS(rec_exit->gicv3_misr, GICV3_MISR_EL2_U, GICV3_MISR_EL2_U) != 0x1) ||
         VAL_EXTRACT_BITS(rec_exit->gicv3_hcr, GICV3_HCR_EL2_EOICOUNT, 31))
     {
-        LOG(ERROR, "\tUnderflow maintence interrupt check failed: %lx\n", rec_exit->gicv3_misr, 0);
+        LOG(ERROR, "Underflow maintence interrupt check failed: %lx\n", rec_exit->gicv3_misr);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(6)));
         goto destroy_realm;
     }
@@ -109,7 +109,7 @@ void gic_ctrl_hcr_host(void)
     ret = val_host_rmi_rec_enter(realm.rec[0], realm.run[0]);
     if (ret)
     {
-        LOG(ERROR, "\tRec enter failed, ret=%x\n", ret, 0);
+        LOG(ERROR, "Rec enter failed, ret=%x\n", ret);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(7)));
         goto destroy_realm;
     }
@@ -118,7 +118,7 @@ void gic_ctrl_hcr_host(void)
     if ((VAL_EXTRACT_BITS(rec_exit->gicv3_misr, GICV3_MISR_EL2_LRENP, GICV3_MISR_EL2_LRENP) != 0x1)
         || VAL_EXTRACT_BITS(rec_exit->gicv3_hcr, GICV3_HCR_EL2_EOICOUNT, 31) != 0x1)
     {
-        LOG(ERROR, "\tNot Present maintence interrupt failed: %lx\n", rec_exit->gicv3_misr, 0);
+        LOG(ERROR, "Not Present maintence interrupt failed: %lx\n", rec_exit->gicv3_misr);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(8)));
         goto destroy_realm;
     }

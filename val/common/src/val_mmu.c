@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023-2024, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023-2025, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -52,7 +52,7 @@ uint64_t val_get_pa_range_supported(void)
         pa_range = 52;
         break;
     default:
-        LOG(ERROR, "\tinvalid ipa_width\n", 0, 0);
+        LOG(ERROR, "invalid ipa_width\n");
         break;
     }
     return pa_range;
@@ -93,9 +93,9 @@ void val_enable_mmu(xlat_ctx_t *ctx)
     val_mair_write(mmu_cfg[MMU_CFG_MAIR], currentEL);
 
 #ifdef PGT_DEBUG
-    LOG(DBG, "\tval_setup_mmu: tcr=0x%lx\n", mmu_cfg[MMU_CFG_TCR],  0);
-    LOG(DBG, "\tval_setup_mmu: ttbr=0x%lx\n", mmu_cfg[MMU_CFG_TTBR0],  0);
-    LOG(DBG, "\tval_setup_mmu: mair=0x%lx\n", mmu_cfg[MMU_CFG_MAIR],  0);
+    LOG(DBG, "val_setup_mmu: tcr=0x%lx\n", mmu_cfg[MMU_CFG_TCR]);
+    LOG(DBG, "val_setup_mmu: ttbr=0x%lx\n", mmu_cfg[MMU_CFG_TTBR0]);
+    LOG(DBG, "val_setup_mmu: mair=0x%lx\n", mmu_cfg[MMU_CFG_MAIR]);
 #endif
 
 /* Enable MMU */
@@ -105,7 +105,7 @@ void val_enable_mmu(xlat_ctx_t *ctx)
                     val_sctlr_read(currentEL),
                     currentEL);
 #ifdef PGT_DEBUG
-    LOG(DBG, "\tval_enable_mmu: successful\n", 0, 0);
+    LOG(DBG, "val_enable_mmu: successful\n");
 #endif
 
 }

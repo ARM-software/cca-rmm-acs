@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023-2024, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023-2025, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -22,7 +22,7 @@ void mm_hipas_unassigned_ripas_ram_da_ia_realm(void)
     uint32_t Attr;
 
     /* Below code is executed for REC[0] only */
-    LOG(DBG, "\tIn realm_create_realm REC[0], mpdir=%x\n", val_read_mpidr(), 0);
+    LOG(DBG, "In realm_create_realm REC[0], mpdir=%x\n", val_read_mpidr());
 
     gv_realm_host_call = val_realm_rsi_host_call_ripas(VAL_SWITCH_TO_HOST);
     da_ipa = gv_realm_host_call->gprs[1];
@@ -36,7 +36,7 @@ void mm_hipas_unassigned_ripas_ram_da_ia_realm(void)
     mem_desc.attributes = MT_RW_DATA | MT_REALM;
     if (val_realm_pgt_create(&mem_desc))
     {
-        LOG(ERROR, "\tVA to PA mapping failed\n", 0, 0);
+        LOG(ERROR, "VA to PA mapping failed\n");
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(1)));
         goto exit;
     }
@@ -50,7 +50,7 @@ void mm_hipas_unassigned_ripas_ram_da_ia_realm(void)
     *(volatile uint32_t *)da_ipa = 0x100;
     if (g_sea_params.handler_abort)
     {
-        LOG(ERROR, "\tError: Data abort triggered to realm\n", 0, 0);
+        LOG(ERROR, "Error: Data abort triggered to realm\n");
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(2)));
     }
 
@@ -58,7 +58,7 @@ void mm_hipas_unassigned_ripas_ram_da_ia_realm(void)
     Attr = MT_CODE | MT_REALM ;
 
     if (val_realm_update_attributes(PAGE_SIZE, ia_ipa, Attr)) {
-        LOG(ERROR, "\tPage attributes update failed\n", 0, 0);
+        LOG(ERROR, "Page attributes update failed\n");
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(3)));
         goto exit;
     }

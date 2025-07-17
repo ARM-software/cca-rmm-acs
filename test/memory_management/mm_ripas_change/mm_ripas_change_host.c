@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2025, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -27,7 +27,7 @@ void mm_ripas_change_host(void)
     /* Populate realm with one REC*/
     if (val_host_realm_setup(&realm, false))
     {
-        LOG(ERROR, "\tRealm setup failed\n", 0, 0);
+        LOG(ERROR, "Realm setup failed\n");
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(1)));
         goto destroy_realm;
     }
@@ -36,7 +36,7 @@ void mm_ripas_change_host(void)
     phys = (uint64_t)val_host_mem_alloc(PAGE_SIZE, (2 * data_create.size));
     if (!phys)
     {
-        LOG(ERROR, "\tval_host_mem_alloc failed\n", 0, 0);
+        LOG(ERROR, "val_host_mem_alloc failed\n");
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(2)));
         goto destroy_realm;
     }
@@ -48,7 +48,7 @@ void mm_ripas_change_host(void)
     ret = val_host_map_protected_data_to_realm(&realm, &data_create);
     if (ret)
     {
-        LOG(ERROR, "\tval_host_map_protected_data_to_realm failed\n", 0, 0);
+        LOG(ERROR, "val_host_map_protected_data_to_realm failed\n");
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(3)));
         goto destroy_realm;
     }
@@ -56,7 +56,7 @@ void mm_ripas_change_host(void)
     /* Activate realm */
     if (val_host_realm_activate(&realm))
     {
-        LOG(ERROR, "\tRealm activate failed\n", 0, 0);
+        LOG(ERROR, "Realm activate failed\n");
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(4)));
         goto destroy_realm;
     }
@@ -66,12 +66,12 @@ void mm_ripas_change_host(void)
     ret = val_host_rmi_rec_enter(realm.rec[0], realm.run[0]);
     if (ret)
     {
-        LOG(ERROR, "\tRec enter failed, ret=%x\n", ret, 0);
+        LOG(ERROR, "Rec enter failed, ret=%x\n", ret);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(5)));
         goto destroy_realm;
     } else if (val_host_check_realm_exit_host_call((val_host_rec_run_ts *)realm.run[0]))
     {
-        LOG(ERROR, "\tREC_EXIT: HOST_CALL params mismatch\n", 0, 0);
+        LOG(ERROR, "REC_EXIT: HOST_CALL params mismatch\n");
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(6)));
         goto destroy_realm;
     }
@@ -83,19 +83,19 @@ void mm_ripas_change_host(void)
     ret = val_host_rmi_rec_enter(realm.rec[0], realm.run[0]);
     if (ret)
     {
-        LOG(ERROR, "\tRec enter failed, ret=%x\n", ret, 0);
+        LOG(ERROR, "Rec enter failed, ret=%x\n", ret);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(7)));
         goto destroy_realm;
     } else if (val_host_check_realm_exit_ripas_change((val_host_rec_run_ts *)realm.run[0]))
     {
-        LOG(ERROR, "\tRipas change req failed\n", 0, 0);
+        LOG(ERROR, "Ripas change req failed\n");
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(8)));
         goto destroy_realm;
     }
     rec_exit = &(((val_host_rec_run_ts *)realm.run[0])->exit);
     if (!(rec_exit->ripas_base == ripas_ipa) || !(rec_exit->ripas_top == (ripas_ipa + ripas_size)))
     {
-        LOG(ERROR, "\tRipas return params mismatch\n", 0, 0);
+        LOG(ERROR, "Ripas return params mismatch\n");
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(9)));
         goto destroy_realm;
     }
@@ -104,7 +104,7 @@ void mm_ripas_change_host(void)
                                     rec_exit->ripas_top, &out_top);
     if (ret)
     {
-        LOG(ERROR, "\tRMI_RTT_SET_RIPAS failed, ret=%x\n", ret, 0);
+        LOG(ERROR, "RMI_RTT_SET_RIPAS failed, ret=%x\n", ret);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(10)));
         goto destroy_realm;
     }
@@ -112,12 +112,12 @@ void mm_ripas_change_host(void)
     ret = val_host_rmi_rec_enter(realm.rec[0], realm.run[0]);
     if (ret)
     {
-        LOG(ERROR, "\tRec enter failed, ret=%x\n", ret, 0);
+        LOG(ERROR, "Rec enter failed, ret=%x\n", ret);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(11)));
         goto destroy_realm;
     } else if (val_host_check_realm_exit_host_call((val_host_rec_run_ts *)realm.run[0]))
     {
-        LOG(ERROR, "\tREC_EXIT: HOST_CALL params mismatch\n", 0, 0);
+        LOG(ERROR, "REC_EXIT: HOST_CALL params mismatch\n");
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(12)));
         goto destroy_realm;
     }

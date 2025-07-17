@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2025, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -21,7 +21,7 @@ void cmd_psci_features_realm(void)
 
     /* Command should return PSCI_SUCCESS */
     if (ret != PSCI_E_SUCCESS) {
-        LOG(ERROR, "\t Unexpected output for PSCI_FEATURES \n", 0, 0);
+        LOG(ERROR, " Unexpected output for PSCI_FEATURES \n");
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(1)));
         goto exit;
     }
@@ -31,7 +31,7 @@ void cmd_psci_features_realm(void)
 
     /* Command should return PSCI_NOT_SUPPORTED */
     if (ret != PSCI_E_NOT_SUPPORTED) {
-        LOG(ERROR, "\t Unexpected output for PSCI_FEATURES \n", 0, 0);
+        LOG(ERROR, " Unexpected output for PSCI_FEATURES \n");
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(2)));
     }
 

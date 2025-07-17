@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2025, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -44,7 +44,7 @@ static uint64_t g_rd_new_prep_sequence(uint16_t vmid)
 
     if (val_host_realm_create_common(&realm_init))
     {
-        LOG(ERROR, "\tRealm create failed\n", 0, 0);
+        LOG(ERROR, "Realm create failed\n");
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(1)));
         return VAL_TEST_PREP_SEQ_FAILED;
     }
@@ -67,7 +67,7 @@ static uint64_t g_rd_null_prep_sequence(void)
 
     if (val_host_rmi_realm_destroy(rd))
     {
-        LOG(ERROR, "\tCouldn't destroy the Realm\n", 0, 0);
+        LOG(ERROR, "Couldn't destroy the Realm\n");
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(2)));
         return VAL_TEST_PREP_SEQ_FAILED;
     }
@@ -87,7 +87,7 @@ static uint64_t g_rec_ready_prep_sequence(uint64_t rd)
 
     if (val_host_rec_create_common(&realm, &rec_params))
     {
-        LOG(ERROR, "\tCouldn't destroy the Realm\n", 0, 0);
+        LOG(ERROR, "Couldn't destroy the Realm\n");
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(3)));
         return VAL_TEST_PREP_SEQ_FAILED;
     }
@@ -106,12 +106,12 @@ static uint64_t g_rd_system_off_prep_sequence(void)
 
     /* Populate realm with one REC*/
     if (val_host_realm_setup(&realm_test[SYSTEM_OFF_REALM], 1))
-        LOG(ERROR, "\tRealm setup failed\n", 0, 0);
+        LOG(ERROR, "Realm setup failed\n");
     /* Enter REC[0]  */
     ret = val_host_rmi_rec_enter(realm_test[SYSTEM_OFF_REALM].rec[0],
                                 realm_test[SYSTEM_OFF_REALM].run[0]);
     if (ret)
-        LOG(ERROR, "\tRec enter failed, ret=%x\n", ret, 0);
+        LOG(ERROR, "Rec enter failed, ret=%x\n", ret);
     return realm_test[SYSTEM_OFF_REALM].rd;
 }
 
@@ -184,7 +184,7 @@ static uint64_t intent_to_seq(struct stimulus *test_data, struct arguments *args
 
         default:
             val_set_status(RESULT_FAIL(VAL_ERROR_POINT(4)));
-            LOG(ERROR, "\n\tUnknown intent label encountered\n", 0, 0);
+            LOG(ERROR, "Unknown intent label encountered\n");
             return VAL_ERROR;
     }
 
@@ -203,9 +203,8 @@ void cmd_realm_activate_host(void)
 
     for (i = 0; i < (sizeof(test_data) / sizeof(struct stimulus)); i++)
     {
-        LOG(TEST, "\n\tCheck %d : ", i + 1, 0);
-        LOG(TEST, test_data[i].msg, 0, 0);
-        LOG(TEST, "; intent id : 0x%x \n", test_data[i].label, 0);
+        LOG(TEST, "Check %2d : %s; intent id : 0x%x \n",
+              i + 1, test_data[i].msg, test_data[i].label);
 
         if (intent_to_seq(&test_data[i], &args)) {
             val_set_status(RESULT_FAIL(VAL_ERROR_POINT(6)));
@@ -216,28 +215,28 @@ void cmd_realm_activate_host(void)
 
         if (ret != PACK_CODE(test_data[i].status, test_data[i].index))
         {
-            LOG(ERROR, "\tret %x\n", ret, 0);
-            LOG(ERROR, "\tERROR status code : %d index %d\n", test_data[i].status,
+            LOG(ERROR, "ret %x\n", ret);
+            LOG(ERROR, "ERROR status code : %d index %d\n", test_data[i].status,
                                                               test_data[i].index);
             val_set_status(RESULT_FAIL(VAL_ERROR_POINT(7)));
             goto fail;
         }
     }
 
-    LOG(TEST, "\n\tPositive Observability Check\n", 0, 0);
+    LOG(TEST, "Check %2d : Positive Observability\n", ++i);
     ret = val_host_rmi_realm_activate(c_args.rd_valid);
     if (ret != 0)
     {
-        LOG(ERROR, "\n\tRealm activate command failed. %x\n", ret, 0);
+        LOG(ERROR, "Realm activate command failed. %x\n", ret);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(8)));
         goto fail;
     }
 
-    LOG(TEST, "\n\tNegative Observability Check\n", 0, 0);
+    LOG(TEST, "Check %2d : Negative Observability\n", ++i);
     ret = val_host_rmi_realm_activate(c_args.rd_valid);
     if (ret != PACK_CODE(RMI_ERROR_REALM, 0))
     {
-        LOG(ERROR, "\n\tRealm activate command should fail. %x\n", ret, 0);
+        LOG(ERROR, "Realm activate command should fail. %x\n", ret);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(9)));
         goto fail;
     }

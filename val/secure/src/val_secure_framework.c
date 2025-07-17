@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023,2025, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -109,7 +109,7 @@ static void val_secure_test_dispatch(void)
 **/
 void val_secure_main(bool primary_cpu_boot)
 {
-    val_set_security_state_flag(3);
+    val_set_security_state_flag(SEC_STATE_SECURE);
 
     xlat_ctx_t  *secure_xlat_ctx = val_secure_get_xlat_ctx();
 
@@ -134,6 +134,6 @@ void val_secure_main(bool primary_cpu_boot)
     /* Ready to run test regression */
     val_secure_test_dispatch();
 
-    LOG(ALWAYS, "SECURE : Entering standby.. \n", 0, 0);
+    LOG(ALWAYS, "SECURE : Entering standby.. \n");
     pal_terminate_simulation();
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2025, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -29,7 +29,7 @@ void cmd_attestation_token_init_realm(void)
                                                  challenge[5], challenge[6], challenge[7]);
     if (args.x0)
     {
-        LOG(ERROR, "\tToken init command failed, ret=%x\n", args.x0, 0);
+        LOG(ERROR, "Token init command failed, ret=%x\n", args.x0);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(1)));
         goto exit;
     }
@@ -55,7 +55,7 @@ void cmd_attestation_token_init_realm(void)
 
     if (args.x0)
     {
-        LOG(ERROR, "\tToken continue should passed, ret=%x\n", args.x0, 0);
+        LOG(ERROR, "Token continue should passed, ret=%x\n", args.x0);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(2)));
         goto exit;
     }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2025, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -27,13 +27,13 @@ bool synchronous_exception_handler(void)
          */
         if (ec != EC_UNKNOWN)
         {
-            LOG(ERROR, "\tEC class mismatch, expected HVC but received %x\n", ec, 0);
+            LOG(ERROR, "EC class mismatch, expected HVC but received %x\n", ec);
         } else {
             g_sea_params.handler_abort = 1;
         }
     } else if (ec != g_sea_params.abort_type  || far_el1 != g_sea_params.far)
     {
-        LOG(ERROR, "\tUnexpected exception detected ec=%x, far=%x\n", ec, far_el1);
+        LOG(ERROR, "Unexpected exception detected ec=%x, far=%x\n", ec, far_el1);
     } else
     {
         g_sea_params.handler_abort = 1;

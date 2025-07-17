@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023-2024, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023-2025, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -133,3 +133,230 @@ void val_assert(const char *e, uint64_t line, const char *file)
 {
     pal_assert(e, line, file);
 }
+
+/**
+ * @brief Prints a string to a buffer while tracking the number of characters printed.
+ *
+ * @param s Pointer to the buffer where the string is stored.
+ * @param n Maximum number of characters that can be written to the buffer.
+ * @param chars_printed Pointer to a counter tracking the number of written characters.
+ * @param str The input string to be printed.
+ */
+static void string_print(char **s, size_t n, size_t *chars_printed,
+             const char *str)
+{
+    while (*str != '\0') {
+        if (*chars_printed < n) {
+            *(*s) = *str;
+            (*s)++;
+        }
+
+        (*chars_printed)++;
+        str++;
+    }
+}
+
+/**
+ * @brief Converts an unsigned integer to a string and appends it to the buffer.
+ *
+ * @param s Pointer to the buffer where the output string is stored.
+ * @param n Maximum number of characters that can be written to the buffer.
+ * @param count Pointer to a counter tracking the number of written characters.
+ * @param unum The unsigned integer to be converted.
+ * @param radix The numerical base (e.g., 10 for decimal, 16 for hexadecimal).
+ * @param padc The padding character to be used if padding is required.
+ * @param padn The number of padding characters to be inserted.
+ */
+static void unsigned_num_print(char **s, size_t n, size_t *count,
+                  unsigned long long int unum, unsigned int radix,
+                  char padc, int padn)
+{
+    /* Just need enough space to store 64 bit decimal integer */
+    char num_buf[20];
+    int i = 0;
+    int width;
+    unsigned int rem;
+
+    do {
+        rem = (unsigned int)unum % radix;
+        if (rem < 0xa)
+            num_buf[i] = '0' + (char)rem;
+        else
+            num_buf[i] = 'a' + (char)(rem - 0xa);
+        i++;
+        unum /= radix;
+    } while (unum > 0U);
+
+    width = i;
+
+    if (padn > 0) {
+        while (width < padn) {
+            if (*count < n) {
+                *(*s) = padc;
+                (*s)++;
+            }
+            (*count)++;
+            padn--;
+        }
+    }
+
+    while (--i >= 0) {
+        if (*count < n) {
+            *(*s) = num_buf[i];
+            (*s)++;
+        }
+        (*count)++;
+    }
+
+    if (padn < 0) {
+        while (width < -padn) {
+            if (*count < n) {
+                *(*s) = padc;
+                (*s)++;
+            }
+            (*count)++;
+            padn++;
+        }
+    }
+}
+
+/**
+ * @brief A simplified version of vsnprintf that formats and writes data into a string.
+ *
+ * @param s    Pointer to the output buffer where the formatted string is stored.
+ * @param n    Maximum number of characters that can be written to the buffer, including
+ *             null terminator.
+ * @param fmt  The format string specifying how subsequent arguments are formatted.
+ * @param args A variable argument list containing the values to be formatted.
+ *
+ * @return The number of characters written (excluding the null terminator), or -1 if an
+ *         error occurs.
+ */
+int val_vsnprintf(char *s, size_t n, const char *fmt, va_list args)
+{
+    int l_count;
+    int left;
+    char *str;
+    int num;
+    unsigned long long int unum;
+    char padc; /* Padding character */
+    int padn; /* Number of characters to pad */
+    size_t count = 0U;
+
+    if (n == 0U) {
+        /* There isn't space for anything. */
+    } else if (n == 1U) {
+        /* Buffer is too small to actually write anything else. */
+        *s = '\0';
+        n = 0U;
+    } else {
+        /* Reserve space for the terminator character. */
+        n--;
+    }
+
+    while (*fmt != '\0') {
+        l_count = 0;
+        left = 0;
+        padc = '\0';
+        padn = 0;
+
+        if (*fmt == '%') {
+            fmt++;
+            /* Check the format specifier. */
+loop:
+            switch (*fmt) {
+            case '1':
+            case '2':
+            case '3':
+            case '4':
+            case '5':
+            case '6':
+            case '7':
+            case '8':
+            case '9':
+                padc = ' ';
+                for (padn = 0; *fmt >= '0' && *fmt <= '9'; fmt++)
+                    padn = (padn * 10) + (*fmt - '0');
+                if (left)
+                    padn = -padn;
+                goto loop;
+            case '-':
+                left = 1;
+                fmt++;
+                goto loop;
+            case 'i':
+            case 'd':
+                num = get_num_va_args(args, l_count);
+
+                if (num < 0) {
+                    if (count < n) {
+                        *s = '-';
+                        s++;
+                    }
+                    count++;
+
+                    unum = (unsigned int)-num;
+                } else {
+                    unum = (unsigned int)num;
+                }
+
+                unsigned_num_print(&s, n, &count, unum, 10,
+                           padc, padn);
+                break;
+            case 'l':
+                l_count++;
+                fmt++;
+                goto loop;
+            case 's':
+                str = va_arg(args, char *);
+                string_print(&s, n, &count, str);
+                break;
+            case 'u':
+                unum = get_unum_va_args(args, l_count);
+                unsigned_num_print(&s, n, &count, unum, 10,
+                           padc, padn);
+                break;
+            case 'x':
+                unum = get_unum_va_args(args, l_count);
+                unsigned_num_print(&s, n, &count, unum, 16,
+                           padc, padn);
+                break;
+            case '0':
+                padc = '0';
+                padn = 0;
+                fmt++;
+
+                for (;;) {
+                    char ch = *fmt;
+                    if ((ch < '0') || (ch > '9')) {
+                        goto loop;
+                    }
+                    padn = (padn * 10) + (ch - '0');
+                    fmt++;
+                }
+            default:
+                /*
+                 * Exit on any other format specifier and abort
+                 * when in debug mode.
+                 */
+                return -1;
+            }
+            fmt++;
+            continue;
+        }
+
+        if (count < n) {
+            *s = *fmt;
+            s++;
+        }
+
+        fmt++;
+        count++;
+    }
+
+    if (n > 0U)
+        *s = '\0';
+
+    return (int)count;
+}
+

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023-2024, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023-2025, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -66,7 +66,7 @@ static uint64_t g_rd_new_prep_sequence(uint16_t vmid)
 
     if (val_host_realm_create_common(&realm_init))
     {
-        LOG(ERROR, "\tRealm create failed\n", 0, 0);
+        LOG(ERROR, "Realm create failed\n");
         return VAL_TEST_PREP_SEQ_FAILED;
     }
     realm_test[vmid].rd = realm_init.rd;
@@ -87,7 +87,7 @@ static uint64_t ipa_valid_prep_sequence(void)
 
     if (create_mapping(IPA_ADDR_MAPPED, false, c_args.rd_valid))
     {
-        LOG(ERROR, "\tCouldn't create the protected mapping\n", 0, 0);
+        LOG(ERROR, "Couldn't create the protected mapping\n");
         return VAL_TEST_PREP_SEQ_FAILED;
     }
     return IPA_ADDR_MAPPED;
@@ -115,7 +115,7 @@ static uint64_t g_rec_ready_prep_sequence(uint64_t rd)
 
     if (val_host_rec_create_common(&realm, &rec_params))
     {
-        LOG(ERROR, "\tREC Create Failed\n", 0, 0);
+        LOG(ERROR, "REC Create Failed\n");
         return VAL_TEST_PREP_SEQ_FAILED;
     }
 
@@ -164,7 +164,7 @@ static uint64_t intent_to_seq(struct stimulus *test_data, struct arguments *args
         case RD_STATE_UNDELEGATED:
             args->rd = g_undelegated_prep_sequence();
             if (args->rd == VAL_TEST_PREP_SEQ_FAILED) {
-                LOG(ERROR, "\tThe undelegated preparation sequence failed\n", 0, 0);
+                LOG(ERROR, "The undelegated preparation sequence failed\n");
                 return VAL_ERROR;
             }
             args->ipa = c_args.ipa_valid;
@@ -174,7 +174,7 @@ static uint64_t intent_to_seq(struct stimulus *test_data, struct arguments *args
         case RD_STATE_DELEGATED:
             args->rd = g_delegated_prep_sequence();
             if (args->rd == VAL_TEST_PREP_SEQ_FAILED) {
-                LOG(ERROR, "\tThe delegated preparation sequence failed\n", 0, 0);
+                LOG(ERROR, "The delegated preparation sequence failed\n");
                 return VAL_ERROR;
             }
             args->ipa = c_args.ipa_valid;
@@ -184,7 +184,7 @@ static uint64_t intent_to_seq(struct stimulus *test_data, struct arguments *args
         case RD_STATE_REC:
             args->rd = g_rec_ready_prep_sequence(c_args.rd_valid);
             if (args->rd == VAL_TEST_PREP_SEQ_FAILED) {
-                LOG(ERROR, "\tREC preparation sequence failed\n", 0, 0);
+                LOG(ERROR, "REC preparation sequence failed\n");
                 return VAL_ERROR;
             }
             args->ipa = c_args.ipa_valid;
@@ -200,7 +200,7 @@ static uint64_t intent_to_seq(struct stimulus *test_data, struct arguments *args
         case RD_STATE_DATA:
             args->rd = g_data_prep_sequence(c_args.rd_valid, IPA_ADDR_DATA);
             if (args->rd == VAL_TEST_PREP_SEQ_FAILED) {
-                LOG(ERROR, "\tREC preparation sequence failed\n", 0, 0);
+                LOG(ERROR, "REC preparation sequence failed\n");
                 return VAL_ERROR;
             }
             args->ipa = c_args.ipa_valid;
@@ -227,7 +227,7 @@ static uint64_t intent_to_seq(struct stimulus *test_data, struct arguments *args
 
         default:
             /* set status to failure */
-            LOG(ERROR, "\n\tUnknown intent label encountered\n", 0, 0);
+            LOG(ERROR, "Unknown intent label encountered\n");
             return VAL_ERROR;
     }
     return VAL_SUCCESS;
@@ -249,9 +249,8 @@ void cmd_rtt_read_entry_host(void)
     // Iterate over the input
     for (i = 0; i < (sizeof(test_data) / sizeof(struct stimulus)); i++)
     {
-        LOG(TEST, "\n\tCheck %d : ", i + 1, 0);
-        LOG(TEST, test_data[i].msg, 0, 0);
-        LOG(TEST, "; intent id : 0x%x \n", test_data[i].label, 0);
+        LOG(TEST, "Check %2d : %s; intent id : 0x%x \n",
+              i + 1, test_data[i].msg, test_data[i].label);
 
         if (intent_to_seq(&test_data[i], &args)) {
             val_set_status(RESULT_FAIL(VAL_ERROR_POINT(2)));
@@ -261,37 +260,37 @@ void cmd_rtt_read_entry_host(void)
         ret = val_host_rmi_rtt_read_entry(args.rd, args.ipa, args.level, &rtte);
 
         if (ret != PACK_CODE(test_data[i].status, test_data[i].index)) {
-            LOG(ERROR, "\tTest Failure!\n\tThe ABI call returned: %x\n\tExpected: %x\n",
+            LOG(ERROR, "Test Failure!The ABI call returned: %xExpected: %x\n",
                 ret, PACK_CODE(test_data[i].status, test_data[i].index));
             val_set_status(RESULT_FAIL(VAL_ERROR_POINT(3)));
             goto exit;
         }
     }
 
-    LOG(TEST, "\n\tNegative Observability \n", 0, 0);
+    LOG(TEST, "Check %2d : Negative Observability\n", ++i);
     /* Check when command failed X1-X4 is zero*/
 
     /* Initialize a zero filled reference structure and compare with the command output */
     val_host_rtt_entry_ts zero_ref = {0};
     if (val_memcmp(&rtte, &zero_ref, sizeof(rtte))) {
-        LOG(ERROR, "\t Output arguments are not zero \n", 0, 0);
+        LOG(ERROR, " Output arguments are not zero \n");
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(4)));
         goto exit;
     }
 
-    LOG(TEST, "\n\tPositive Observability \n", 0, 0);
+    LOG(TEST, "Check %2d : Positive Observability\n", ++i);
 
     /* Check if walk level matches input level */
     for (i = 0; i < VAL_RTT_MAX_LEVEL; i++) {
         ret = val_host_rmi_rtt_read_entry(c_args.rd_valid, c_args.ipa_valid, i, &rtte);
         if (ret) {
-            LOG(ERROR, "\tREAD_ENTRY failed with ret value: %d\n", ret, 0);
+            LOG(ERROR, "READ_ENTRY failed with ret value: %d\n", ret);
             val_set_status(RESULT_FAIL(VAL_ERROR_POINT(5)));
             goto exit;
         }
 
         if (rtte.walk_level != i) {
-            LOG(ERROR, "\n\tWalk level did not match \n", 0, 0);
+            LOG(ERROR, "Walk level did not match \n");
             val_set_status(RESULT_FAIL(VAL_ERROR_POINT(6)));
             goto exit;
         }
@@ -299,7 +298,7 @@ void cmd_rtt_read_entry_host(void)
 
     /* Check if rtte.state[63:8] & rtte.ripas[63:8} are zero */
     if ((VAL_EXTRACT_BITS(rtte.state, 8, 63) != 0) || (VAL_EXTRACT_BITS(rtte.ripas, 8, 63) != 0)) {
-        LOG(ERROR, "\tUnused bits of RTTE.state & RTTE.ripas are non zero \n", 0, 0);
+        LOG(ERROR, "Unused bits of RTTE.state & RTTE.ripas are non zero \n");
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(7)));
         goto exit;
     }
@@ -309,13 +308,13 @@ void cmd_rtt_read_entry_host(void)
     ret = val_host_rmi_rtt_read_entry(c_args.rd_valid, c_args.ipa_valid,
                                                        c_args.level_valid, &rtte);
     if (ret) {
-        LOG(ERROR, "\tREAD_ENTRY failed with ret value: %d\n", ret, 0);
+        LOG(ERROR, "READ_ENTRY failed with ret value: %d\n", ret);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(8)));
         goto exit;
     }
 
     if (rtte.state != RMI_UNASSIGNED || rtte.state != RMI_EMPTY || rtte.desc != 0) {
-        LOG(ERROR, "\n\t Unexpected RTT entry.\n\tState is: %d, desc is: 0x%x",
+        LOG(ERROR, " Unexpected RTT entry.State is: %d, desc is: 0x%x\n",
                                                              rtte.state, rtte.desc);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(9)));
         goto exit;
@@ -325,13 +324,13 @@ void cmd_rtt_read_entry_host(void)
     ret = val_host_rmi_rtt_read_entry(c_args.rd_valid, IPA_ADDR_DATA,
                                                        c_args.level_valid, &rtte);
     if (ret) {
-        LOG(ERROR, "\tREAD_ENTRY failed with ret value: %d\n", ret, 0);
+        LOG(ERROR, "READ_ENTRY failed with ret value: %d\n", ret);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(10)));
         goto exit;
     }
 
     if (rtte.state == RMI_ASSIGNED && VAL_EXTRACT_BITS(rtte.desc, 2, 9) != 0) {
-        LOG(ERROR, "\n\t Unexpected descriptor Lower attributes  \n", 0, 0);
+        LOG(ERROR, " Unexpected descriptor Lower attributes  \n");
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(11)));
         goto exit;
     }
@@ -339,14 +338,14 @@ void cmd_rtt_read_entry_host(void)
     /* For unprotected IPA with Assigned state check for validity fo X3(desc) and X4(ripas) */
     if (create_mapping(IPA_ADDR_UNPROTECTED, false, c_args.rd_valid))
     {
-        LOG(ERROR, "\tCouldn't create the unprotected mapping\n", 0, 0);
+        LOG(ERROR, "Couldn't create the unprotected mapping\n");
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(12)));
         goto exit;
     }
 
     uint64_t ns = g_undelegated_prep_sequence();
     if (ns == VAL_TEST_PREP_SEQ_FAILED) {
-        LOG(ERROR, "\tUndelegated preparation sequence failed\n", 0, 0);
+        LOG(ERROR, "Undelegated preparation sequence failed\n");
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(13)));
         goto exit;
     }
@@ -355,7 +354,7 @@ void cmd_rtt_read_entry_host(void)
     if (val_host_rmi_rtt_map_unprotected(c_args.rd_valid, IPA_ADDR_UNPROTECTED,
                                                          VAL_RTT_MAX_LEVEL, desc))
     {
-        LOG(ERROR, "\tCouldn't complete the unprotected mapping\n", 0, 0);
+        LOG(ERROR, "Couldn't complete the unprotected mapping\n");
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(14)));
         goto exit;
     }
@@ -363,13 +362,13 @@ void cmd_rtt_read_entry_host(void)
     ret = val_host_rmi_rtt_read_entry(c_args.rd_valid, IPA_ADDR_UNPROTECTED,
                                                        c_args.level_valid, &rtte);
     if (ret) {
-        LOG(ERROR, "\tREAD_ENTRY failed with ret value: %d\n", ret, 0);
+        LOG(ERROR, "READ_ENTRY failed with ret value: %d\n", ret);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(15)));
         goto exit;
     }
 
     if (rtte.state == RMI_ASSIGNED && (rtte.desc != desc || rtte.ripas != RMI_EMPTY)) {
-        LOG(ERROR, "\n\t Unexpected RTT entry\n\t State is: %d", rtte.state, 0);
+        LOG(ERROR, " Unexpected RTT entry State is: %d\n", rtte.state);
         LOG(ERROR, " ,desc is: 0x%x & RIPAS is: %d\n", rtte.desc, rtte.ripas);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(16)));
         goto exit;

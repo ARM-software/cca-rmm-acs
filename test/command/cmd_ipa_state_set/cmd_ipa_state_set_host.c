@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2025, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -24,7 +24,7 @@ void cmd_ipa_state_set_host(void)
     /* Populate realm with one REC*/
     if (val_host_realm_setup(&realm, 1))
     {
-        LOG(ERROR, "\tRealm setup failed\n", 0, 0);
+        LOG(ERROR, "Realm setup failed\n");
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(1)));
         goto destroy_realm;
     }
@@ -33,13 +33,13 @@ void cmd_ipa_state_set_host(void)
     ret = val_host_rmi_rec_enter(realm.rec[0], realm.run[0]);
     if (ret)
     {
-        LOG(ERROR, "\tRec enter failed, ret=%x\n", ret, 0);
+        LOG(ERROR, "Rec enter failed, ret=%x\n", ret);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(2)));
         goto destroy_realm;
     }
     else if (val_host_check_realm_exit_ripas_change((val_host_rec_run_ts *)realm.run[0]))
     {
-        LOG(ERROR, "\tREC_EXIT: Unexpected REC exit\n", 0, 0);
+        LOG(ERROR, "REC_EXIT: Unexpected REC exit\n");
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(3)));
         goto destroy_realm;
     }
@@ -53,7 +53,7 @@ void cmd_ipa_state_set_host(void)
     ret = val_host_rmi_rtt_set_ripas(realm.rd, realm.rec[0], ipa_base, ipa_top, &out_top);
     if  (ret)
     {
-        LOG(ERROR, "\tRIPAS_CHANGE failed with ret = 0x%x\n", ret, 0);
+        LOG(ERROR, "RIPAS_CHANGE failed with ret = 0x%x\n", ret);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(4)));
         goto destroy_realm;
 
@@ -66,7 +66,7 @@ void cmd_ipa_state_set_host(void)
     ret = val_host_rmi_rec_enter(realm.rec[0], realm.run[0]);
     if (ret)
     {
-        LOG(ERROR, "\tRec enter failed, ret=%x\n", ret, 0);
+        LOG(ERROR, "Rec enter failed, ret=%x\n", ret);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(5)));
         goto destroy_realm;
     }
@@ -78,7 +78,7 @@ void cmd_ipa_state_set_host(void)
     ret = val_host_rmi_rec_enter(realm.rec[0], realm.run[0]);
     if (ret)
     {
-        LOG(ERROR, "\tRec enter failed, ret=%x\n", ret, 0);
+        LOG(ERROR, "Rec enter failed, ret=%x\n", ret);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(6)));
         goto destroy_realm;
     }

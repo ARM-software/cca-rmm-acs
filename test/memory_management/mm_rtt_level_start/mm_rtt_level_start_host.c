@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023,2025, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2025, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -19,7 +19,7 @@ static uint32_t create_realm(val_host_realm_ts *realm)
     /* Populate realm with one REC */
     if (val_host_realm_setup(realm, false))
     {
-        LOG(ERROR, "\tRealm setup failed\n", 0, 0);
+        LOG(ERROR, "Realm setup failed\n");
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(1)));
         return VAL_ERROR;
     }
@@ -37,7 +37,7 @@ static uint32_t create_realm(val_host_realm_ts *realm)
             ret = val_host_map_unprotected(realm, pa, ipa, PAGE_SIZE, PAGE_SIZE);
             if (ret)
             {
-                LOG(ERROR, "\tval_realm_map_unprotected_data failed\n", 0, 0);
+                LOG(ERROR, "val_realm_map_unprotected_data failed\n");
                 val_set_status(RESULT_FAIL(VAL_ERROR_POINT(2)));
                 return VAL_ERROR;
             }
@@ -51,7 +51,7 @@ static uint32_t create_realm(val_host_realm_ts *realm)
             ipa = rtt_sl_start[i][1];
             if (val_host_ripas_init(realm, ipa, ipa + PAGE_SIZE, VAL_RTT_MAX_LEVEL, PAGE_SIZE))
             {
-                LOG(ERROR, "\tval_host_ripas_init failed\n", 0, 0);
+                LOG(ERROR, "val_host_ripas_init failed\n");
                 val_set_status(RESULT_FAIL(VAL_ERROR_POINT(3)));
                 return VAL_ERROR;
             }
@@ -59,7 +59,7 @@ static uint32_t create_realm(val_host_realm_ts *realm)
             ret = val_host_map_protected_data_unknown(realm, pa, ipa, PAGE_SIZE);
             if (ret)
             {
-                LOG(ERROR, "\tval_host_map_protected_data_unknown failed\n", 0, 0);
+                LOG(ERROR, "val_host_map_protected_data_unknown failed\n");
                 val_set_status(RESULT_FAIL(VAL_ERROR_POINT(4)));
                 return VAL_ERROR;
             }
@@ -69,7 +69,7 @@ static uint32_t create_realm(val_host_realm_ts *realm)
                                                 realm->s2_starting_level, &rtte);
         if (!RMI_STATUS(ret))
         {
-            LOG(ERROR, "\tRead entry failed\n", 0, 0);
+            LOG(ERROR, "Read entry failed\n");
             val_set_status(RESULT_FAIL(VAL_ERROR_POINT(5)));
             return VAL_ERROR;
         }
@@ -78,7 +78,7 @@ static uint32_t create_realm(val_host_realm_ts *realm)
     /* Activate realm */
     if (val_host_realm_activate(realm))
     {
-        LOG(ERROR, "\tRealm activate failed\n", 0, 0);
+        LOG(ERROR, "Realm activate failed\n");
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(6)));
         return VAL_ERROR;
     }
@@ -87,14 +87,14 @@ static uint32_t create_realm(val_host_realm_ts *realm)
     ret = val_host_rmi_rec_enter(realm->rec[0], realm->run[0]);
     if (ret)
     {
-        LOG(ERROR, "\tRec enter failed, ret=%x\n", ret, 0);
+        LOG(ERROR, "Rec enter failed, ret=%x\n", ret);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(7)));
         return VAL_ERROR;
     }
 
     if (val_host_realm_destroy(realm->rd))
     {
-        LOG(ERROR, "\tval_host_realm_destroy failed\n", 0, 0);
+        LOG(ERROR, "val_host_realm_destroy failed\n");
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(8)));
         return VAL_ERROR;
     }
@@ -125,13 +125,13 @@ void mm_rtt_level_start_host(void)
     ret = val_host_rmi_features(0, &s2sz_supp);
     if (ret)
     {
-        LOG(ERROR, "\tRMI Features failed, ret=%x\n", ret, 0);
+        LOG(ERROR, "RMI Features failed, ret=%x\n", ret);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(9)));
         goto destroy_realm;
     }
     s2sz_supp = VAL_EXTRACT_BITS(s2sz_supp, 0, 7);
 
-    LOG(DBG, "\tRMI Features s2sz supp %d %d\n", s2sz_supp, arr[0][0]);
+    LOG(DBG, "RMI Features s2sz supp %d %d\n", s2sz_supp, arr[0][0]);
 
     for (i = 0; i < sizeof(arr)/sizeof(arr[0]); i++)
     {

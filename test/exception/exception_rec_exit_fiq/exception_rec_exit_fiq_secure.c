@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2025, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -23,7 +23,7 @@ void exception_rec_exit_fiq_secure(void)
 
     if (val_irq_register_handler(PLATFORM_TWDOG_INTID, wd_irq_handler))
     {
-        LOG(ERROR, "\tSecure WD interrupt register failed\n", 0, 0);
+        LOG(ERROR, "Secure WD interrupt register failed\n");
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(1)));
         goto exit;
     }
@@ -36,9 +36,9 @@ void exception_rec_exit_fiq_secure(void)
 
     if (handler_flag == 1)
     {
-        LOG(ALWAYS, "\nSecure WD Interrupt triggered", 0, 0);
+        LOG(ALWAYS, "Secure WD Interrupt triggered\n");
     } else {
-        LOG(ERROR, "\nSecure WD Interrupt not triggered", 0, 0);
+        LOG(ERROR, "Secure WD Interrupt not triggered\n");
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(2)));
     }
 
@@ -46,7 +46,7 @@ void exception_rec_exit_fiq_secure(void)
 
     if (val_irq_unregister_handler(PLATFORM_TWDOG_INTID))
     {
-        LOG(ERROR, "\t  IRQ handler unregister failed\n", 0, 0);
+        LOG(ERROR, "  IRQ handler unregister failed\n");
     }
 
 exit:

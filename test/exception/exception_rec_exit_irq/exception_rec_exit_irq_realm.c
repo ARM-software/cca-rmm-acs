@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023-2024, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023-2025, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -19,12 +19,12 @@ void exception_rec_exit_irq_realm(void)
     timeout = gv_realm_host_call->gprs[1];
 
     /* Below code is executed for REC[0] only */
-    LOG(DBG, "\tIn Realm, REC[0], mpdir=%x\n", val_read_mpidr(), 0);
+    LOG(DBG, "In Realm, REC[0], mpdir=%x\n", val_read_mpidr());
 
     /* Wait for interrupt */
     time = val_sleep_elapsed_time(timeout);
 
-    LOG(ERROR, "\t Watchdog interrupt not triggered %d\n", time, 0);
+    LOG(ERROR, " Watchdog interrupt not triggered %d\n", time);
 
     val_realm_return_to_host();
 }

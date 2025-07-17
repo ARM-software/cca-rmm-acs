@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023-2024, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -16,7 +16,8 @@
 
 #define HOST_MEM_REGIONS 12
 
-#define ACS_HOST_CTX_MAX_XLAT_TABLES 30
+#define ACS_HOST_CTX_MAX_XLAT_TABLES 40
+
 #ifndef ACS_HOST_IMAGE_XLAT_SECTION_NAME
 #define ACS_HOST_IMAGE_XLAT_SECTION_NAME	"xlat_static_tables"
 #endif

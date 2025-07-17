@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2025, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -27,7 +27,7 @@ void mm_protected_ipa_boundary_host(void)
     /* Populate realm with one REC*/
     if (val_host_realm_setup(&realm, false))
     {
-        LOG(ERROR, "\tRealm setup failed\n", 0, 0);
+        LOG(ERROR, "Realm setup failed\n");
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(1)));
         goto destroy_realm;
     }
@@ -38,8 +38,7 @@ void mm_protected_ipa_boundary_host(void)
     if (val_host_ripas_init(&realm, protected_ipa, protected_ipa + PAGE_SIZE,
                                                VAL_RTT_MAX_LEVEL, PAGE_SIZE))
     {
-        LOG(ERROR, "\trealm_init_ipa_state failed, ipa=0x%lx\n",
-                protected_ipa, 0);
+        LOG(ERROR, "realm_init_ipa_state failed, ipa=0x%lx\n", protected_ipa);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(2)));
         goto destroy_realm;
     }
@@ -47,7 +46,7 @@ void mm_protected_ipa_boundary_host(void)
     protected_src_pa = (uint64_t)val_host_mem_alloc(PAGE_SIZE, (2*PAGE_SIZE));
     if (!protected_src_pa)
     {
-        LOG(ERROR, "\tval_host_mem_alloc failed\n", 0, 0);
+        LOG(ERROR, "val_host_mem_alloc failed\n");
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(3)));
         goto destroy_realm;
     }
@@ -56,7 +55,7 @@ void mm_protected_ipa_boundary_host(void)
                                     protected_ipa, PAGE_SIZE, protected_src_pa);
     if (ret)
     {
-        LOG(ERROR, "\tMap protect data failed\n", 0, 0);
+        LOG(ERROR, "Map protect data failed\n");
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(4)));
         goto destroy_realm;
     }
@@ -64,7 +63,7 @@ void mm_protected_ipa_boundary_host(void)
     /* Activate realm */
     if (val_host_realm_activate(&realm))
     {
-        LOG(ERROR, "\tRealm activate failed\n", 0, 0);
+        LOG(ERROR, "Realm activate failed\n");
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(5)));
         goto destroy_realm;
     }
@@ -72,14 +71,14 @@ void mm_protected_ipa_boundary_host(void)
     unprotected_pa = (uint64_t)val_host_mem_alloc(PAGE_SIZE, PAGE_SIZE);
     if (!unprotected_pa)
     {
-        LOG(ERROR, "\tval_host_mem_alloc failed\n", 0, 0);
+        LOG(ERROR, "val_host_mem_alloc failed\n");
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(6)));
         goto destroy_realm;
     }
 
     if (val_host_map_unprotected(&realm, unprotected_pa, unprotected_ipa, PAGE_SIZE, PAGE_SIZE))
     {
-        LOG(ERROR, "\tval_realm_map_unprotected_data failed\n", 0, 0);
+        LOG(ERROR, "val_realm_map_unprotected_data failed\n");
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(7)));
         goto destroy_realm;
     }
@@ -90,12 +89,12 @@ void mm_protected_ipa_boundary_host(void)
     ret = val_host_rmi_rec_enter(realm.rec[0], realm.run[0]);
     if (ret)
     {
-        LOG(ERROR, "\tRec enter failed, ret=%x\n", ret, 0);
+        LOG(ERROR, "Rec enter failed, ret=%x\n", ret);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(8)));
         goto destroy_realm;
     } else if (val_host_check_realm_exit_host_call((val_host_rec_run_ts *)realm.run[0]))
     {
-        LOG(ERROR, "\tREC_EXIT: HOST_CALL params mismatch\n", 0, 0);
+        LOG(ERROR, "REC_EXIT: HOST_CALL params mismatch\n");
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(9)));
         goto destroy_realm;
     }
@@ -103,7 +102,7 @@ void mm_protected_ipa_boundary_host(void)
     ret = val_host_rmi_data_destroy(realm.rd, protected_ipa, &data_destroy);
     if (ret)
     {
-        LOG(ERROR, "\tData destroy failed, ipa=0x%lx, ret=0x%x\n", protected_ipa, ret);
+        LOG(ERROR, "Data destroy failed, ipa=0x%lx, ret=0x%x\n", protected_ipa, ret);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(10)));
         goto destroy_realm;
     }
@@ -114,7 +113,7 @@ void mm_protected_ipa_boundary_host(void)
     ret = val_host_rmi_rec_enter(realm.rec[0], realm.run[0]);
     if (ret)
     {
-        LOG(ERROR, "\tRec enter failed, ret=%x\n", ret, 0);
+        LOG(ERROR, "Rec enter failed, ret=%x\n", ret);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(11)));
         goto destroy_realm;
     }
@@ -122,7 +121,7 @@ void mm_protected_ipa_boundary_host(void)
     if (validate_rec_exit_da(rec_exit, protected_ipa, ESR_ISS_DFSC_TTF_L3,
                                 NON_EMULATABLE_DA, 0))
     {
-        LOG(ERROR, "\tREC exit params mismatch\n", 0, 0);
+        LOG(ERROR, "REC exit params mismatch\n");
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(12)));
         goto destroy_realm;
     }

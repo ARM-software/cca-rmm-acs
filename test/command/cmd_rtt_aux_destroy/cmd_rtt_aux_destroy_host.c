@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2024-2025, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -73,7 +73,7 @@ static uint64_t rd_rtt_tree_single_prep_sequence(void)
     /* SKIP thie test case if RMM do not support both single and shared RTT configuration */
     if (VAL_EXTRACT_BITS(featreg0, 43, 44) != RMI_PLANE_RTT_AUX_SINGLE)
     {
-        LOG(ALWAYS, "\n\tRMM does not support shared RTT tree configuration\n", 0, 0);
+        LOG(ALWAYS, "RMM does not support shared RTT tree configuration\n");
         return VAL_SKIP_CHECK;
     }
 
@@ -90,7 +90,7 @@ static uint64_t rd_rtt_tree_single_prep_sequence(void)
 
     if (val_host_realm_create_common(&realm[SINGLE_RTT_TREE_REALM]))
     {
-        LOG(ERROR, "\tRealm create failed\n", 0, 0);
+        LOG(ERROR, "Realm create failed\n");
         return VAL_TEST_PREP_SEQ_FAILED;
     }
 
@@ -104,20 +104,20 @@ static uint64_t ipa_folded_rtt_prep_sequence(void)
 
     if (create_mapping(IPA_FOLDED_RTT, true, realm[VALID_REALM].rd))
     {
-        LOG(ERROR, "\t Mapping creation failed\n", 0, 0);
+        LOG(ERROR, " Mapping creation failed\n");
         return VAL_TEST_PREP_SEQ_FAILED;
     }
 
     if (val_host_create_aux_mapping(realm[VALID_REALM].rd, IPA_FOLDED_RTT, RTT_INDEX_1))
     {
-        LOG(ERROR, "\tRTT creation failed\n", 0, 0);
+        LOG(ERROR, "RTT creation failed\n");
         return VAL_TEST_PREP_SEQ_FAILED;
     }
 
     phys = (uint64_t)val_host_mem_alloc(L2_SIZE, L2_SIZE);
     if (!phys)
     {
-        LOG(ERROR, "\tval_host_mem_alloc failed\n", 0, 0);
+        LOG(ERROR, "val_host_mem_alloc failed\n");
         return VAL_TEST_PREP_SEQ_FAILED;
     }
 
@@ -129,13 +129,13 @@ static uint64_t ipa_folded_rtt_prep_sequence(void)
 
     if (val_host_map_protected_data_to_realm(&realm[VALID_REALM], &data_create))
     {
-        LOG(ERROR, "\tval_host_map_protected_data_to_realm failed\n", 0, 0);
+        LOG(ERROR, "val_host_map_protected_data_to_realm failed\n");
         return VAL_TEST_PREP_SEQ_FAILED;
     }
 
     if (val_host_rmi_rtt_aux_fold(realm[VALID_REALM].rd, IPA_FOLDED_RTT, MAP_LEVEL, RTT_INDEX_1).x0)
     {
-        LOG(ERROR, "\tRTT_AUX Fold failed\n", 0, 0);
+        LOG(ERROR, "RTT_AUX Fold failed\n");
         return VAL_TEST_PREP_SEQ_FAILED;
     }
 
@@ -146,7 +146,7 @@ static uint64_t ipa_valid_prep_sequence(void)
 {
    if (val_host_create_aux_mapping(realm[VALID_REALM].rd, IPA_NON_LIVE_RTT, RTT_INDEX_1))
     {
-        LOG(ERROR, "\tRTT creation failed\n", 0, 0);
+        LOG(ERROR, "RTT creation failed\n");
         return VAL_TEST_PREP_SEQ_FAILED;
     }
 
@@ -173,14 +173,14 @@ static uint64_t rd_valid_prep_sequence(void)
 
     if (val_host_realm_create_common(&realm[VALID_REALM]))
     {
-        LOG(ERROR, "\tRealm create failed\n", 0, 0);
+        LOG(ERROR, "Realm create failed\n");
         return VAL_TEST_PREP_SEQ_FAILED;
     }
 
     /* Create first branches of RTTs */
     if (val_host_create_aux_mapping(realm[VALID_REALM].rd, 0, RTT_INDEX_1))
     {
-        LOG(ERROR, "\tRTT Creation failed\n", 0, 0)
+        LOG(ERROR, "RTT Creation failed\n")
         return VAL_TEST_PREP_SEQ_FAILED;
     }
 
@@ -356,7 +356,7 @@ static uint64_t intent_to_seq(struct stimulus *test_data, struct arguments *args
             break;
 
         default:
-            LOG(ERROR, "\n\tUnknown intent label encountered\n", 0, 0);
+            LOG(ERROR, "Unknown intent label encountered\n");
             return VAL_ERROR;
     }
 
@@ -372,7 +372,7 @@ void cmd_rtt_aux_destroy_host(void)
     /* Skip if RMM do not support planes */
     if (!val_host_rmm_supports_planes())
     {
-        LOG(ALWAYS, "\n\tPlanes feature not supported\n", 0, 0);
+        LOG(ALWAYS, "Planes feature not supported\n");
         val_set_status(RESULT_SKIP(VAL_SKIP_CHECK));
         goto exit;
     }
@@ -381,7 +381,7 @@ void cmd_rtt_aux_destroy_host(void)
     if (!val_host_rmm_supports_rtt_tree_per_plane())
     {
         val_set_status(RESULT_SKIP(VAL_SKIP_CHECK));
-        LOG(ALWAYS, "\tNo support for RTT tree per plane, Skipping Test\n", 0, 0);
+        LOG(ALWAYS, "No support for RTT tree per plane, Skipping Test\n");
         goto exit;
     }
 
@@ -392,37 +392,36 @@ void cmd_rtt_aux_destroy_host(void)
 
     for (i = 0; i < (sizeof(test_data) / sizeof(struct stimulus)); i++)
     {
-        LOG(TEST, "\n\tCheck %d : ", i + 1, 0);
-        LOG(TEST, test_data[i].msg, 0, 0);
-        LOG(TEST, "; intent id : 0x%x \n", test_data[i].label, 0);
+        LOG(TEST, "Check %2d : %s; intent id : 0x%x \n",
+              i + 1, test_data[i].msg, test_data[i].label);
 
         ret = intent_to_seq(&test_data[i], &args);
         if (ret == VAL_SKIP_CHECK)
         {
-            LOG(TEST, "\tSkipping Check %d\n", i + 1, 0);
+            LOG(TEST, "Skipping Check %d\n", i + 1);
             continue;
         }
         else if (ret == VAL_ERROR) {
-            LOG(ERROR, "\n\t Intent to sequence failed \n", 0, 0);
+            LOG(ERROR, " Intent to sequence failed \n");
             val_set_status(RESULT_FAIL(VAL_ERROR_POINT(2)));
             goto exit;
         }
 
         cmd_ret = val_host_rmi_rtt_aux_destroy(args.rd, args.ipa, args.level, args.index);
         if (cmd_ret.x0 != PACK_CODE(test_data[i].status, test_data[i].index)) {
-            LOG(ERROR, "\tTest Failure!\n\tThe ABI call returned: %x\n\tExpected: %x\n",
+            LOG(ERROR, "Test Failure!The ABI call returned: %xExpected: %x\n",
                 cmd_ret.x0, PACK_CODE(test_data[i].status, test_data[i].index));
             val_set_status(RESULT_FAIL(VAL_ERROR_POINT(3)));
             goto exit;
         }
     }
 
-    LOG(TEST, "\n\tPositive Observability Check\n", 0, 0);
+    LOG(TEST, "Check %2d : Positive Observability\n", ++i);
     cmd_ret = val_host_rmi_rtt_aux_destroy(c_args.rd_valid, c_args.ipa_valid,
                                                  c_args.level_valid, c_args.index_valid);
     if (cmd_ret.x0 != 0)
     {
-        LOG(ERROR, "\n\tRTT_AUX_DESTROY Command failed. %x\n", cmd_ret.x0, 0);
+        LOG(ERROR, "RTT_AUX_DESTROY Command failed. %x\n", cmd_ret.x0);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(4)));
         goto exit;
     }
@@ -434,7 +433,7 @@ void cmd_rtt_aux_destroy_host(void)
                                                  c_args.level_valid, c_args.index_valid);
     if (RMI_STATUS(cmd_ret.x0) != RMI_ERROR_RTT_AUX || RMI_INDEX(cmd_ret.x0) != LEVEL_L2)
     {
-        LOG(ERROR, "\n\tUnexpected output for RTT_AUX_DESTROY %x\n", cmd_ret.x0, 0);
+        LOG(ERROR, "Unexpected output for RTT_AUX_DESTROY %x\n", cmd_ret.x0);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(5)));
         goto exit;
     }
@@ -445,7 +444,7 @@ void cmd_rtt_aux_destroy_host(void)
                                                  c_args.level_valid, c_args.index_valid);
     if (cmd_ret.x0 != 0)
     {
-        LOG(ERROR, "\n\t RTT_AUX_CREATE failed. %x\n", cmd_ret.x0, 0);
+        LOG(ERROR, " RTT_AUX_CREATE failed. %x\n", cmd_ret.x0);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(6)));
         goto exit;
     }
@@ -453,7 +452,7 @@ void cmd_rtt_aux_destroy_host(void)
     /* Unfold folded RTT to meet postamble requirements */
     if (val_host_create_aux_mapping(c_args.rd_valid, IPA_FOLDED_RTT, RTT_INDEX_1))
     {
-        LOG(ERROR, "\n\t RTT_AUX_CREATE failed. %x\n", cmd_ret.x0, 0);
+        LOG(ERROR, " RTT_AUX_CREATE failed. %x\n", cmd_ret.x0);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(7)));
         goto exit;
     }

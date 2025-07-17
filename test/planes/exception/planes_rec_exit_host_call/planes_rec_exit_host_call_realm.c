@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2024-2025, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -26,7 +26,7 @@ static void p0_payload(void)
     if (val_realm_plane_perm_init(PLANE_1_INDEX, PLANE_1_PERMISSION_INDEX, p1_ipa_base,
                                                                              p1_ipa_top))
     {
-        LOG(ERROR, "Secondary plane permission initialization failed\n", 0, 0);
+        LOG(ERROR, "Secondary plane permission initialization failed\n");
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(1)));
         goto exit;
     }
@@ -42,7 +42,7 @@ static void p0_payload(void)
         goto exit;
     }
 
-    LOG(ERROR, "HOST CALL was not forwarded to host\n", 0, 0);
+    LOG(ERROR, "HOST CALL was not forwarded to host\n");
     val_set_status(RESULT_FAIL(VAL_ERROR_POINT(3)));
 
 exit:
@@ -54,7 +54,7 @@ static void p1_payload(void)
     /* Execute RSI_HOST_CALL */
     val_realm_rsi_host_call(VAL_SWITCH_TO_HOST);
 
-    LOG(ERROR, "HOST CALL was not intercepted, Exiting Plane\n", 0, 0);
+    LOG(ERROR, "HOST CALL was not intercepted, Exiting Plane\n");
     val_set_status(RESULT_FAIL(VAL_ERROR_POINT(4)));
     val_realm_return_to_p0();
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2025, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -31,20 +31,20 @@ void pmu_overflow_realm(void)
     uint64_t dfr0;
 
     /* Below code is executed for REC[0] only */
-    LOG(TEST, "\tIn realm_create_realm REC[0], mpdir=%x\n", val_read_mpidr(), 0);
+    LOG(TEST, "In realm_create_realm REC[0], mpdir=%x\n", val_read_mpidr());
 
     dfr0 = read_id_aa64dfr0_el1();
     /* Check that PMU is supported */
     if ((VAL_EXTRACT_BITS(dfr0, 8, 11) == 0x0))
     {
-        LOG(ERROR, "\tPMU not supported\n", 0, 0);
+        LOG(ERROR, "PMU not supported\n");
         val_set_status(RESULT_SKIP(VAL_SKIP_CHECK));
         goto exit;
     }
 
     if (val_irq_register_handler(PMU_VIRQ, rmi_pmu_handler))
     {
-        LOG(ERROR, "\tInterrupt %d register failed\n", PMU_VIRQ, 0);
+        LOG(ERROR, "Interrupt %d register failed\n", PMU_VIRQ);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(1)));
         goto exit;
     }
@@ -68,7 +68,7 @@ void pmu_overflow_realm(void)
     {
         handler_flag = 0;
     } else {
-        LOG(ERROR, "\tPMU interrupt %d not triggered to realm\n", PMU_VIRQ, 0);
+        LOG(ERROR, "PMU interrupt %d not triggered to realm\n", PMU_VIRQ);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(2)));
     }
 
@@ -77,7 +77,7 @@ exit:
 
     if (val_irq_unregister_handler(PMU_VIRQ))
     {
-        LOG(ERROR, "\tInterrupt %d unregister failed\n", PMU_VIRQ, 0);
+        LOG(ERROR, "Interrupt %d unregister failed\n", PMU_VIRQ);
     }
 
     val_realm_return_to_host();

@@ -131,7 +131,7 @@ static uint64_t g_params_prep_sequence(params_prep_seq_type type)
         else if (supported_hashalgo == 0x2)
             params->hash_algo = 0;
         else {
-            LOG(TEST, "\n\tNo Invalid combitation", 0, 0);
+            LOG(TEST, "No Invalid combitation\n");
             return VAL_SKIP_CHECK;
         }
         break;
@@ -142,7 +142,7 @@ static uint64_t g_params_prep_sequence(params_prep_seq_type type)
 
         if (VAL_EXTRACT_BITS(featreg0, 22, 22)) {
             if (VAL_EXTRACT_BITS(featreg0, 23, 27) == 0xF) {
-                LOG(TEST, "\n\tNo Invalid combitation", 0, 0);
+                LOG(TEST, "No Invalid combitation\n");
                 return VAL_SKIP_CHECK;
             }
             params->pmu_num_ctrs |= (uint8_t)(VAL_EXTRACT_BITS(featreg0, 23, 27) + 1);
@@ -158,7 +158,7 @@ static uint64_t g_params_prep_sequence(params_prep_seq_type type)
 
         if (VAL_EXTRACT_BITS(featreg0, 9, 9)) {
             if (VAL_EXTRACT_BITS(featreg0, 10, 13) == 0xF) {
-                LOG(TEST, "\n\tNo Invalid combitation", 0, 0);
+                LOG(TEST, "No Invalid combitation\n");
                 return VAL_SKIP_CHECK;
             }
             params->sve_vl |= (uint8_t)(VAL_EXTRACT_BITS(featreg0, 10, 13) + 1);
@@ -178,7 +178,7 @@ static uint64_t g_params_prep_sequence(params_prep_seq_type type)
             params->s2sz = 52;
         }
         else {
-            LOG(TEST, "\n\tNo Invalid combitation", 0, 0);
+            LOG(TEST, "No Invalid combitation\n");
             return VAL_SKIP_CHECK;
         }
 
@@ -189,7 +189,7 @@ static uint64_t g_params_prep_sequence(params_prep_seq_type type)
         val_host_rmi_features(0, &featreg0);
 
         if (VAL_EXTRACT_BITS(featreg0, 14, 19) == 0x0) {
-            LOG(TEST, "\n\tNo Invalid combitation", 0, 0);
+            LOG(TEST, "No Invalid combitation\n");
             return VAL_SKIP_CHECK;
         }
         params->num_bps = (uint8_t)(VAL_EXTRACT_BITS(featreg0, 14, 19) + 1);
@@ -200,7 +200,7 @@ static uint64_t g_params_prep_sequence(params_prep_seq_type type)
         val_host_rmi_features(0, &featreg0);
 
         if (VAL_EXTRACT_BITS(featreg0, 20, 25) == 0xF) {
-            LOG(TEST, "\n\tNo Invalid combitation", 0, 0);
+            LOG(TEST, "No Invalid combitation\n");
             return VAL_SKIP_CHECK;
         }
         params->num_wps |= (uint8_t)(VAL_EXTRACT_BITS(featreg0, 18, 21) + 1);
@@ -255,7 +255,7 @@ static uint64_t g_params_prep_sequence(params_prep_seq_type type)
         if (vmidbits == 0x1)
             params->vmid = 0xFF00;
         else {
-            LOG(TEST, "\n\tCouldn't create VMID Invalid sequence", 0, 0);
+            LOG(TEST, "Couldn't create VMID Invalid sequence\n");
             return VAL_SKIP_CHECK;
         }
         break;
@@ -297,7 +297,7 @@ static uint64_t g_params_prep_sequence(params_prep_seq_type type)
         }
         else
         {
-            LOG(TEST, "\n\tCouldn't create VMID Invalid sequence", 0, 0);
+            LOG(TEST, "Couldn't create VMID Invalid sequence\n");
             return VAL_SKIP_CHECK;
         }
         break;
@@ -319,7 +319,7 @@ static uint64_t g_params_prep_sequence(params_prep_seq_type type)
         break;
 
     default:
-        LOG(ERROR, "\n\t INVALID PREP_SEQUENCE \n", 0, 0);
+        LOG(ERROR, " INVALID PREP_SEQUENCE \n");
         return VAL_TEST_PREP_SEQ_FAILED;
     }
 
@@ -366,7 +366,7 @@ static uint64_t g_rec_ready_prep_sequence(uint64_t rd)
 
     if (val_host_rec_create_common(&realm, &rec_params))
     {
-        LOG(ERROR, "\tCouldn't destroy the Realm\n", 0, 0);
+        LOG(ERROR, "Couldn't destroy the Realm\n");
         return VAL_TEST_PREP_SEQ_FAILED;
     }
 
@@ -387,7 +387,7 @@ static uint64_t g_rd_new_prep_sequence(uint16_t vmid)
 
     if (val_host_realm_create_common(&realm_init))
     {
-        LOG(ERROR, "\tRealm create failed\n", 0, 0);
+        LOG(ERROR, "Realm create failed\n");
         return VAL_TEST_PREP_SEQ_FAILED;
     }
     realm[vmid].rd = realm_init.rd;
@@ -645,7 +645,7 @@ static uint64_t intent_to_seq(struct stimulus *test_data, struct arguments *args
 
         default:
             /* set status to failure */
-            LOG(ERROR, "\n\tUnknown intent label encountered\n", 0, 0);
+            LOG(ERROR, "Unknown intent label encountered\n");
             return VAL_ERROR;
     }
 
@@ -667,18 +667,17 @@ void cmd_realm_create_host(void)
     /* Iterate over the input */
     for (i = 0; i < (sizeof(test_data) / sizeof(struct stimulus)); i++)
     {
-        LOG(TEST, "\n\tCheck %d : ", i + 1, 0);
-        LOG(TEST, test_data[i].msg, 0, 0);
-        LOG(TEST, "; intent id : 0x%x \n", test_data[i].label, 0);
+        LOG(TEST, "Check %2d : %s; intent id : 0x%x \n",
+              i + 1, test_data[i].msg, test_data[i].label);
 
         ret = intent_to_seq(&test_data[i], &args);
         if (ret == VAL_SKIP_CHECK)
         {
-            LOG(TEST, "\n\tSkipping Test case\n", 0, 0);
+            LOG(TEST, "Skipping Test case\n");
             continue;
         }
         else if (ret == VAL_ERROR) {
-            LOG(ERROR, "\n\t Intent to sequence failed \n", 0, 0);
+            LOG(ERROR, " Intent to sequence failed \n");
             val_set_status(RESULT_FAIL(VAL_ERROR_POINT(2)));
             goto exit;
         }
@@ -687,27 +686,27 @@ void cmd_realm_create_host(void)
 
         if (ret != PACK_CODE(test_data[i].status, test_data[i].index))
         {
-            LOG(ERROR, "\tTest Failure!\n\tThe ABI call returned: %x\n\tExpected: %x\n",
+            LOG(ERROR, "Test Failure!The ABI call returned: %xExpected: %x\n",
                             ret, PACK_CODE(test_data[i].status, test_data[i].index));
             val_set_status(RESULT_FAIL(VAL_ERROR_POINT(3)));
             goto exit;
         }
     }
 
-    LOG(TEST, "\n\tPositive Observability Check\n", 0, 0);
+    LOG(TEST, "Check %2d : Positive Observability\n", ++i);
     ret = val_host_rmi_realm_create(c_args.rd_valid, c_args.params_valid);
     /* Valid call should give success if footprints have not changed */
     if (ret != 0) {
-        LOG(ERROR, "\n\tPositive Observability Check Failed\n", 0, 0);
+        LOG(ERROR, "Positive Observability Check Failed\n");
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(4)));
         goto exit;
     }
 
-    LOG(TEST, "\n\tNegative Observability Check\n", 0, 0);
+    LOG(TEST, "Check %2d : Negative Observability\n", ++i);
     ret = val_host_rmi_realm_create(c_args.rd_valid, c_args.params_valid);
     /* Now the command should fail with the same parameters (footprint has changed) */
     if (ret == 0) {
-        LOG(ERROR, "\n\tNegative Observability Check Failed\n", 0, 0);
+        LOG(ERROR, "Negative Observability Check Failed\n");
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(5)));
         goto exit;
     }

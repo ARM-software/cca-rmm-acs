@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2025, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -19,7 +19,7 @@ void cmd_rsi_features_realm(void)
     /* In the current version of the interface, this command returns zero
      *  regardless of the index provided */
     if (feat_reg != 0) {
-        LOG(ERROR, "\tReceived non zero value\n", 0, 0);
+        LOG(ERROR, "Received non zero value\n");
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(1)));
         goto exit;
     }

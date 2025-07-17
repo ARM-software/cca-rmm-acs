@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2025, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -24,8 +24,8 @@ void cmd_psci_version_realm(void)
 
     if (version_major < PSCI_INTERFACE_VERSION_MAJOR ||
                     version_minor < PSCI_INTERFACE_VERSION_MINOR) {
-        LOG(ERROR, "\tMajor Version : 0x%x. Minor Version : 0x%x \n", version_major, version_minor);
-        LOG(TEST, "\tExpected atleast - Major : 0x%x, Minor : 0x%x \n",
+        LOG(ERROR, "Major Version : 0x%x. Minor Version : 0x%x \n", version_major, version_minor);
+        LOG(TEST, "Expected atleast - Major : 0x%x, Minor : 0x%x \n",
                     PSCI_INTERFACE_VERSION_MAJOR, PSCI_INTERFACE_VERSION_MINOR);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(1)));
         goto exit;
@@ -33,7 +33,7 @@ void cmd_psci_version_realm(void)
 
     /* Check for MBZ field */
     if (VAL_EXTRACT_BITS(version, 31, 63) != 0) {
-        LOG(ERROR, "\tReceived non zero value for reserved field\n", 0, 0);
+        LOG(ERROR, "Received non zero value for reserved field\n");
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(2)));
     }
 

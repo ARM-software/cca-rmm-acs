@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023-2024, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023-2025, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -28,7 +28,7 @@ void exception_non_emulatable_da_2_host(void)
     /* Populate realm with one REC*/
     if (val_host_realm_setup(&realm, false))
     {
-        LOG(ERROR, "\tRealm setup failed\n", 0, 0);
+        LOG(ERROR, "Realm setup failed\n");
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(1)));
         goto destroy_realm;
     }
@@ -37,7 +37,7 @@ void exception_non_emulatable_da_2_host(void)
     phys = (uint64_t)val_host_mem_alloc(PAGE_SIZE, (2 * data_create.size));
     if (!phys)
     {
-        LOG(ERROR, "\tval_host_mem_alloc failed\n", 0, 0);
+        LOG(ERROR, "val_host_mem_alloc failed\n");
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(2)));
         goto destroy_realm;
     }
@@ -49,7 +49,7 @@ void exception_non_emulatable_da_2_host(void)
     ret = val_host_map_protected_data_to_realm(&realm, &data_create);
     if (ret)
     {
-        LOG(ERROR, "\tval_host_map_protected_data_to_realm failed\n", 0, 0);
+        LOG(ERROR, "val_host_map_protected_data_to_realm failed\n");
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(3)));
         goto destroy_realm;
     }
@@ -57,7 +57,7 @@ void exception_non_emulatable_da_2_host(void)
     /* Activate realm */
     if (val_host_realm_activate(&realm))
     {
-        LOG(ERROR, "\tRealm activate failed\n", 0, 0);
+        LOG(ERROR, "Realm activate failed\n");
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(4)));
         goto destroy_realm;
     }
@@ -68,12 +68,12 @@ void exception_non_emulatable_da_2_host(void)
     ret = val_host_rmi_rec_enter(realm.rec[0], realm.run[0]);
     if (ret)
     {
-        LOG(ERROR, "\tRec enter failed, ret=%x\n", ret, 0);
+        LOG(ERROR, "Rec enter failed, ret=%x\n", ret);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(5)));
         goto destroy_realm;
     } else if (val_host_check_realm_exit_host_call((val_host_rec_run_ts *)realm.run[0]))
     {
-        LOG(ERROR, "\tREC_EXIT: HOST_CALL params mismatch\n", 0, 0);
+        LOG(ERROR, "REC_EXIT: HOST_CALL params mismatch\n");
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(6)));
         goto destroy_realm;
     }
@@ -83,7 +83,7 @@ void exception_non_emulatable_da_2_host(void)
     ret = val_host_rmi_data_destroy(realm.rd, ripas_ipa, &data_destroy);
     if (ret)
     {
-        LOG(ERROR, "\tData destroy failed, ipa=0x%lx, ret=0x%x\n", ripas_ipa, ret);
+        LOG(ERROR, "Data destroy failed, ipa=0x%lx, ret=0x%x\n", ripas_ipa, ret);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(7)));
         goto destroy_realm;
     }
@@ -97,7 +97,7 @@ void exception_non_emulatable_da_2_host(void)
     ret = val_host_rmi_rec_enter(realm.rec[0], realm.run[0]);
     if (ret)
     {
-        LOG(ERROR, "\tRec enter failed, ret=%x\n", ret, 0);
+        LOG(ERROR, "Rec enter failed, ret=%x\n", ret);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(8)));
         goto destroy_realm;
     }
@@ -106,7 +106,7 @@ void exception_non_emulatable_da_2_host(void)
     if (validate_rec_exit_da(rec_exit, ripas_ipa,
                                 ESR_ISS_DFSC_TTF_L3, NON_EMULATABLE_DA, 0))
     {
-        LOG(ERROR, "\tREC exit ESR params mismatch\n", 0, 0);
+        LOG(ERROR, "REC exit ESR params mismatch\n");
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(9)));
         goto destroy_realm;
     }

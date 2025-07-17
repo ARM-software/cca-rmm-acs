@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2024-2025, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -35,7 +35,7 @@ static void p0_payload(void)
     args = val_realm_rsi_ipa_state_set(ipa_base, ipa_base + size, ripas_val, flags);
     if (args.x0 || (args.x1 != (ipa_base + size)))
     {
-        LOG(ERROR, "\trsi_ipa_state_set failed x0 %lx x1 %lx\n", args.x0, args.x1);
+        LOG(ERROR, "rsi_ipa_state_set failed x0 %lx x1 %lx\n", args.x0, args.x1);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(1)));
         goto exit;
     }
@@ -47,7 +47,7 @@ static void p0_payload(void)
     if (val_realm_plane_perm_init(PLANE_1_INDEX, PLANE_1_PERMISSION_INDEX, p1_ipa_base,
                                                                              p1_ipa_top))
     {
-        LOG(ERROR, "Secondary plane permission initialization failed\n", 0, 0);
+        LOG(ERROR, "Secondary plane permission initialization failed\n");
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(2)));
         goto exit;
     }
@@ -55,7 +55,7 @@ static void p0_payload(void)
     /* Give Plane 1 RW permission for the test IPA */
     if (val_realm_plane_perm_init(PLANE_1_INDEX, TEST_IPA_PERM_INDEX, ipa_base, ipa_base + size))
     {
-        LOG(ERROR, "Secondary plane permission initialization failed\n", 0, 0);
+        LOG(ERROR, "Secondary plane permission initialization failed\n");
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(3)));
         goto exit;
     }
@@ -76,7 +76,7 @@ static void p0_payload(void)
         ESR_EL2_EC(esr) != ESR_EL2_EC_HVC ||
         run_ptr.exit.gprs[0] != PSI_P0_CALL)
     {
-        LOG(ERROR, "Invalid exit type: %d, ESR: 0x%lx",
+        LOG(ERROR, "Invalid exit type: %d, ESR: 0x%lx\n",
                                              run_ptr.exit.reason, run_ptr.exit.esr_el2);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(5)));
         goto exit;
@@ -99,7 +99,7 @@ static void p0_payload(void)
         ESR_EL2_EC(esr) != ESR_EL2_EC_DATA_ABORT  ||
         run_ptr.exit.far_el2 != ipa_base)
     {
-        LOG(ERROR, "Invalid exit type: %d, ESR: 0x%lx",
+        LOG(ERROR, "Invalid exit type: %d, ESR: 0x%lx\n",
                                              run_ptr.exit.reason, run_ptr.exit.esr_el2);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(7)));
         goto exit;
@@ -122,7 +122,7 @@ static void p0_payload(void)
         ESR_EL2_EC(esr) != ESR_EL2_EC_INST_ABORT  ||
         run_ptr.exit.far_el2 != ipa_base)
     {
-        LOG(ERROR, "Invalid exit type: %d, ESR: 0x%lx",
+        LOG(ERROR, "Invalid exit type: %d, ESR: 0x%lx\n",
                                              run_ptr.exit.reason, run_ptr.exit.esr_el2);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(9)));
         goto exit;
@@ -148,7 +148,7 @@ static void p1_payload(void)
     mem_desc.attributes = MT_RW_DATA | MT_REALM;
     if (val_realm_pgt_create(&mem_desc))
     {
-        LOG(ERROR, "\tVA to PA mapping failed\n", 0, 0);
+        LOG(ERROR, "VA to PA mapping failed\n");
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(10)));
         goto exit;
     }
@@ -161,7 +161,7 @@ static void p1_payload(void)
     mem_desc.attributes = MT_CODE | MT_REALM ;
 
     if (val_realm_update_attributes(PAGE_SIZE, empty_ipa, (uint32_t)mem_desc.attributes)) {
-        LOG(ERROR, "\tPage attributes update failed\n", 0, 0);
+        LOG(ERROR, "Page attributes update failed\n");
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(11)));
         goto exit;
     }

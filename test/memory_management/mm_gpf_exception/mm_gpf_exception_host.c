@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2025, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -20,10 +20,10 @@ static bool exception_gpf_handler(void)
 
     if (ec != EC_DATA_ABORT_SAME_EL  || far_el1 != protected_phys)
     {
-        LOG(ERROR, "\tUnexpected exception detected ec=%x, far=%x\n", ec, far_el1);
+        LOG(ERROR, "Unexpected exception detected ec=%x, far=%x\n", ec, far_el1);
     } else
     {
-        LOG(INFO, "\tExpected exception detected\n", 0, 0);
+        LOG(INFO, "Expected exception detected\n");
         g_handler_abort = 1;
     }
 
@@ -46,7 +46,7 @@ void mm_gpf_exception_host(void)
     /* Populate realm with one REC*/
     if (val_host_realm_setup(&realm, true))
     {
-        LOG(ERROR, "\tRealm setup failed\n", 0, 0);
+        LOG(ERROR, "Realm setup failed\n");
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(1)));
         goto destroy_realm;
     }
@@ -57,7 +57,7 @@ void mm_gpf_exception_host(void)
     *(volatile uint32_t *)protected_phys = 0xabcd;
     if (!g_handler_abort)
     {
-        LOG(ERROR, "\tGPF exception not triggered\n", 0, 0);
+        LOG(ERROR, "GPF exception not triggered\n");
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(2)));
         goto free_exception;
     }
@@ -70,7 +70,7 @@ free_exception:
 destroy_realm:
     return;
 #else
-    LOG(TEST, "\tPlatform not supporting GPF exception handling at NS-EL2\n", 0, 0);
+    LOG(TEST, "Platform not supporting GPF exception handling at NS-EL2\n");
     val_set_status(RESULT_SKIP(VAL_SKIP_CHECK));
 
     (void)exception_gpf_handler;

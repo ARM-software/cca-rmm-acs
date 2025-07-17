@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2025, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -55,7 +55,7 @@ void mm_realm_access_outside_ipa_realm(void)
     currentEL = (val_read_current_el() & 0xc) >> 2;
 
     /* Below code is executed for REC[0] only */
-    LOG(DBG, "\tIn realm_create_realm REC[0], mpdir=%x\n", val_read_mpidr(), 0);
+    LOG(DBG, "In realm_create_realm REC[0], mpdir=%x\n", val_read_mpidr());
 
     val_realm_return_to_host();
     val_exception_setup(NULL, sea_handler);
@@ -71,7 +71,7 @@ void mm_realm_access_outside_ipa_realm(void)
     mem_desc.attributes = MT_RW_DATA | MT_REALM;
     if (val_realm_pgt_create(&mem_desc))
     {
-        LOG(ERROR, "\tVA to PA mapping failed\n", 0, 0);
+        LOG(ERROR, "VA to PA mapping failed\n");
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(1)));
         goto exit;
     }
@@ -86,7 +86,7 @@ void mm_realm_access_outside_ipa_realm(void)
 
     if (!g_handler_flag)
     {
-        LOG(ERROR, "\tData abort not triggered\n", 0, 0);
+        LOG(ERROR, "Data abort not triggered\n");
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(2)));
         goto exit;
     }

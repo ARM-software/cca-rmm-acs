@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2025, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -150,7 +150,7 @@ static void send_event_common(event_t *event, unsigned int inc)
  */
 void val_send_event(event_t *event)
 {
-    LOG(DBG, "Sending event %x\n", (uint64_t) event, 0);
+    LOG(DBG, "Sending event %x\n", (uint64_t) event);
     send_event_common(event, 1);
 }
 
@@ -163,7 +163,7 @@ void val_send_event(event_t *event)
  */
 void val_send_event_to_all(event_t *event)
 {
-    //LOG("Sending event %p to all CPUs\n", (void *) event);
+    //LOG("Sending event %p to all CPUs", (void *) event);
     send_event_common(event, val_get_cpu_count());
 }
 
@@ -179,7 +179,7 @@ void val_send_event_to_all(event_t *event)
  */
 void val_send_event_to(event_t *event, unsigned int cpus_count)
 {
-    //LOG("Sending event %p to %u CPUs\n", (void *) event, cpus_count);
+    //LOG("Sending event %p to %u CPUs", (void *) event, cpus_count);
     send_event_common(event, cpus_count);
 }
 
@@ -191,7 +191,7 @@ void val_wait_for_event(event_t *event)
 {
     unsigned int event_received = 0;
 
-    LOG(DBG, "Waiting for event %x\n", (uint64_t) event, 0);
+    LOG(DBG, "Waiting for event %x\n", (uint64_t) event);
     while (!event_received) {
 
         //val_dataCacheInvalidateVA((uint64_t)&event->cnt);
@@ -222,5 +222,5 @@ void val_wait_for_event(event_t *event)
         }
     }
 
-    LOG(DBG, "Event recieved for %x\n", (uint64_t) event, 0);
+    LOG(DBG, "Event recieved for %x\n", (uint64_t) event);
 }

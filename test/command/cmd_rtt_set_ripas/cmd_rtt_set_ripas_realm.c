@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023-2024, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023-2025, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -29,7 +29,7 @@ void cmd_rtt_set_ripas_realm(void)
                                                                  RSI_NO_CHANGE_DESTROYED);
         ret = cmd_ret.x0;
         if (ret) {
-            LOG(ERROR, "\t IPA_STATE_SET failed with ret value: %d \n", ret, 0);
+            LOG(ERROR, " IPA_STATE_SET failed with ret value: %d \n", ret);
             goto exit;
         }
 
@@ -38,7 +38,7 @@ void cmd_rtt_set_ripas_realm(void)
                                                                  RSI_NO_CHANGE_DESTROYED);
         ret = cmd_ret.x0;
         if (ret) {
-            LOG(ERROR, "\t IPA_STATE_SET failed with ret value: %d \n", ret, 0);
+            LOG(ERROR, " IPA_STATE_SET failed with ret value: %d \n", ret);
             val_realm_return_to_host();
         }
 
@@ -49,7 +49,7 @@ void cmd_rtt_set_ripas_realm(void)
                                                                  RSI_NO_CHANGE_DESTROYED);
         ret = cmd_ret.x0;
         if (ret) {
-            LOG(ERROR, "\t IPA_STATE_SET failed with ret value: %d \n", ret, 0);
+            LOG(ERROR, " IPA_STATE_SET failed with ret value: %d \n", ret);
             val_realm_return_to_host();
         }
 #endif
@@ -59,7 +59,7 @@ void cmd_rtt_set_ripas_realm(void)
                                                                  RSI_NO_CHANGE_DESTROYED);
         ret = cmd_ret.x0;
         if (ret) {
-            LOG(ERROR, "\t IPA_STATE_SET failed with ret value: %d \n", ret, 0);
+            LOG(ERROR, " IPA_STATE_SET failed with ret value: %d \n", ret);
             val_realm_return_to_host();
         }
     }
@@ -68,7 +68,7 @@ void cmd_rtt_set_ripas_realm(void)
     ret = val_psci_cpu_on(REC_NUM(1), val_realm_get_secondary_cpu_entry(), CONTEXT_ID);
     if (ret)
     {
-        LOG(ERROR, "\n\tPSCI CPU ON failed with ret status : 0x%x \n", ret, 0);
+        LOG(ERROR, "PSCI CPU ON failed with ret status : 0x%x \n", ret);
         goto exit;
     }
 
@@ -76,7 +76,7 @@ void cmd_rtt_set_ripas_realm(void)
     cmd_ret = val_realm_rsi_ipa_state_set(ipa_base, ipa_top, RSI_RAM, RSI_NO_CHANGE_DESTROYED);
     ret = cmd_ret.x0;
     if (ret) {
-        LOG(ERROR, "\t IPA_STATE_SET failed with ret value: %d \n", ret, 0);
+        LOG(ERROR, " IPA_STATE_SET failed with ret value: %d \n", ret);
         goto exit;
     }
 

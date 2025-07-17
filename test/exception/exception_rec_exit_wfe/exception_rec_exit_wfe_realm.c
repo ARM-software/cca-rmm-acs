@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023-2024, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023-2025, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -104,7 +104,7 @@ void exception_rec_exit_wfe_realm(void)
     /* Fail the test if WFE is not triggered */
     if (*wfe_trig == false)
     {
-            LOG(ERROR, "\tWFE not triggered\n", 0, 0);
+            LOG(ERROR, "WFE not triggered\n");
             val_set_status(RESULT_FAIL(VAL_ERROR_POINT(1)));
             goto test_exit;
     }
@@ -114,14 +114,13 @@ void exception_rec_exit_wfe_realm(void)
     {
         if (gGPRS[index] != lGPRS[index])
         {
-            LOG(ERROR, "\tWFE check, the gprs value is corrupted, \
-                             hence testcase failed \n", 0, 0);
+            LOG(ERROR, "WFE check, the gprs value is corrupted, hence testcase failed \n");
             val_set_status(RESULT_FAIL(VAL_ERROR_POINT(2)));
             goto test_exit;
         }
     }
 
-    LOG(TEST, "\tREALM WFE Trigger checks are verified \n", 0, 0);
+    LOG(TEST, "REALM WFE Trigger checks are verified \n");
 
 test_exit:
     val_realm_return_to_host();

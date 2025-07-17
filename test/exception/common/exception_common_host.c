@@ -1,5 +1,5 @@
  /*
- * Copyright (c) 2023, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2025, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -38,14 +38,14 @@ uint64_t exception_validate_rec_exit_ripas(exception_rec_exit_ts rec_exit_except
             if (!(rec_exit->ripas_base == rec_exit_exception.ripas_base) ||\
                 !(rec_exit->ripas_top == rec_exit_exception.ripas_top))
             {
-                LOG(ERROR, "\tRipas return params mismatch\n", 0, 0);
+                LOG(ERROR, "Ripas return params mismatch\n");
                 return VAL_ERROR;
             }
 
             /* check the rec exit dueto RIPAS changes*/
             if (rec_exit_exception.ripas_value != rec_exit->ripas_value)
             {
-                LOG(ERROR, "\tRipas value mismatch\n", 0, 0);
+                LOG(ERROR, "Ripas value mismatch\n");
                 return VAL_ERROR;
             }
 
@@ -61,7 +61,7 @@ uint64_t exception_validate_rec_exit_ripas(exception_rec_exit_ts rec_exit_except
 
             if (status)
             {
-                LOG(ERROR, "\tRMI_RTT_SET_RIPAS failed, status=%x\n", status, 0);
+                LOG(ERROR, "RMI_RTT_SET_RIPAS failed, status=%x\n", status);
                 return VAL_ERROR;
             }
 

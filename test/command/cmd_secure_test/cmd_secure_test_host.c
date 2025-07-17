@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2025, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -24,7 +24,7 @@ void cmd_secure_test_host(void)
     /* Execute secure payload  */
     if (val_host_execute_secure_payload())
     {
-        LOG(ERROR, "\tval_execute_secure_payload() failed\n", 0, 0);
+        LOG(ERROR, "val_execute_secure_payload() failed\n");
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(1)));
         goto exit;
     }

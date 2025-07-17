@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2025, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -23,7 +23,7 @@ void measurement_immutable_rim_realm(void)
 
     /* Compare both RIM to verify RIM is immutable */
     if (val_memcmp(&args1, &args2, sizeof(args1))) {
-        LOG(ERROR, "\t Both RIM values are not same \n", 0, 0);
+        LOG(ERROR, " Both RIM values are not same \n");
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(1)));
         goto exit;
     }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2025, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -24,7 +24,7 @@ uint64_t val_host_power_on_cpu(uint32_t target_cpuid)
     {
         return VAL_SUCCESS;
     } else {
-        LOG(WARN, "\tPSCI_CPU_ON failed, ret=0x%x\n", ret, 0);
+        LOG(WARN, "PSCI_CPU_ON failed, ret=0x%x\n", ret);
         return VAL_ERROR;
     }
 }
@@ -38,6 +38,6 @@ uint64_t val_host_power_off_cpu(void)
 {
     uint64_t ret =  val_psci_cpu_off();
 
-    LOG(WARN, "\tPSCI_CPU_OFF failed, ret=0x%x\n", ret, 0);
+    LOG(WARN, "PSCI_CPU_OFF failed, ret=0x%x\n", ret);
     return VAL_ERROR;
 }
