@@ -345,9 +345,9 @@ static uint64_t params_valid_prep_sequence(void)
     params->rtt_base = rtt0;
     params->num_bps = 1;
     params->num_wps = 1;
-    params->mecid = MECID_VALID;
 
 #ifdef RMM_V_1_1
+    params->mecid = MECID_VALID;
     params->flags1 |= VAL_REALM_FLAG_RTT_TREE_PP;
 #endif
 
