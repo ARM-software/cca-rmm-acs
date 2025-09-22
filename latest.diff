@@ -1,0 +1,52 @@
+diff --git a/test/memory_management/mm_ripas_destroyed_ia/mm_ripas_destroyed_ia_realm.c b/test/memory_management/mm_ripas_destroyed_ia/mm_ripas_destroyed_ia_realm.c
+index b990b4b..45ef98a 100644
+--- a/test/memory_management/mm_ripas_destroyed_ia/mm_ripas_destroyed_ia_realm.c
++++ b/test/memory_management/mm_ripas_destroyed_ia/mm_ripas_destroyed_ia_realm.c
+@@ -29,6 +29,47 @@ void mm_ripas_destroyed_ia_realm(void)
+ 
+     val_exception_setup(NULL, synchronous_exception_handler);
+ 
++    /* Validate that host supplied IPA and size fall within the Realm protected region
++     * and describe an aligned RIPAS=DESTROYED mapping. This prevents malicious host
++     * values from being mapped as executable memory inside the Realm.
++     */
++    if ((size == 0) || (size % PAGE_SIZE))
++    {
++        LOG(ERROR, "Invalid RIPAS size: 0x%lx\n", size);
++        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(3)));
++        goto exit;
++    }
++
++    uint64_t ipa_width = val_realm_get_ipa_width();
++    if (ipa_width == 0)
++    {
++        LOG(ERROR, "Invalid IPA width\n");
++        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(3)));
++        goto exit;
++    }
++
++    uint64_t protected_limit = 1ULL << (ipa_width - 1);
++    uint64_t ipa_end = ipa_base + size;
++    if ((ipa_base >= protected_limit) || (ipa_end > protected_limit) || (ipa_end < ipa_base) ||
++        (ipa_base % PAGE_SIZE))
++    {
++        LOG(ERROR, "Invalid RIPAS range: base=0x%lx size=0x%lx\n", ipa_base, size);
++        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(3)));
++        goto exit;
++    }
++
++    val_smc_param_ts ripas_state;
++    val_memset(&ripas_state, 0, sizeof(ripas_state));
++    ripas_state = val_realm_rsi_ipa_state_get(ipa_base, ipa_end);
++    if ((ripas_state.x0 != RSI_SUCCESS) || (ripas_state.x2 != RSI_DESTROYED) ||
++        (ripas_state.x1 < ipa_end))
++    {
++        LOG(ERROR, "Unexpected RIPAS state: x0=%lx x1=%lx x2=%lx\n",
++            ripas_state.x0, ripas_state.x1, ripas_state.x2);
++        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(4)));
++        goto exit;
++    }
++
+     mem_desc.virtual_address = ipa_base;
+     mem_desc.physical_address = ipa_base;
+     mem_desc.length = size;
