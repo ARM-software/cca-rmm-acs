@@ -16,7 +16,7 @@ void mm_ripas_change_partial_host(void)
     val_host_rec_enter_ts *rec_enter = NULL;
     val_host_rec_exit_ts *rec_exit = NULL;
     uint64_t ripas_ipa, ripas_size = 0x3000;
-    uint64_t phys;
+    uint64_t phys = 0;
     val_data_create_ts data_create;
     uint64_t out_top;
 
@@ -126,5 +126,9 @@ void mm_ripas_change_partial_host(void)
 
     /* Free test resources */
 destroy_realm:
+    if (phys)
+    {
+        val_host_mem_free((void *)phys);
+    }
     return;
 }
