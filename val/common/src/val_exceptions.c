@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023-2025, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023-2026, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -50,8 +50,8 @@ static bool default_sync_current_exception(void)
     switch (ec)
     {
         case EC_DATA_ABORT_SAME_EL:
-            LOG(ERROR, "Data abort: pc=%x, esr=%x\n", elr, esr);
-            LOG(ERROR, ", ec=%x\n", ec);
+            LOG(ERROR, "Data abort: pc=%lx, esr=%lx\n", elr, esr);
+            LOG(ERROR, ", ec=%lx\n", ec);
 
             if (!(esr & (1U << 10)))
             { /* Check FnV bit. */
@@ -64,12 +64,12 @@ static bool default_sync_current_exception(void)
             break;
 
         case EC_INSTRUCTION_ABORT_SAME_EL:
-            LOG(ERROR, "Instruction abort: pc=%x, esr=%x\n", elr, esr);
+            LOG(ERROR, "Instruction abort: pc=%lx, esr=%lx\n", elr, esr);
             LOG(ERROR, ", ec=%x\n", ec);
 
             if (!(esr & (1U << 10)))
             { /* Check FnV bit. */
-                LOG(ERROR, ", far=%x\n", far);
+                LOG(ERROR, ", far=%lx\n", far);
             } else
             {
                 LOG(ERROR, ", far=invalid\n");
@@ -78,9 +78,9 @@ static bool default_sync_current_exception(void)
             break;
 
         default:
-            LOG(ERROR, "Unknown sync exception elr=%x, esr=%x\n",
+            LOG(ERROR, "Unknown sync exception elr=%lx, esr=%lx\n",
                  elr, esr);
-            LOG(ERROR, ", ec=%x\n", ec);
+            LOG(ERROR, ", ec=%lx\n", ec);
 
             if (!(esr & (1U << 10)))
             { /* Check FnV bit. */

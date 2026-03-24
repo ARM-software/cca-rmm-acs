@@ -1,9 +1,26 @@
-.. Copyright [C] 2023-2025, Arm Limited or its affiliates. All rights reserved.
+.. Copyright [C] 2023-2026, Arm Limited or its affiliates. All rights reserved.
       SPDX-License-Identifier: BSD-3-Clause
 
 ##########
 Change-log
 ##########
+
+*********************************
+v1.1_DA_ALPHA_v1.0_RHI_BETA_03_26
+*********************************
+
+-  The DA Foundation release is aligned to `RMM v1.1 alp17 specification`_ and RHI release is aligned to `RHI v1.0 bet1 specification`_ . Details are given below.
+
+New Features / Tests Added
+==========================
+
+- Added Device Assignment(DA) foundation
+- Added test DA end to end flow for offchip pci device
+- Added tests for DA PDEV/VDEV Command ABIs
+- For more details on DA tests details check `DA Scenarios`_.
+- Added RHI infra
+- Added tests for RHI Commands
+- For more details on RHI tests details check `RHI Scenarios`_.
 
 ***********************
 v1.1_MEC_LFA_BETA_02_25
@@ -16,7 +33,7 @@ New Features / Tests Added
 
 - Added MEC and LFA infra
 - Added MEC shared and private ID scenarios
-- Added MEC_SET_PRIVATE and MEC_SET_SHARED command ABIs 
+- Added MEC_SET_PRIVATE and MEC_SET_SHARED command ABIs
 - Added LFA test
 - For more details on these tests details check `MEC LFA Scenarios`_.
 
@@ -142,3 +159,7 @@ New Features / Tests Added
 .. _Attestation and Measurement Scenarios: ./attestation_measurement_scenarios.md
 .. _Planes Scenarios: ./planes_scenarios.rst
 .. _MEC LFA Scenarios: ./mec_lfa.md
+.. _RMM v1.1 alp17 specification: https://developer.arm.com/-/cdn-downloads/permalink/Architectures/Armv9/DEN0137_1.1-alp17.zip
+.. _RHI v1.0 bet1 specification: https://developer.arm.com/documentation/den0148/1-0bet1/
+.. _DA Scenarios: ./device_assignment_scenarios.md
+.. _RHI Scenarios: ./rhi_scenarios.md

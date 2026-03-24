@@ -1,5 +1,5 @@
  /*
- * Copyright (c) 2023, 2025, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2025-2026, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -10,7 +10,7 @@
 #include "val_host_helpers.h"
 
 #define MAP_LEVEL_FOR_WALK 3
-#define EXCEPTION_IA_IPA_ADDRESS 0x501000
+#define EXCEPTION_IA_IPA_ADDRESS 0xA01000
 
 void exception_rec_exit_ia_host(void)
 {
@@ -33,7 +33,7 @@ void exception_rec_exit_ia_host(void)
                                                                      VAL_RTT_MAX_LEVEL, PAGE_SIZE))
     {
         LOG(ERROR, "realm_init_ipa_state failed, ipa=0x%x\n",
-                EXCEPTION_IA_IPA_ADDRESS, 0);
+                EXCEPTION_IA_IPA_ADDRESS);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(2)));
         goto destroy_realm;
     }

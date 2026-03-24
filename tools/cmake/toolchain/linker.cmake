@@ -1,5 +1,5 @@
 #-------------------------------------------------------------------------------
-# Copyright (c) 2023-2025, Arm Limited or its affiliates. All rights reserved.
+# Copyright (c) 2023-2026, Arm Limited or its affiliates. All rights reserved.
 #
 # SPDX-License-Identifier: BSD-3-Clause
 #
@@ -51,13 +51,33 @@ function (create_executable EXE_NAME OUTPUT_DIR TEST)
 
     # Preprocess the scatter file for image layout symbols
     add_custom_command(OUTPUT CPP-LD--${EXE_NAME}${TEST}
-                    COMMAND ${CROSS_COMPILE}gcc -E -P -I${ROOT_DIR}/val/common/inc/ -I${COMMON_VAL_PATH}/inc/ -I${ROOT_DIR}/plat/targets/${TARGET}/inc/ ${SCATTER_INPUT_FILE} -o ${SCATTER_OUTPUT_FILE} -DCMAKE_BUILD={CMAKE_BUILD}
-                    DEPENDS ${VAL_LIB} ${COMMON_VAL_LIB} ${PAL_LIB} ${TEST_LIB})
+                    COMMAND ${CROSS_COMPILE}gcc -E -P
+                    -I${ROOT_DIR}/val/common/inc/
+                    -I${COMMON_VAL_PATH}/inc/
+                    -I${ROOT_DIR}/plat/targets/${TARGET}/inc/
+                    -I${ROOT_DIR}/external/mbedtls/include/
+                    -I${ROOT_DIR}/lib/configs/mbedtls/
+                    ${SCATTER_INPUT_FILE}
+                    -o ${SCATTER_OUTPUT_FILE}
+                    -DCMAKE_BUILD={CMAKE_BUILD}
+                    DEPENDS ${VAL_LIB} ${COMMON_VAL_LIB} ${PAL_LIB} ${TEST_LIB}
+                    ${BUILD}/external/mbedtls/build/library/mbedtls
+                    ${BUILD}/external/mbedtls/build/library/mbedx509
+                    ${BUILD}/external/mbedtls/build/library/mbedcrypto
+                    )
     add_custom_target(CPP-LD-${EXE_NAME}${TEST} ALL DEPENDS CPP-LD--${EXE_NAME}${TEST})
 
     # Link the objects
     add_custom_command(OUTPUT ${EXE_NAME}${TEST}.elf
-                    COMMAND ${GNUARM_LINKER} ${CMAKE_LINKER_FLAGS} ${GNUARM_LINKER_FLAGS} -T ${SCATTER_OUTPUT_FILE} -o ${OUTPUT_DIR}/${EXE_NAME}.elf ${VAL_LIB}.a ${COMMON_VAL_LIB}.a ${PAL_LIB}.a ${TEST_LIB}.a ${VAL_LIB}.a ${PAL_LIB}.a ${PAL_OBJ_LIST} ${XLAT_BUILD_DIR}/${XLAT-LIB}.a
+                    COMMAND ${GNUARM_LINKER} ${CMAKE_LINKER_FLAGS} ${GNUARM_LINKER_FLAGS}
+                    -T ${SCATTER_OUTPUT_FILE}
+                    -o ${OUTPUT_DIR}/${EXE_NAME}.elf
+                    ${VAL_LIB}.a ${COMMON_VAL_LIB}.a ${PAL_LIB}.a ${TEST_LIB}.a ${VAL_LIB}.a ${PAL_LIB}.a ${PAL_OBJ_LIST} ${XLAT_BUILD_DIR}/${XLAT-LIB}.a
+                    ${BUILD}/external/mbedtls/build/library/mbedx509.a
+                    ${BUILD}/external/mbedtls/build/library/mbedcrypto.a
+                    ${BUILD}/external/mbedtls/build/library/mbedtls.a
+                    ${BUILD}/external/mbedtls/build/library/mbedx509.a
+                    ${BUILD}/external/mbedtls/build/library/mbedcrypto.a
                     DEPENDS CPP-LD-${EXE_NAME}${TEST})
     add_custom_target(${EXE_NAME}${TEST}_elf ALL DEPENDS ${EXE_NAME}${TEST}.elf)
 
@@ -76,7 +96,7 @@ function (create_executable EXE_NAME OUTPUT_DIR TEST)
 if(${EXE_NAME} STREQUAL "acs_realm")
     # Combine acs_host.bin and acs_realm.bin into acs_non_secure.bin
     add_custom_command(OUTPUT acs_non_secure${TEST}.bin
-            COMMAND ${SREC_CAT} ${OUTPUT_DIR}/acs_host.bin -Binary ${OUTPUT_DIR}/acs_realm.bin -Binary -offset 0x100000 -o ${OUTPUT_DIR}/acs_non_secure.bin -Binary
+            COMMAND ${SREC_CAT} ${OUTPUT_DIR}/acs_host.bin -Binary ${OUTPUT_DIR}/acs_realm.bin -Binary -offset 0x200000 -o ${OUTPUT_DIR}/acs_non_secure.bin -Binary
             DEPENDS acs_host${TEST}_bin acs_realm${TEST}_bin)
     add_custom_target(ns_bin_file${TEST} ALL DEPENDS acs_non_secure${TEST}.bin)
 endif()

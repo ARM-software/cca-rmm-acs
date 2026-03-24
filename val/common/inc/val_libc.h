@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023-2025, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023-2026, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -13,13 +13,13 @@
 #define MAX_BUF_SIZE        80U
 
 #define get_num_va_args(_args, _lcount)                     \
-    (((_lcount) > 1)  ? (int)va_arg(_args, long long int) : \
-    (((_lcount) == 1) ? (int)va_arg(_args, long int) :      \
+    (((_lcount) > 1)  ? va_arg(_args, long long int) :      \
+    (((_lcount) == 1) ? va_arg(_args, long int) :           \
                 va_arg(_args, int)))
 
-#define get_unum_va_args(_args, _lcount)                                        \
-    (((_lcount) > 1)  ? (unsigned int)va_arg(_args, unsigned long long int) :   \
-    (((_lcount) == 1) ? (unsigned int)va_arg(_args, unsigned long int) :        \
+#define get_unum_va_args(_args, _lcount)                                    \
+    (((_lcount) > 1)  ? va_arg(_args, unsigned long long int) :             \
+    (((_lcount) == 1) ? va_arg(_args, unsigned long int) :                  \
                 va_arg(_args, unsigned int)))
 
 int val_memcmp(void *src, void *dest, size_t len);

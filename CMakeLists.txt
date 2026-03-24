@@ -1,5 +1,5 @@
 #-------------------------------------------------------------------------------
-# Copyright (c) 2023-2025, Arm Limited or its affiliates. All rights reserved.
+# Copyright (c) 2023-2026, Arm Limited or its affiliates. All rights reserved.
 #
 # SPDX-License-Identifier: BSD-3-Clause
 #
@@ -25,6 +25,9 @@ get_filename_component(ROOT_DIR . ABSOLUTE)
 set(BUILD ${CMAKE_CURRENT_BINARY_DIR} CACHE INTERNAL "Setting build directory to ${BUILD}" FORCE)
 file(MAKE_DIRECTORY ${BUILD}/output/)
 
+# Set external directory for external library
+file(MAKE_DIRECTORY ${BUILD}/external/)
+
 # Set global compile list variable
 set(COMPILE_LIST "")
 
@@ -34,7 +37,6 @@ add_definitions(-DUSEFULBUF_DISABLE_ALL_FLOAT)
 #### Include cmake support module ###
 include(${ROOT_DIR}/tools/cmake/toolchain/utils.cmake)
 include(${ROOT_DIR}/tools/cmake/toolchain/default.cmake)
-include(${ROOT_DIR}/tools/cmake/common/CMakeExternal.cmake)
 include(${ROOT_DIR}/tools/cmake/common/CMakeHelpers.cmake)
 include(${ROOT_DIR}/tools/cmake/common/CommonVAL.cmake)
 ####
@@ -49,7 +51,7 @@ list(APPEND CMAKE_BUILD_TYPE_LIST Release Debug)
 list(APPEND ARM_ARCH_MAJOR_LIST 8 9)
 list(APPEND SECURE_TEST_ENABLE_LIST 1)
 list(APPEND SUITE_COVERAGE_LIST all command none)
-list(APPEND SUITE_COVERAGE_FEATURE_LIST planes mec)
+list(APPEND SUITE_COVERAGE_FEATURE_LIST planes mec device_assignment)
 
 ###
 
@@ -191,7 +193,7 @@ else()
 endif()
 
 if((${SUITE} STREQUAL "attestation_measurement") OR (${SUITE} STREQUAL "all"))
-    set(RMM_ACS_TARGET_QCBOR		${CMAKE_CURRENT_BINARY_DIR}/rmm_acs_qcbor	CACHE PATH "Location of Q_CBOR sources.")
+    set(RMM_ACS_TARGET_QCBOR            ${ROOT_DIR}/external/qcbor  CACHE PATH "Location of Q_CBOR sources.")
     set(RMM_ACS_QCBOR_INCLUDE_PATH      ${RMM_ACS_TARGET_QCBOR}/inc)
 endif()
 
@@ -239,25 +241,31 @@ else()
 endif()
 
 if(((${SUITE} STREQUAL "attestation_measurement") OR (${SUITE} STREQUAL "all")) AND (NOT EXISTS ${RMM_ACS_TARGET_QCBOR}))
-execute_process(COMMAND ${GIT_EXECUTABLE} clone ${QCBOR_GIT_REPO_LINK} ${RMM_ACS_TARGET_QCBOR}
-	RESULT_VARIABLE qcbor_clone_result
-	WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
-if(qcbor_clone_result)
-	message(FATAL_ERROR "git clone failed for ${QCBOR_GIT_REPO_LINK}")
+    message(FATAL_ERROR
+            "QCBOR sources not found at ${RMM_ACS_TARGET_QCBOR}. "
+            "Run 'git submodule update --init --recursive'.")
 endif()
 
-if(NOT qcbor_clone_result)
-execute_process(COMMAND ${GIT_EXECUTABLE} checkout -q "${QCBOR_GIT_REPO_TAG}"
-	RESULT_VARIABLE qcbor_checkout_result
-	WORKING_DIRECTORY ${RMM_ACS_TARGET_QCBOR})
-if(qcbor_checkout_result)
-	message(FATAL_ERROR "git checkout failed for Repo : ${QCBOR_GIT_REPO_LINK}, Tag : ${QCBOR_GIT_REPO_TAG}")
-endif()
-endif()
+# Set MbedTLS path external/mbedtls.
+set(RMM_ACS_TARGET_MBEDTLS ${ROOT_DIR}/external/mbedtls
+CACHE PATH "Location of MBEDTLS sources.")
+set(RMM_ACS_MBEDTLS_INCLUDE_PATH        ${RMM_ACS_TARGET_MBEDTLS}/include)
+
+if(NOT EXISTS ${RMM_ACS_TARGET_MBEDTLS})
+    message(FATAL_ERROR
+            "MbedTLS sources not found at ${RMM_ACS_TARGET_MBEDTLS}. "
+            "Run 'git submodule update --init --recursive'.")
 endif()
 
 # Setup toolchain parameters for compilation and link
 include(${ROOT_DIR}/tools/cmake/toolchain/common.cmake)
+
+# Add subdirectory to include mbedtls CMakeLists.txt file
+add_subdirectory(${ROOT_DIR}/lib/mbedtls)
+
+# Inclue directories for mbedtls
+include_directories(${RMM_SOURCE_DIR}/lib/configs/mbedtls)
+include_directories(${RMM_ACS_MBEDTLS_INCLUDE_PATH})
 
 ###
 
@@ -296,5 +304,5 @@ add_subdirectory(${ROOT_DIR}/tools/cmake/acs_secure)
 list(REMOVE_DUPLICATES COMPILE_LIST)
 execute_process(COMMAND python ${ROOT_DIR}/tools/scripts/compile_check.py "${COMPILE_LIST}" "${ROOT_DIR}" OUTPUT_VARIABLE NOT_COMPILED_FILES)
 if(NOT ${NOT_COMPILED_FILES} MATCHES NULL)
-	message(WARNING "Following files are not compiled ${NOT_COMPILED_FILES}")
+    message(WARNING "Following files are not compiled ${NOT_COMPILED_FILES}")
 endif()

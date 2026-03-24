@@ -1,5 +1,5 @@
 #-------------------------------------------------------------------------------
-# Copyright (c) 2023-2025, Arm Limited or its affiliates. All rights reserved.
+# Copyright (c) 2023-2026, Arm Limited or its affiliates. All rights reserved.
 #
 # SPDX-License-Identifier: BSD-3-Clause
 #
@@ -104,7 +104,11 @@ endif()
 foreach(SUITE ${SUITE_LIST})
     #message(STATUS "[ACS] : Compiling sources from ${SUITE} suite")
     # Get all the test folders from a given test component
-    _get_sub_dir_list(TEST_LIST ${TEST_SOURCE_DIR}/${SUITE})
+    if(${SUITE} STREQUAL "planes" OR ${SUITE} STREQUAL "device_assignment")
+        _get_sub_dir_list(TEST_LIST ${TEST_SOURCE_DIR}/${SUITE}/*/)
+    else()
+        _get_sub_dir_list(TEST_LIST ${TEST_SOURCE_DIR}/${SUITE})
+    endif()
     foreach(TEST ${TEST_LIST})
         #message(STATUS "[ACS] : Compiling sources from ${TEST} Test")
         file(GLOB TEST_SRC "${TEST_SOURCE_DIR}/*/*/*_secure.c")

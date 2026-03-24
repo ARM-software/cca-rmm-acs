@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2025-2026, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -33,7 +33,7 @@ static uint64_t g_mec_state_private_prep_sequence(void)
     /* Populate realm-1 with Private MECID */
     if (val_host_realm_setup(&realm1, 1))
     {
-        LOG(ERROR, "\tRealm-1 setup failed\n", 0, 0);
+        LOG(ERROR, "\tRealm-1 setup failed\n");
         return VAL_TEST_PREP_SEQ_FAILED;
     }
 
@@ -73,7 +73,7 @@ static uint64_t intent_to_seq(struct stimulus *test_data, struct arguments *args
             break;
 
         default:
-            LOG(ERROR, "\n\tUnknown intent label encountered\n", 0, 0);
+            LOG(ERROR, "Unknown intent label encountered\n");
             return VAL_ERROR;
     }
 
@@ -90,7 +90,7 @@ void cmd_mec_set_shared_host(void)
     val_host_rmi_features(1, &featreg1);
     if (!featreg1)
     {
-        LOG(ERROR, "MEC feature not supported, skipping the test\n", 0, 0);
+        LOG(ERROR, "MEC feature not supported, skipping the test\n");
         val_set_status(RESULT_SKIP(VAL_SKIP_CHECK));
         goto exit;
     }
@@ -102,9 +102,9 @@ void cmd_mec_set_shared_host(void)
 
     for (i = 0; i < (sizeof(test_data) / sizeof(struct stimulus)); i++)
     {
-        LOG(TEST, "\n\tCheck %d : ", i + 1, 0);
-        LOG(TEST, test_data[i].msg, 0, 0);
-        LOG(TEST, "; intent id : 0x%x \n", test_data[i].label, 0);
+        LOG(TEST, "\n\tCheck %d : ", i + 1);
+        LOG(TEST, test_data[i].msg);
+        LOG(TEST, "; intent id : 0x%x \n", test_data[i].label);
 
         if (intent_to_seq(&test_data[i], &args)) {
             val_set_status(RESULT_FAIL(VAL_ERROR_POINT(2)));
@@ -120,11 +120,11 @@ void cmd_mec_set_shared_host(void)
         }
     }
 
-    LOG(TEST, "\n\tPositive Observability Check\n", 0, 0);
+    LOG(TEST, "\n\tPositive Observability Check\n");
     cmd_ret = val_host_rmi_mec_set_shared(c_args.mecid_valid);
     if (cmd_ret.x0 != RMI_SUCCESS)
     {
-        LOG(ERROR, "\n\t Command failed. %x\n", cmd_ret.x0, 0);
+        LOG(ERROR, "Command failed. %x\n", cmd_ret.x0);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(4)));
         goto exit;
     }
@@ -134,14 +134,14 @@ void cmd_mec_set_shared_host(void)
 exit:
     if (val_host_postamble())
     {
-        LOG(ERROR, "\tval_host_postamble failed\n", 0, 0);
+        LOG(ERROR, "\tval_host_postamble failed\n");
         val_set_status(RESULT_FAIL(VAL_ERROR));
     }
 
     cmd_ret = val_host_rmi_mec_set_private(c_args.mecid_valid);
     if (cmd_ret.x0)
     {
-        LOG(ERROR, "\trmi_mec_set_private failed %x\n", cmd_ret.x0, 0);
+        LOG(ERROR, "\trmi_mec_set_private failed %x\n", cmd_ret.x0);
         val_set_status(RESULT_FAIL(VAL_ERROR));
     }
 

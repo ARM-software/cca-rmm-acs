@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023-2025, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023-2026, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -8,6 +8,8 @@
 #include "val_host_realm.h"
 #include "val_host_alloc.h"
 #include "val_host_helpers.h"
+#include "val_host_doe.h"
+#include "val_timer.h"
 
 int current_realm = 1;
 val_host_granule_ts *head = NULL;
@@ -1328,7 +1330,7 @@ void val_host_realm_params(val_host_realm_ts *realm)
 {
     realm->s2sz = IPA_WIDTH_DEFAULT;
     realm->hash_algo = RMI_HASH_SHA_256;
-    realm->s2_starting_level = 1;
+    realm->s2_starting_level = 0;
     realm->num_s2_sl_rtts = 1;
     realm->vmid = 0;
     realm->rec_count = 1;
@@ -1362,6 +1364,45 @@ uint32_t val_host_check_realm_exit_host_call(val_host_rec_run_ts *run)
 }
 
 /**
+ *   @brief    Checks the realm exit state is host call
+ *   @param    run      - Rec run structure pointer
+ *   @return   SUCCESS/FAILURE
+**/
+uint32_t val_host_check_realm_exit_rsi_host_call(val_host_rec_run_ts *run)
+{
+    if ((run->exit.exit_reason == RMI_EXIT_HOST_CALL) &&
+        (run->exit.imm == 0))
+        return VAL_SUCCESS;
+
+    return VAL_ERROR;
+}
+
+/**
+ *   @brief    Checks the PDEV state is as per expected state
+ *   @param    pdev        - PA of the PDEV
+ *   @param    pdev_state  - Expected PDEV state
+ *   @return   SUCCESS/FAILURE
+**/
+uint64_t val_host_check_pdev_state(uint64_t pdev, uint8_t pdev_state)
+{
+    val_smc_param_ts args;
+
+    args = val_host_rmi_pdev_get_state(pdev);
+    if (args.x0)
+    {
+        LOG(ERROR, "PDEV get state failed, %x\n", args.x0);
+        return VAL_ERROR;
+    }
+    if (args.x1 != pdev_state)
+    {
+        LOG(ERROR, "PDEV state expected %x, returned %x", pdev_state, args.x1);
+        return VAL_ERROR;
+    }
+
+    return VAL_SUCCESS;
+}
+
+/**
  *   @brief    Checks the realm exit state is psci
  *   @param    run      - Rec run structure pointer
  *   @param    psci_fid - PSCI function id
@@ -1374,6 +1415,167 @@ uint32_t val_host_check_realm_exit_psci(val_host_rec_run_ts *run, uint32_t psci_
         return VAL_SUCCESS;
 
     return VAL_ERROR;
+}
+
+/**
+ *   @brief    Maps protected memory into the realm
+ *   @param    realm        - Realm strucrure
+ *   @param    vdev         - PA of the VDEV
+ *   @param    target_pa    - PA of target device memory
+ *   @param    ipa          - IPA Address
+ *   @param    rtt_map_size - size of memory to be mapped
+ *   @return   SUCCESS/FAILURE
+**/
+uint32_t val_host_map_protected_dev_mem(val_host_realm_ts *realm, uint64_t vdev,
+                uint64_t target_pa,
+                uint64_t ipa,
+                uint64_t rtt_map_size
+                )
+{
+    uint64_t rd = realm->rd;
+    uint64_t map_level, rtt_level;
+    uint64_t ret = 0;
+    uint64_t size = 0;
+    uint64_t phys = target_pa;
+    val_host_rtt_entry_ts  rtte;
+    val_smc_param_ts args;
+
+
+    if (!ADDR_IS_ALIGNED(ipa, rtt_map_size))
+        return VAL_ERROR;
+
+    if (rtt_map_size == PAGE_SIZE)
+        map_level = 3;
+    else if (rtt_map_size == VAL_RTT_L2_BLOCK_SIZE)
+        map_level = 2;
+    else
+        {
+            LOG(ERROR, "\tUnknown rtt_map_size=0x%x\n", rtt_map_size);
+            return VAL_ERROR;
+        }
+
+    while (size < rtt_map_size)
+    {
+        args.x0 = val_host_rmi_granule_delegate(phys);
+        if (args.x0)
+        {
+            LOG(ERROR, "\tGranule delegation failed, PA=0x%x\n", phys);
+            return VAL_ERROR;
+        }
+
+        args = val_host_rmi_vdev_map(rd, vdev, ipa, map_level, phys);
+
+        if (RMI_STATUS(args.x0) == RMI_ERROR_RTT)
+        {
+            rtt_level = RMI_INDEX(args.x0);
+            ret = val_host_rmi_rtt_read_entry(realm->rd,
+                        val_host_addr_align_to_level(ipa, rtt_level), rtt_level, &rtte);
+            if (ret)
+            {
+                LOG(ERROR, "\tval_host_rmi_rtt_read_entry, ret=0x%x\n", ret);
+                return VAL_ERROR;
+            }
+
+            if (rtte.state == RMI_UNASSIGNED)
+            {
+                /* Create missing RTT levels and retry data create again */
+                ret = val_host_create_rtt_levels(realm, ipa, (uint32_t)rtte.walk_level,
+                                map_level, PAGE_SIZE);
+                if (ret)
+                {
+                    LOG(ERROR, "\tval_realm_create_rtt_levels failed, ret=0x%x\n", ret);
+                    goto error;
+                }
+
+                args = val_host_rmi_vdev_map(rd, vdev, ipa, map_level, phys);
+            }
+        }
+
+        if (args.x0)
+        {
+            LOG(ERROR, "\tval_host_rmi_vdev_map failed, ret=0x%lx\n", ret);
+            goto error;
+        }
+
+        phys += PAGE_SIZE;
+        ipa += PAGE_SIZE;
+        size += PAGE_SIZE;
+    }
+
+    return VAL_SUCCESS;
+
+error:
+    for (; size > 0;)
+    {
+        args = val_host_rmi_vdev_unmap(rd, ipa, map_level);
+        if (args.x0)
+            LOG(ERROR, "\tval_host_rmi_vdev_unmap failed, ret=0x%lx\n", ret);
+
+        args.x0 = val_host_rmi_granule_undelegate(phys);
+        if (args.x0)
+        {
+            LOG(ERROR, "\tval_rmi_granule_undelegate failed\n");
+        }
+        phys -= PAGE_SIZE;
+        size -= PAGE_SIZE;
+        ipa -= PAGE_SIZE;
+    }
+
+    return VAL_ERROR;
+}
+
+/**
+ *   @brief    Maps protected memory into the realm
+ *   @param    realm            - Realm strucrure
+ *   @param    vdev             - PA of the VDEV
+ *   @param    dev_mem_base     - IPA Base
+ *   @param    dev_mem_top      - IPA Top
+ *   @param    dev_mem_pa       - PA of the target device memory
+ *   @return   SUCCESS/FAILURE
+**/
+uint32_t val_host_dev_mem_map(val_host_realm_ts *realm, uint64_t vdev, uint64_t dev_mem_base,
+                                                  uint64_t dev_mem_top, uint64_t dev_mem_pa)
+{
+    uint32_t i = 0;
+    uint64_t region_size = dev_mem_top - dev_mem_base;
+    uint64_t total_pages = region_size / PAGE_SIZE;
+
+    if ((region_size == 0U) || (region_size % PAGE_SIZE))
+    {
+        LOG(ERROR, "Invalid VDEV mapping size=0x%lx\n", region_size);
+        return VAL_ERROR;
+    }
+
+    if (realm->dev_granules_mapped_count >= VAL_MAX_DEV_GRANULES_MAP)
+    {
+        LOG(ERROR, "Exceeded max tracked VDEV_MAP regions\n");
+        return VAL_ERROR;
+    }
+
+    while (i < total_pages)
+    {
+        if (val_host_map_protected_dev_mem(realm, vdev,
+                dev_mem_pa + i * PAGE_SIZE,
+                dev_mem_base + i * PAGE_SIZE,
+                PAGE_SIZE
+                ))
+        {
+            LOG(ERROR, "val_host_map_protected_dev_mem failed, par_base=0x%lx\n",
+                    dev_mem_pa + i * PAGE_SIZE);
+            return VAL_ERROR;
+        }
+
+
+        i++;
+    }
+
+    realm->dev_granules[realm->dev_granules_mapped_count].ipa = dev_mem_base;
+    realm->dev_granules[realm->dev_granules_mapped_count].size = region_size;
+    realm->dev_granules[realm->dev_granules_mapped_count].level = VAL_RTT_MAX_LEVEL;
+    realm->dev_granules[realm->dev_granules_mapped_count].pa = dev_mem_pa;
+    realm->dev_granules_mapped_count++;
+
+    return VAL_SUCCESS;
 }
 
 /**
@@ -1416,6 +1618,7 @@ void val_host_add_granule(uint32_t state, uint64_t PA, val_host_granule_ts *node
         tail->next = granule_list;
         tail = tail->next;
     }
+
 }
 
 /**
@@ -2469,3 +2672,19 @@ bool val_host_rmm_supports_rtt_tree_per_plane(void)
     return false;
 }
 
+/* Checks RMM support for DA
+ * @param  none
+ * @return Returns true or false
+**/
+bool val_host_rmm_supports_da(void)
+{
+    uint64_t featreg0, da;
+
+    val_host_rmi_features(0, &featreg0);
+
+    da =  VAL_EXTRACT_BITS(featreg0, 42, 42);
+    if (da == 1)
+        return true;
+
+    return false;
+}

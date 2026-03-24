@@ -1,5 +1,5 @@
 #-------------------------------------------------------------------------------
-# Copyright (c) 2023, Arm Limited or its affiliates. All rights reserved.
+# Copyright (c) 2023-2026, Arm Limited or its affiliates. All rights reserved.
 #
 # SPDX-License-Identifier: BSD-3-Clause
 #
@@ -12,11 +12,19 @@ set(PAL_SRC
     ${ROOT_DIR}/plat/targets/${TARGET}/src/pal_cpu_info.c
     ${ROOT_DIR}/plat/targets/${TARGET}/src/pal_mmio.c
     ${ROOT_DIR}/plat/targets/${TARGET}/src/pal_irq.c
+    ${ROOT_DIR}/plat/targets/${TARGET}/src/pal_fvp_pcie.c
+    ${ROOT_DIR}/plat/targets/${TARGET}/src/pal_fvp_exerciser.c
     ${ROOT_DIR}/plat/driver/src/pal_pl011_uart.c
     ${ROOT_DIR}/plat/driver/src/pal_sp805_watchdog.c
     ${ROOT_DIR}/plat/driver/src/pal_nvm.c
+    ${ROOT_DIR}/plat/driver/src/pal_smmuv3_test_engine.c
     ${ROOT_DIR}/plat/common/src/pal_smc.c
     ${ROOT_DIR}/plat/common/src/pal_libc.c
+    ${ROOT_DIR}/plat/common/src/pal_pcie.c
+    ${ROOT_DIR}/plat/common/src/pal_pcie_enumeration.c
+    ${ROOT_DIR}/plat/common/src/pal_exerciser.c
+    ${ROOT_DIR}/plat/common/src/pal_crypto.c
+    ${ROOT_DIR}/plat/common/src/pal_rhi.c
     ${ROOT_DIR}/plat/common/src/pal_syscall.S
     ${ROOT_DIR}/plat/common/src/pal_spinlock.S
     ${ROOT_DIR}/plat/driver/src/gic/pal_arm_gic_v3.c

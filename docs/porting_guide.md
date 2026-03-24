@@ -19,6 +19,9 @@ This document provides the porting steps and the list of PAL APIs.
 - One Non-secure Watchdog timer must be available to help system recovery from any fatal error conditions
 - 64KB Non-secure Non-volatile memory must be available for preserving test data over watchdog timer reset. Each byte of this region must be initialised to 0xFF at power on reset.
 
+## Others
+Sample PCI hierarchy is given in **plat/targets/tgt_tfa_fvp/manifest/pci_hierarchy.json** file. Current DA Foundation tests are validated with this pci hierarchy.
+
 ## List of PAL APIs
 
 Since the test suite is agnostic to various system targets, you must port the following PAL APIs before building the tests. <br />
@@ -59,4 +62,4 @@ Arm RMM ACS is distributed under BSD-3-Clause License.
 
 --------------
 
-*Copyright (c) 2023, Arm Limited or its affliates. All rights reserved.*
+*Copyright (c) 2023, 2026, Arm Limited or its affliates. All rights reserved.*

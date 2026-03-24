@@ -1,10 +1,11 @@
 /*
- * Copyright (c) 2023, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023-2026, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
  */
 #include "val_host_memory.h"
+#include "platform_override_fvp.h"
 
 REGISTER_XLAT_CONTEXT2(acs_host,
 		       HOST_MEM_REGIONS,
@@ -29,6 +30,8 @@ extern uintptr_t __DATA_START__, __DATA_END__;
 extern uintptr_t __BSS_START__, __BSS_END__;
 #define BSS_START  ((uintptr_t)&__BSS_START__)
 #define BSS_END    ((uintptr_t)&__BSS_END__)
+
+#define MEM_SIZE_64K              0x10000
 
 #define HOST_TEXT MAP_REGION_FLAT(                              \
                                 TEXT_START,                     \
@@ -81,6 +84,39 @@ extern uintptr_t __BSS_START__, __BSS_END__;
                                 PLATFORM_NS_WD_SIZE,            \
                                 MT_DEVICE_RW | MT_NS)
 
+#define PCIE_ECAM MAP_REGION_FLAT(                                \
+                                PLATFORM_OVERRIDE_PCIE_ECAM_BASE_ADDR_0,            \
+                                PLATFORM_OVERRIDE_PCIE_ECAM_BASE_ADDR_0_SIZE,            \
+                                MT_DEVICE_RW | MT_NS)
+
+#define PCIE_BAR32NP MAP_REGION_FLAT(                                \
+                                PLATFORM_OVERRIDE_PCIE_BAR32NP_VALUE,            \
+                                0x50 * MEM_SIZE_64K,            \
+                                MT_DEVICE_RW | MT_NS)
+
+#define PCIE_BAR32P MAP_REGION_FLAT(                                \
+                                PLATFORM_OVERRIDE_PCIE_BAR32P_VALUE,            \
+                                0x25 * MEM_SIZE_64K,            \
+                                MT_DEVICE_RW | MT_NS)
+
+#define PCIE_RP_BAR32 MAP_REGION_FLAT(                                \
+                                PLATOFRM_OVERRIDE_RP_BAR32_VALUE,            \
+                                0x20 * MEM_SIZE_64K,            \
+                                MT_DEVICE_RW | MT_NS)
+
+
+#define PCIE_RP_BAR64 MAP_REGION_FLAT(                                \
+                                PLATFORM_OVERRIDE_RP_BAR64_VALUE,            \
+                                0x10 * MEM_SIZE_64K,            \
+                                MT_DEVICE_RW | MT_NS)
+
+#define PCIE_BAR64 MAP_REGION_FLAT(                                \
+                                PLATFORM_OVERRIDE_PCIE_BAR64_VALUE,            \
+                                0x10 * MEM_SIZE_64K,            \
+                                MT_DEVICE_RW | MT_NS)
+
+
+
 /**
  *   @brief    Add regions assigned to host into its translation table data structure.
  *   @param    void
@@ -101,7 +137,14 @@ void val_host_add_mmap(void)
             HOST_RO,
             HOST_RW,
             HOST_BSS,
-            MEMORY_POOL
+            MEMORY_POOL,
+            PCIE_ECAM,
+            PCIE_BAR32NP,
+            PCIE_BAR32P,
+            PCIE_RP_BAR32,
+            PCIE_RP_BAR64,
+            PCIE_BAR64
+
     };
 
     mmap_add_ctx(&acs_host_xlat_ctx, host_regions);

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023-2025, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023-2026, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -55,7 +55,7 @@
 /* Base address of watchdog assigned */
 #define PLATFORM_WDOG_BASE    0x1C0F0000 //(SP805)
 #define PLATFORM_WDOG_SIZE    0x10000
-#define PLATFORM_WDOG_LOAD_VALUE (0x3E7 * 40 * 1000) // 20sec
+#define PLATFORM_WDOG_LOAD_VALUE (0x3E7 * 40 * 1000 * 10) // 20sec
 #define PLATFORM_WDOG_INTR 32
 
 #define PLATFORM_NS_WD_BASE  0x2A440000
@@ -81,10 +81,10 @@
  *
  * +--------------+      +-------------+
  * |              |      | Host Image  |
- * |    ACS       |      |    (1MB)    |
+ * |    ACS       |      |    (2MB)    |
  * | Normal World | ==>  +-------------+
  * |    Image     |      | Realm Image |
- * | (2MB Size)   |      |    (1MB)    |
+ * | (4MB Size)   |      |    (2MB)    |
  * +--------------+      +-------------+
  * |  Memory Pool |      |Shared Region|
  * |    (50MB)    |      |    (1MB)    |
@@ -95,12 +95,12 @@
  * |              |      |    (49MB)   |
  * +--------------+      +-------------+
  *
- * 2MB for Image loading and 50MB as Free NS Space.
+ * 4MB for Image loading and 50MB as Free NS Space.
  */
 
-#define PLATFORM_NORMAL_WORLD_IMAGE_SIZE  0x200000
+#define PLATFORM_NORMAL_WORLD_IMAGE_SIZE  0x400000
 #define PLATFORM_HOST_IMAGE_SIZE          (PLATFORM_NORMAL_WORLD_IMAGE_SIZE / 2)
-#define PLATFORM_REALM_IMAGE_SIZE         0xC0000 //768 kb
+#define PLATFORM_REALM_IMAGE_SIZE         (PLATFORM_NORMAL_WORLD_IMAGE_SIZE / 2)
 #define PLATFORM_MEMORY_POOL_SIZE         (50 * 0x100000)
 #define PLATFORM_SHARED_REGION_SIZE       0x100000
 #define PLATFORM_HEAP_REGION_SIZE         (PLATFORM_MEMORY_POOL_SIZE \
@@ -173,7 +173,7 @@
 /* Need to be adjusted based on platform */
 #define ITERATIONS_PER_MS 10000
 
-#define IPA_WIDTH_DEFAULT   32
+#define IPA_WIDTH_DEFAULT   40
 
 #define PGT_IAS     IPA_WIDTH_DEFAULT
 #define PAGT_OAS    IPA_WIDTH_DEFAULT

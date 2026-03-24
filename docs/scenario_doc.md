@@ -5,12 +5,14 @@ This document provides a consolidated list of scenario documents designed to tes
 | -------------------------- |
 | [Attestation and Measurement](./attestation_measurement_scenarios.md) |
 | [Command](./command_scenarios.rst) |
+| [Device Assignment](./device_assignment_scenarios.md) |
 | [Exception](./exception_scenarios.md) |
 | [GIC](./gic_scenarios.md) |
+| [MEC and LFA](./mec_lfa.md) |
 | [Memory Management](./memory_management_scenarios.md) |
 | [Planes](./planes_scenarios.rst) |
 | [PMU and Debug](./pmu_debug.md) |
-| [MEC and LFA](./mec_lfa.md) |
+| [RHI](./rhi_scenarios.md) |
 
 ## License
 
@@ -18,4 +20,4 @@ Arm CCA RMM ACS is distributed under BSD-3-Clause License.
 
 --------------
 
-*Copyright (c) 2025, Arm Limited or its affliates. All rights reserved.*
+*Copyright (c) 2025-2026, Arm Limited or its affliates. All rights reserved.*
