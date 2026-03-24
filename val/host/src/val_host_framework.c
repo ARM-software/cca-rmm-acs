@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023-2025, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023-2026, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -12,6 +12,7 @@
 #include "pal_interfaces.h"
 #include "val.h"
 #include "val_host_memory.h"
+#include "pal_common_support.h"
 
 extern const uint32_t  total_tests;
 extern const test_db_t test_list[];
@@ -221,6 +222,8 @@ static void val_host_print_acs_header(void)
    LOG(ALWAYS, "********* RMM v1.1 ACS **********\n\n")
    LOG(ALWAYS, " 1. Planes - BETA \n\n")
    LOG(ALWAYS, " 2. MEC and LFA - BETA \n\n")
+   LOG(ALWAYS, " 3. DA Foundation - ALPHA \n\n")
+   LOG(ALWAYS, " 4. RHI - BETA \n\n")
    LOG(ALWAYS, "*********************************\n\n")
 #elif defined(RMM_V_1_0)
    LOG(ALWAYS, "********* RMM v1.0 ACS EAC **********\n\n")
@@ -237,7 +240,8 @@ static void val_host_test_dispatch(bool primary_cpu_boot)
     uint32_t          test_result, i;
     uint32_t          reboot_run = 0;
     uint32_t          test_num_start = 0, test_num_end = 0;
-    uint32_t          feature_planes_supported = 0, feature_mec_supported = 0;
+    uint32_t          feature_planes_supported = 0, feature_mec_supported = 0,
+                                                     feature_da_supported = 0;
     test_fptr_t       fn_ptr;
     test_info_t       test_info = {0};
     regre_report_t    regre_report = {0};
@@ -318,8 +322,8 @@ static void val_host_test_dispatch(bool primary_cpu_boot)
             feature_planes_supported = val_host_rmm_supports_planes();
             if (!feature_planes_supported)
             {
-                LOG(ALWAYS, "Planes feature not supported, Skipping planes Suite\n\n", 0, 0);
-                LOG(ALWAYS, "*********************************\n", 0, 0)
+                LOG(ALWAYS, "Planes feature not supported, Skipping planes Suite\n\n");
+                LOG(ALWAYS, "*********************************\n")
             }
         }
 
@@ -328,8 +332,19 @@ static void val_host_test_dispatch(bool primary_cpu_boot)
             feature_mec_supported = val_host_rmm_supports_mec();
             if (!feature_mec_supported)
             {
-                LOG(ALWAYS, "MEC feature not supported, Skipping mec Suite\n\n", 0, 0);
-                LOG(ALWAYS, "*********************************\n", 0, 0)
+                LOG(ALWAYS, "MEC feature not supported, Skipping mec Suite\n\n");
+                LOG(ALWAYS, "*********************************\n")
+            }
+        }
+
+        if (!val_strcmp(SUITE, "all") || !val_strcmp(SUITE, "device_assignment"))
+        {
+            feature_da_supported = val_host_rmm_supports_da();
+            if (!feature_da_supported)
+            {
+                LOG(ALWAYS, "Device Assignment feature not supported, \
+                              Skipping Device Assignment Suite\n\n");
+                LOG(ALWAYS, "*********************************\n")
             }
         }
 #endif
@@ -347,9 +362,14 @@ static void val_host_test_dispatch(bool primary_cpu_boot)
                                                                                      "planes")))
                 continue;
 
-            /* Skip if RMM do not support planes */
+            /* Skip if RMM do not support mec */
             if ((!feature_mec_supported) && (!val_strcmp((char *)test_list[i].sub_suite_name,
                                                                                      "mec")))
+                    continue;
+
+            /* Skip if RMM do not support device_assignment */
+            if ((!feature_da_supported) && (!val_strcmp((char *)test_list[i].sub_suite_name,
+                                                                        "device_assignment")))
                     continue;
 
             if (reboot_run)
@@ -424,6 +444,20 @@ static void val_host_test_dispatch(bool primary_cpu_boot)
 }
 
 /**
+ *   @brief    Create PCIe table and PCI enumeration
+ *   @param    void
+ *   @return   void
+**/
+void val_host_create_pcie_info_table(void)
+{
+    __attribute__((aligned (PAGE_SIZE))) static uint64_t PcieInfoTable[(sizeof(PCIE_INFO_TABLE)
+                  + (PLATFORM_OVERRIDE_NUM_ECAM * sizeof(PCIE_INFO_BLOCK)))/8];
+
+    val_pcie_create_info_table(PcieInfoTable);
+}
+
+
+/**
  *   @brief    C entry function for endpoint
  *   @param    primary_cpu_boot     -   Boolean value for primary cpu boot
  *   @return   void (Never returns)
@@ -451,6 +485,12 @@ void val_host_main(bool primary_cpu_boot)
     /* Enable Stage-1 MMU */
     val_enable_mmu(host_xlat_ctx);
 
+    if (!val_strcmp(SUITE, "all") || !val_strcmp(SUITE, "device_assignment")
+                                                || !val_strcmp(SUITE, "rhi"))
+    {
+        /* Creates PCIe Table and enumeration */
+        val_host_create_pcie_info_table();
+    }
     /* Ready to run test regression */
     val_host_test_dispatch(primary_cpu_boot);
 

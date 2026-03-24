@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2025-2026, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -18,7 +18,7 @@ void mec_id_private_host(void)
     val_host_rmi_features(1, &featreg1);
     if (!featreg1)
     {
-        LOG(ERROR, "MEC feature not supported, skipping the test\n", 0, 0);
+        LOG(ERROR, "MEC feature not supported, skipping the test\n");
         val_set_status(RESULT_SKIP(VAL_SKIP_CHECK));
         goto destroy_realm;
     }
@@ -32,18 +32,18 @@ void mec_id_private_host(void)
     /* Populate realm-1 with Private MECID */
     if (val_host_realm_setup(&realm1, 1))
     {
-        LOG(ERROR, "\tRealm-1 setup failed\n", 0, 0);
+        LOG(ERROR, "\tRealm-1 setup failed\n");
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(1)));
         goto destroy_realm;
     }
 
-    LOG(DBG, "\tCreated Realm-1 with Private MECID: %d\n", realm1.mecid, 0);
+    LOG(DBG, "\tCreated Realm-1 with Private MECID: %d\n", realm1.mecid);
 
     /* Enter Realm-1 REC[0]  */
     ret = val_host_rmi_rec_enter(realm1.rec[0], realm1.run[0]);
     if (ret)
     {
-        LOG(ERROR, "\tRealm-1 Rec enter failed, ret=%x\n", ret, 0);
+        LOG(ERROR, "\tRealm-1 Rec enter failed, ret=%x\n", ret);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(2)));
         goto destroy_realm;
     }

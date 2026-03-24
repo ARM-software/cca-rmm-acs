@@ -1,3 +1,9 @@
 [submodule "val_common"]
 	path = val_common
 	url = https://github.com/ARM-software/psa-acs-common-val.git
+[submodule "external/mbedtls"]
+	path = external/mbedtls
+	url = https://github.com/Mbed-TLS/mbedtls.git
+[submodule "external/qcbor"]
+	path = external/qcbor
+	url = https://github.com/laurencelundblade/QCBOR.git

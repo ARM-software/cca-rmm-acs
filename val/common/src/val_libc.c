@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023-2025, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023-2026, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -237,7 +237,7 @@ int val_vsnprintf(char *s, size_t n, const char *fmt, va_list args)
     int l_count;
     int left;
     char *str;
-    int num;
+    long long int num;
     unsigned long long int unum;
     char padc; /* Padding character */
     int padn; /* Number of characters to pad */
@@ -295,10 +295,10 @@ loop:
                     }
                     count++;
 
-                    unum = (unsigned int)-num;
-                } else {
-                    unum = (unsigned int)num;
-                }
+                unum = (unsigned long long)(-num);
+            } else {
+                unum = (unsigned long long)num;
+            }
 
                 unsigned_num_print(&s, n, &count, unum, 10,
                            padc, padn);
@@ -359,4 +359,3 @@ loop:
 
     return (int)count;
 }
-

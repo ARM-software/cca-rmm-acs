@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023-2025, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023-2026, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -85,28 +85,42 @@ val_smc_param_ts val_host_rmi_rtt_aux_map_protected(uint64_t rd, uint64_t ipa, u
 val_smc_param_ts val_host_rmi_rtt_aux_map_unprotected(uint64_t rd, uint64_t ipa, uint64_t index);
 val_smc_param_ts val_host_rmi_rtt_aux_unmap_protected(uint64_t rd, uint64_t ipa, uint64_t index);
 val_smc_param_ts val_host_rmi_rtt_aux_unmap_unprotected(uint64_t rd, uint64_t ipa, uint64_t index);
-val_smc_param_ts val_host_rmi_granule_io_delegate(uint64_t addr, uint64_t flags);
-val_smc_param_ts val_host_rmi_granule_io_undelegate(uint64_t addr);
-val_smc_param_ts val_host_rmi_io_create(uint64_t rd, uint64_t ipa, uint64_t flags, uint64_t desc);
-val_smc_param_ts val_host_rmi_io_destroy(uint64_t rd, uint64_t ipa);
+val_smc_param_ts val_host_rmi_mec_set_private(uint64_t mecid);
+val_smc_param_ts val_host_rmi_mec_set_shared(uint64_t mecid);
 val_smc_param_ts val_host_rmi_pdev_abort(uint64_t pdev_ptr);
+val_smc_param_ts val_host_rmi_pdev_aux_count(uint64_t flags);
 val_smc_param_ts val_host_rmi_pdev_communicate(uint64_t pdev_ptr, uint64_t data_ptr);
 val_smc_param_ts val_host_rmi_pdev_create(uint64_t pdev_ptr, uint64_t params_ptr);
 val_smc_param_ts val_host_rmi_pdev_destroy(uint64_t pdev_ptr);
 val_smc_param_ts val_host_rmi_pdev_get_state(uint64_t pdev_ptr);
 val_smc_param_ts val_host_rmi_pdev_ide_reset(uint64_t pdev_ptr);
-val_smc_param_ts val_host_rmi_pdev_notify(uint64_t pdev_ptr, uint64_t ev);
-val_smc_param_ts val_host_rmi_pdev_set_key(uint64_t pdev_ptr, uint64_t key,
-                                               uint64_t len, uint8_t algo);
+val_smc_param_ts val_host_rmi_pdev_ide_key_refresh(uint64_t pdev_ptr, uint8_t coh);
+val_smc_param_ts val_host_rmi_pdev_set_pubkey(uint64_t pdev_ptr, uint64_t params_ptr);
 val_smc_param_ts val_host_rmi_pdev_stop(uint64_t pdev_ptr);
+/*TODO: Update once TF-RMM correct vdev_abort command */
+// val_smc_param_ts val_host_rmi_vdev_abort(uint64_t rd, uint64_t pdev_ptr, uint64_t vdev_ptr);
 val_smc_param_ts val_host_rmi_vdev_abort(uint64_t vdev_ptr);
-val_smc_param_ts val_host_rmi_vdev_communicate(uint64_t vdev_ptr, uint64_t data_ptr);
+val_smc_param_ts val_host_rmi_vdev_aux_count(uint64_t pdev_flags, uint64_t vdev_flags);
+val_smc_param_ts val_host_rmi_vdev_communicate(uint64_t rd, uint64_t pdev_ptr,
+                           uint64_t vdev_ptr, uint64_t data_ptr);
 val_smc_param_ts val_host_rmi_vdev_create(uint64_t rd, uint64_t pdev_ptr,
                                   uint64_t vdev_ptr, uint64_t params_ptr);
-val_smc_param_ts val_host_rmi_vdev_destroy(uint64_t vdev_ptr);
+val_smc_param_ts val_host_rmi_vdev_destroy(uint64_t rd, uint64_t pdev_ptr,
+                                                       uint64_t vdev_ptr);
 val_smc_param_ts val_host_rmi_vdev_get_state(uint64_t vdev_ptr);
-val_smc_param_ts val_host_rmi_vdev_stop(uint64_t vdev_ptr);
-val_smc_param_ts val_host_rmi_mec_set_private(uint64_t mecid);
-val_smc_param_ts val_host_rmi_mec_set_shared(uint64_t mecid);
+val_smc_param_ts val_host_rmi_vdev_complete(uint64_t rec_ptr, uint64_t vdev_ptr);
+val_smc_param_ts val_host_rmi_vdev_get_interface_report(uint64_t rd, uint64_t pdev_ptr,
+                                                                     uint64_t vdev_ptr);
+val_smc_param_ts val_host_rmi_vdev_get_measurements(uint64_t rd, uint64_t pdev_ptr,
+                                            uint64_t vdev_ptr, uint64_t params_ptr);
+val_smc_param_ts val_host_rmi_vdev_lock(uint64_t rd, uint64_t pdev_ptr, uint64_t vdev_ptr);
+val_smc_param_ts val_host_rmi_vdev_map(uint64_t rd, uint64_t vdev_ptr, uint64_t ipa,
+                                                      uint64_t level, uint64_t addr);
+val_smc_param_ts val_host_rmi_vdev_start(uint64_t rd, uint64_t pdev_ptr, uint64_t vdev_ptr);
+val_smc_param_ts val_host_rmi_vdev_unlock(uint64_t rd, uint64_t pdev_ptr, uint64_t vdev_ptr);
+val_smc_param_ts val_host_rmi_vdev_validate_mapping(uint64_t rd, uint64_t rec_ptr,
+                                              uint64_t pdev_ptr, uint64_t vdev_ptr,
+                                                      uint64_t base, uint64_t top);
+val_smc_param_ts val_host_rmi_vdev_unmap(uint64_t rd, uint64_t ipa, uint64_t level);
 
 #endif /* _VAL_HOST_RMI_H_ */

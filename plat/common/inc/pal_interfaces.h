@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023-2025, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023-2026, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -15,6 +15,7 @@
 #include "pal_irq.h"
 #include "pal_shemaphore.h"
 #include "pal_arch.h"
+#include "pal_rhi.h"
 #include "pal_arch_helpers.h"
 #include "pal_common_val_intf.h"
 

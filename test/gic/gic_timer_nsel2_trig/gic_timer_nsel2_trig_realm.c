@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2025, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2025-2026, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -24,7 +24,7 @@ void gic_timer_nsel2_trig_realm(void)
     /* Wait for interrupt */
     time = val_sleep_elapsed_time(timeout);
 
-    LOG(ERROR, "Timer interrupt not triggered %d\n", time, 0);
+    LOG(ERROR, "Timer interrupt not triggered %d\n", time);
 
     val_realm_return_to_host();
 }

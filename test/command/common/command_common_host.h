@@ -1,5 +1,5 @@
  /*
- * Copyright (c) 2023-2024, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023-2026, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -7,6 +7,7 @@
 #ifndef _CMD_COMMON_HOST_H
 #define _CMD_COMMON_HOST_H
 #include "val_host_command.h"
+#include "val_host_da.h"
 
 uint32_t val_host_realm_create_common(val_host_realm_ts *realm);
 uint32_t val_host_rec_create_common(val_host_realm_ts *realm, val_host_rec_params_ts *params);
@@ -29,4 +30,11 @@ uint64_t ipa_protected_unassigned_ram_prep_sequence(uint64_t rd);
 uint64_t ipa_protected_unassigned_empty_prep_sequence(uint64_t rd);
 uint64_t ipa_protected_aux_assigned_prep_sequence(uint64_t rd, uint64_t rtt_index);
 uint64_t g_pa_in_lpa2_range_prep_sequence(void);
+uint64_t g_pdev_new_prep_sequence(val_host_pdev_ts *pdev_dev);
+uint64_t g_vdev_new_prep_sequence(val_host_pdev_ts *pdev_dev, val_host_vdev_ts *vdev_dev,
+                                                                val_host_realm_ts *realm);
+uint64_t g_vdev_state_prep_sequence(val_host_pdev_ts *pdev_dev,  val_host_vdev_ts *vdev_dev,
+                                  val_host_realm_ts *realm, uint8_t vdev_state);
+uint64_t g_pdev_ready_prep_sequence(val_host_pdev_ts *pdev_dev);
+void val_host_set_pdev_flags(val_host_pdev_flags_ts *pdev_flags);
 #endif /* _CMD_COMMON_HOST_H */

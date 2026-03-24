@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023-2024, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023-2026, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -116,6 +116,17 @@ val_realm_rsi_host_call_t *val_realm_rsi_host_call_ripas(uint16_t imm)
      val_smc_call(RSI_HOST_CALL, (uint64_t)&gv_realm_host_call, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 
      return &gv_realm_host_call;
+}
+
+/**
+ *   @brief    Make a host call
+ *   @param    rsi_host_call     - realm host call structure
+ *   @return   Returns command return status
+**/
+uint64_t val_realm_rsi_rhi_host(val_realm_rsi_host_call_t *rsi_host_call)
+{
+
+     return (val_smc_call(RSI_HOST_CALL, (uint64_t)rsi_host_call, 0, 0, 0, 0, 0, 0, 0, 0, 0)).x0;
 }
 
 /**
@@ -323,100 +334,62 @@ val_smc_param_ts val_realm_rsi_plane_reg_write(uint64_t plane_idx, uint64_t enco
 }
 
 /**
- *   @brief    Continue an interruptible Realm device operation.
- *   @param    dev_id    -  Realm device identifier
+ *   @brief    Disable DMA.
+ *   @param    vdev_id         -  Realm device identifier
  *   @return   SMC return arguments
 **/
-val_smc_param_ts val_realm_rsi_rdev_continue(uint64_t dev_id)
+val_smc_param_ts val_realm_rsi_vdev_dma_disable(uint64_t vdev_id)
 {
-    return val_smc_call(RSI_RDEV_CONTINUE, dev_id, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    return val_smc_call(RSI_VDEV_DMA_DISABLE, vdev_id, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 /**
- *   @brief    Get digests of Realm device attestation evidence.
- *   @param    dev_id    -  Realm device identifier
- *   @param    addr      -  IPA of the Granule to which the digests will be written
+ *   @brief    Enable DMA.
+ *   @param    vdev_id         -  Realm device identifier
+ *   @param    flags           -  Flags
+ *   @param    non_ats_plane   -  Index of Plane whose stage 2 permissions are observed
+                                  by non-ATS requests from the device
+ *   @param    lock_nonce      -  Nonce generated on most recent transition to LOCKED state
+ *   @param    meas_nonce      -  GET_MEASUREMENT request sequence number
+ *   @param    report_nonce    -  GET_INTERFACE_REPORT request sequence number
  *   @return   SMC return arguments
 **/
-val_smc_param_ts val_realm_rsi_rdev_get_digests(uint64_t dev_id, uint64_t addr)
+val_smc_param_ts val_realm_rsi_vdev_dma_enable(uint64_t vdev_id, uint64_t flags,
+                                    uint64_t non_ats_plane, uint64_t lock_nonce,
+                                    uint64_t meas_nonce,  uint64_t report_nonce)
 {
-    return val_smc_call(RSI_RDEV_GET_DIGESTS, dev_id, addr, 0, 0, 0, 0, 0, 0, 0, 0);
+    return val_smc_call(RSI_VDEV_DMA_ENABLE, vdev_id, flags, non_ats_plane,
+                               lock_nonce, meas_nonce, report_nonce, 0, 0, 0, 0);
 }
 
 /**
- *   @brief    Get Realm device interface report.
- *   @param    dev_id         -  Realm device identifier
- *   @param    version_max    -  Maximum TDISP version accepted by caller
+ *   @brief    Get information for a device.
+ *   @param    vdev_id    -  Realm device identifier
+ *   @param    addr       -  IPA to which the configuration data will be written
  *   @return   SMC return arguments
 **/
-val_smc_param_ts val_realm_rsi_rdev_get_interface_report(uint64_t dev_id, uint64_t version_max)
+val_smc_param_ts val_realm_rsi_vdev_get_info(uint64_t vdev_id, uint64_t addr)
 {
-    return val_smc_call(RSI_RDEV_GET_INTERFACE_REPORT, dev_id, version_max, 0, 0, 0, 0, 0, 0, 0, 0);
+    return val_smc_call(RSI_VDEV_GET_INFO, vdev_id, addr, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 /**
- *   @brief    Get Realm device measurements.
- *   @param    dev_id      -  Realm device identifier
- *   @param    params_ptr  -  IPA of measurement parameters
+ *   @brief    Validate Realm device memory mappings.
+ *   @param    vdev_id         -  Realm device identifier
+ *   @param    ipa_base        -  Base of target IPA region
+ *   @param    ipa_top         -  Top of target IPA region
+ *   @param    pa_base         -  Base of target PA region
+ *   @param    flags           -  Flags
+ *   @param    lock_nonce      -  Nonce generated on most recent transition to LOCKED state
+ *   @param    meas_nonce      -  GET_MEASUREMENT request sequence number
+ *   @param    report_nonce    -  GET_INTERFACE_REPORT request sequence number
  *   @return   SMC return arguments
 **/
-val_smc_param_ts val_realm_rsi_rdev_get_measurements(uint64_t dev_id, uint64_t params_ptr)
+val_smc_param_ts val_realm_rsi_vdev_validate_mapping(uint64_t vdev_id, uint64_t ipa_base,
+                                                      uint64_t ipa_top, uint64_t pa_base,
+                                                     uint64_t flags, uint64_t lock_nonce,
+                                             uint64_t meas_nonce,  uint64_t report_nonce)
 {
-    return val_smc_call(RSI_RDEV_GET_MEASUREMENTS, dev_id, params_ptr, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-/**
- *   @brief    Get state of a Realm device.
- *   @param    dev_id         -  Realm device identifier
- *   @return   SMC return arguments
-**/
-val_smc_param_ts val_realm_rsi_rdev_get_state(uint64_t dev_id)
-{
-   return val_smc_call(RSI_RDEV_GET_INTERFACE_REPORT, dev_id, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-/**
- *   @brief    Lock a Realm device.
- *   @param    dev_id         -  Realm device identifier
- *   @return   SMC return arguments
-**/
-val_smc_param_ts val_realm_rsi_rdev_lock(uint64_t dev_id)
-{
-    return val_smc_call(RSI_RDEV_LOCK, dev_id, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-/**
- *   @brief    Start a Realm device.
- *   @param    dev_id         -  Realm device identifier
- *   @return   SMC return arguments
-**/
-val_smc_param_ts val_realm_rsi_rdev_start(uint64_t dev_id)
-{
-    return val_smc_call(RSI_RDEV_START, dev_id, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-/**
- *   @brief    Stop a Realm device.
- *   @param    dev_id         -  Realm device identifier
- *   @return   SMC return arguments
-**/
-val_smc_param_ts val_realm_rsi_rdev_stop(uint64_t dev_id)
-{
-    return val_smc_call(RSI_RDEV_STOP, dev_id, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
-/**
- *   @brief    Validate MMIO mappings for a Realm device.
- *   @param    dev_id         -  Realm device identifier
- *   @param    ipa_base       -  Base of target IPA region
- *   @param    ipa_top        -  Top of target IPA region
- *   @param    pa_base        -  Base of target PA region
- *   @param    flags          -  Flags
- *   @return   SMC return arguments
-**/
-val_smc_param_ts val_realm_rsi_rdev_validate_io(uint64_t dev_id, uint64_t ipa_base,
-                                uint64_t ipa_top, uint64_t pa_base, uint64_t flags)
-{
-    return val_smc_call(RSI_RDEV_VALIDATE_IO, dev_id, ipa_base, ipa_top, pa_base, flags,
-                                                                         0, 0, 0, 0, 0);
+    return val_smc_call(RSI_VDEV_VALIDATE_MAPPING, vdev_id, ipa_base, ipa_top, pa_base, flags,
+                                                  lock_nonce, meas_nonce, report_nonce, 0, 0);
 }

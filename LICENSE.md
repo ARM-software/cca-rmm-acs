@@ -41,3 +41,22 @@ Individual files contain the following tag instead of the full license text.
 
 This enables machine processing of license information based on the SPDX
 License Identifiers that are here available: http://spdx.org/licenses/
+
+# Other Projects
+ - Some source files originate from the [sysarch-acs](https://github.com/ARM-software/sysarch-acs). These files are licensed under the Apache License, Version 2.0 which are a permissive licenses compatible with BSD-3-Clause. Any contributions to this code must also be made under the terms of Apache License 2.
+ - These files are:
+    - plat/common/inc/pal_common_support.h
+    - plat/common/inc/pal_pcie_enum.h
+    - plat/common/src/pal_exerciser.c
+    - plat/common/src/pal_pcie.c
+    - plat/common/src/pal_pcie_enumeration.c
+    - plat/targets/tgt_tfa_fvp/inc/platform_override_fvp.h
+    - plat/targets/tgt_tfa_fvp/inc/platform_override_struct.h
+    - plat/targets/tgt_tfa_fvp/src/pal_fvp_exerciser.c
+    - plat/targets/tgt_tfa_fvp/src/pal_fvp_pcie.c
+    - val/host/inc/val_host_exerciser.h
+    - val/host/inc/val_host_pcie.h
+    - val/host/inc/val_host_pcie_enumeration.h
+    - val/host/inc/val_host_pcie_spec.h
+    - val/host/src/val_host_exerciser.c
+    - val/host/src/val_host_pcie.c

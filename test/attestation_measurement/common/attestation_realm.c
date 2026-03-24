@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023-2025, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023-2026, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -160,7 +160,7 @@ static uint64_t parse_claims_realm_token(attestation_token_ts *attestation_token
                 if (item.uDataType != QCBOR_TYPE_TEXT_STRING)
                 {
                     LOG(ERROR, "Realm hash algo/public key hash algo id is \
-                                            not in expected format.", 0, 0);
+                                                 not in expected format.\n");
                     return VAL_ERROR;
                 }
             }
@@ -223,7 +223,7 @@ static uint64_t parse_claims_platform_token(attestation_token_ts *attestation_to
                 if (item.uDataType != QCBOR_TYPE_TEXT_STRING)
                 {
                     LOG(ERROR, "Platform token profile/verification-service/hash algo is \
-                                                         not in expected format.", 0, 0);
+                                                              not in expected format.\n");
                     return VAL_ERROR;
                 }
             }
@@ -315,7 +315,7 @@ static uint64_t parse_claims_platform_token(attestation_token_ts *attestation_to
                             if (item.uDataType != QCBOR_TYPE_TEXT_STRING)
                             {
                                 LOG(ERROR, "Software component type/version/algorithm is \
-                                                         not in expected format.", 0, 0);
+                                                               not in expected format.\n");
                                 return VAL_ERROR;
                             }
                         }
@@ -326,7 +326,7 @@ static uint64_t parse_claims_platform_token(attestation_token_ts *attestation_to
                             if (item.uDataType != QCBOR_TYPE_BYTE_STRING)
                             {
                                 LOG(ERROR, "Software component measurement value/signer is \
-                                                            not in expected format.", 0, 0);
+                                                                 not in expected format.\n");
                                 return VAL_ERROR;
                             }
                         }
@@ -521,4 +521,3 @@ uint64_t val_attestation_verify_token(attestation_token_ts *attestation_token,
 
     return VAL_SUCCESS;
 }
-

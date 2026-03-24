@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2025, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2025-2026, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -13,6 +13,7 @@
 #include "val_mmu.h"
 #include "val_host_alloc.h"
 #include "val_host_mp.h"
+#include "platform_override_fvp.h"
 
 void acs_host_entry(void);
 uint64_t val_host_get_secondary_cpu_entry(void);
@@ -21,5 +22,7 @@ uint32_t val_host_execute_secure_payload(void);
 uint32_t val_host_realm_printf_msg_service(void);
 void val_host_set_reboot_flag(void);
 uint32_t val_host_get_last_run_test_info(test_info_t *test_info);
+void val_host_create_pcie_info_table(void);
+void val_pcie_create_info_table(uint64_t *pcie_info_table);
 
 #endif /* _VAL_HOST_FRAMEWORK_H_ */

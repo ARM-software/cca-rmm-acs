@@ -11,6 +11,7 @@ The reason for each failing/skipping test is listed here in this file.<br />
 |------|---------------------------------------------------------------------------------|
 | exception_rec_exit_wfe | Platform limitation |
 | mm_gpf_exception | Platform limitation |
+| rhi_da_vdev_p2p_unbind | Platform limitation |
 
 ## License
 
@@ -18,4 +19,4 @@ Arm CCA RMM ACS is distributed under BSD-3-Clause License.
 
 --------------
 
-*Copyright (c) 2023-2025, Arm Limited or its affliates. All rights reserved.*
+*Copyright (c) 2023-2026, Arm Limited or its affliates. All rights reserved.*

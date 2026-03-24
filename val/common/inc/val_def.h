@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023-2025, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023-2026, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -75,11 +75,10 @@
  *
  * Protected Space - Base: 0x0
  * 0x000000 - 0x3fffff  Test use
- * 0x400000 - 0x4fffff  Plane 0 Image regions
- * 0x500000 - 0x5fffff  Plane 1 Image regions
- * 0x600000 - 0x6fffff  Plane 2 Image regions
- * 0x700000 - 0x9fffff  Reserved
- * 0x900000 - (2^(ipa_width - 1) - 1) Test use
+ * 0x400000 - 0x5fffff  Plane 0 Image regions
+ * 0x600000 - 0x7fffff  Plane 1 Image regions
+ * 0x800000 - 0x9fffff  Plane 2 Image regions
+ * 0xa00000 - (2^(ipa_width - 1) - 1) Test use
  *
  * Unprotected Space - Base: 2^(ipa_width - 1)
  * 0x000000 - 0x3fffff  Test use
@@ -92,8 +91,8 @@
 
 //MSB=0
 #define VAL_PLANE0_IMAGE_BASE_IPA 0x400000
-#define VAL_PLANE1_IMAGE_BASE_IPA 0x500000
-#define VAL_PLANE2_IMAGE_BASE_IPA 0x600000
+#define VAL_PLANE1_IMAGE_BASE_IPA 0x600000
+#define VAL_PLANE2_IMAGE_BASE_IPA 0x800000
 
 /* Use this macro for test use IPA */
 #define VAL_TEST_USE_IPA 0x0

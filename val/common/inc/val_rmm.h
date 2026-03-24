@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023-2025, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023-2026, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -36,25 +36,33 @@
 #define RMI_REC_AUX_COUNT            0xC4000167
 #define RMI_RTT_INIT_RIPAS           0xC4000168
 #define RMI_RTT_SET_RIPAS            0xC4000169
-#define RMI_GRANULE_IO_DELEGATE      0xC4000170
-#define RMI_GRANULE_IO_UNDELEGATE    0xC4000171
-#define RMI_IO_CREATE                0xC4000172
-#define RMI_IO_DESTROY               0xC4000173
-#define RMI_PDEV_ABORT               0xC4000174
-#define RMI_PDEV_COMMUNICATE         0xC4000175
-#define RMI_PDEV_CREATE              0xC4000176
-#define RMI_PDEV_DESTROY             0xC4000177
-#define RMI_PDEV_GET_STATE           0xC4000178
-#define RMI_PDEV_IDE_RESET           0xC4000179
-#define RMI_PDEV_NOTIFY              0xC400017A
-#define RMI_PDEV_SET_KEY             0xC400017B
-#define RMI_PDEV_STOP                0xC400017C
-#define RMI_VDEV_ABORT               0xC4000185
-#define RMI_VDEV_COMMUNICATE         0xC4000186
-#define RMI_VDEV_CREATE              0xC4000187
-#define RMI_VDEV_DESTROY             0xC4000188
-#define RMI_VDEV_GET_STATE           0xC4000189
-#define RMI_VDEV_STOP                0xC400018A
+
+/* v1.1 DA SMC IDs */
+#define RMI_PDEV_AUX_COUNT                0xC4000156
+#define RMI_VDEV_AUX_COUNT                0xC4000160
+#define RMI_VDEV_VALIDATE_MAPPING         0xC4000163
+#define RMI_VDEV_MAP                      0xC4000172
+#define RMI_VDEV_UNMAP                    0xC4000173
+#define RMI_PDEV_ABORT                    0xC4000174
+#define RMI_PDEV_COMMUNICATE              0xC4000175
+#define RMI_PDEV_CREATE                   0xC4000176
+#define RMI_PDEV_DESTROY                  0xC4000177
+#define RMI_PDEV_GET_STATE                0xC4000178
+#define RMI_PDEV_IDE_RESET                0xC4000179
+#define RMI_PDEV_IDE_KEY_REFRESH          0xC400017A
+#define RMI_PDEV_SET_PUBKEY               0xC400017B
+#define RMI_PDEV_STOP                     0xC400017C
+#define RMI_VDEV_ABORT                    0xC4000185
+#define RMI_VDEV_COMMUNICATE              0xC4000186
+#define RMI_VDEV_CREATE                   0xC4000187
+#define RMI_VDEV_DESTROY                  0xC4000188
+#define RMI_VDEV_GET_STATE                0xC4000189
+#define RMI_VDEV_UNLOCK                   0xC400018A
+#define RMI_VDEV_COMPLETE                 0xC400018E
+#define RMI_VDEV_GET_INTERFACE_REPORT     0xC40001D0
+#define RMI_VDEV_GET_MEASUREMENTS         0xC40001D1
+#define RMI_VDEV_LOCK                     0xC40001D2
+#define RMI_VDEV_START                    0xC40001D3
 
 /* v1.1 Planes SMC IDs */
 #define RMI_RTT_SET_S2AP               0xC400018B
@@ -94,6 +102,7 @@
 /* RmiHashAlgorithm type */
 #define RMI_HASH_SHA_256    0
 #define RMI_HASH_SHA_512    1
+#define RMI_HASH_SHA_384    2
 
 /* RmiRecEmulatedMmio types */
 #define RMI_NOT_EMULATED_MMIO 0
@@ -103,17 +112,18 @@
 #define RMI_PMU_OVERFLOW_NOT_ACTIVE  0
 #define RMI_PMU_OVERFLOW_ACTIVE      1
 
-/* RmiRecExitReason types */
-#define RMI_EXIT_SYNC          0
-#define RMI_EXIT_IRQ           1
-#define RMI_EXIT_FIQ           2
-#define RMI_EXIT_PSCI          3
-#define RMI_EXIT_RIPAS_CHANGE  4
-#define RMI_EXIT_HOST_CALL     5
-#define RMI_EXIT_SERROR        6
-#define RMI_EXIT_IO            7
-#define RMI_EXIT_RTT_REQUES    8
-#define RMI_EXIT_S2AP_CHANGE   9
+/* RmiRecExitReason type */
+#define RMI_EXIT_SYNC               0
+#define RMI_EXIT_IRQ                1
+#define RMI_EXIT_FIQ                2
+#define RMI_EXIT_PSCI               3
+#define RMI_EXIT_RIPAS_CHANGE       4
+#define RMI_EXIT_HOST_CALL          5
+#define RMI_EXIT_SERROR             6
+#define RMI_EXIT_S2AP_CHANGE        7
+#define RMI_EXIT_VDEV_REQUEST       8
+#define RMI_EXIT_VDEV_MAP           9
+#define RMI_EXIT_VDEV_P2P_BINDING  10
 
 #define RMI_VALIDN_NS 1
 
@@ -125,15 +135,14 @@
 #define RMI_EMPTY        0
 #define RMI_RAM          1
 #define RMI_DESTROYED    2
-#define RMI_IO           3
+#define RMI_DEV          3
 
 /* RmiRttEntryState types */
 #define RMI_UNASSIGNED          0
 #define RMI_ASSIGNED            1
 #define RMI_TABLE               2
-#define RMI_ASSIGNED_IO_PRIVATE 3
-#define RMI_ASSIGNED_IO_SHARED  4
-#define RMI_AUX_DESTROYED       5
+#define RMI_ASSIGNED_DEV        3
+#define RMI_AUX_DESTROYED       4
 
 /* RmiStatusCode types */
 #define RMI_SUCCESS                0
@@ -141,9 +150,13 @@
 #define RMI_ERROR_REALM            2
 #define RMI_ERROR_REC              3
 #define RMI_ERROR_RTT              4
-#define RMI_ERROR_DEVICE           5
-#define RMI_ERROR_NOT_SUPPORTED    6
+#define RMI_ERROR_NOT_SUPPORTED    5
+#define RMI_ERROR_DEVICE           6
 #define RMI_ERROR_RTT_AUX          7
+#define RMI_ERROR_PSMMU_ST         8
+#define RMI_ERROR_DPT              9
+#define RMI_BUSY                  10
+#define RMI_ERROR_GLOBAL          11
 
 /* RmiDataMeasureContent types */
 #define RMI_NO_MEASURE_CONTENT      0
@@ -171,42 +184,16 @@
 #define RMI_FALSE                   0
 #define RMI_TRUE                    1
 
-/* RmiIoAction type */
-#define RMI_IO_GET_INTERFACE_REPORT     0
-#define RMI_IO_GET_MEASUREMENTS         1
-#define RMI_IO_LOCK                     2
-#define RMI_IO_START                    3
-#define RMI_IO_STOP                     4
-
-/* RmiIoEnterStatus type */
-#define RMI_IO_SUCCESS              0
-#define RMI_IO_ERROR                1
-#define RMI_IO_NONE                 2
-
-/* RmiIoRequestType type */
-#define RMI_DISCOVERY               0
-#define RMI_CMA_SPDM                1
-#define RMI_SECURE_CMA_SPDM         2
-
-/* RmiIoShared type */
-#define RMI_IO_PRIVATE              0
-#define RMI_IO_SHARED               1
-
-/* RmiPdevClass type */
-#define RMI_PCIE                    0
-
-/* RmiPdevEvent type */
-#define RMI_IDE_KEY_REFRESH         0
-
 /* RmiPdevState type */
 #define RMI_PDEV_NEW                0
 #define RMI_PDEV_NEEDS_KEY          1
 #define RMI_PDEV_HAS_KEY            2
 #define RMI_PDEV_READY              3
-#define RMI_PDEV_COMMUNICATING      4
-#define RMI_PDEV_STOPPING           5
-#define RMI_PDEV_STOPPED            6
-#define RMI_PDEV_ERROR              7
+#define RMI_PDEV_IDE_RESETTING      4
+#define RMI_PDEV_COMMUNICATING      5
+#define RMI_PDEV_STOPPING           6
+#define RMI_PDEV_STOPPED            7
+#define RMI_PDEV_ERROR              8
 
 /* RmiSignatureAlgorithm type */
 #define RMI_SIG_RSASSA_3072         0
@@ -214,17 +201,74 @@
 #define RMI_SIG_ECDSA_P384          2
 
 /* RmiVdevState type */
-#define RMI_VDEV_READY              0
-#define RMI_VDEV_COMMUNICATING      1
-#define RMI_VDEV_STOPPING           2
-#define RMI_VDEV_STOPPED            3
+#define RMI_VDEV_NEW                0
+#define RMI_VDEV_UNLOCKED           1
+#define RMI_VDEV_LOCKED             2
+#define RMI_VDEV_STARTED            3
 #define RMI_VDEV_ERROR              4
 
-/* RmiIoExit flags */
-#define RMI_IO_EXIT_CACHE    (0x1UL << 0)
-#define RMI_IO_EXIT_SEND    (0x1UL << 1)
-#define RMI_IO_EXIT_WAIT    (0x1UL << 2)
-#define RMI_IO_EXIT_MULTI    (0x1UL << 3)
+/*
+ * RmiDevCommExitFlags
+ * Fieldset contains flags provided by the RMM during a device transaction.
+ * Width: 64 bits
+ */
+#define RMI_DEV_COMM_EXIT_FLAGS_REQ_CACHE_BIT        (UL(1) << 0U)
+#define RMI_DEV_COMM_EXIT_FLAGS_RSP_CACHE_BIT        (UL(1) << 1U)
+#define RMI_DEV_COMM_EXIT_FLAGS_REQ_SEND_BIT        (UL(1) << 2U)
+#define RMI_DEV_COMM_EXIT_FLAGS_RSP_WAIT_BIT        (UL(1) << 3U)
+#define RMI_DEV_COMM_EXIT_FLAGS_RSP_RESET_BIT        (UL(1) << 4U)
+#define RMI_DEV_COMM_EXIT_FLAGS_MULTI_BIT        (UL(1) << 5U)
+
+/* RmiDevCommObject type */
+#define RMI_DEV_VCA                 0
+#define RMI_DEV_CERTIFICATE         1
+#define RMI_DEV_MEASUREMENTS        2
+#define RMI_DEV_INTERFACE_REPORT    3
+
+/* RmiDevCommProtocol type */
+#define RMI_PROTOCOL_SPDM           0
+#define RMI_PROTOCOL_SECURE_SPDM    1
+
+/* RmiDevCommStatus type */
+#define RMI_DEV_COMM_NONE           0
+#define RMI_DEV_COMM_RESPONSE       1
+#define RMI_DEV_COMM_ERROR          2
+
+/* RmiPdevSpdm type */
+#define RMI_SPDM_FALSE              0
+#define RMI_SPDM_TRUE               1
+
+/* RmiPdevIde type */
+#define RMI_IDE_FALSE               0
+#define RMI_IDE_TRUE                1
+
+/* RmiPdevCoherent type */
+#define RMI_NCOH                   0
+#define RMI_COH                    1
+
+/* RmiPdevCategory type */
+#define RMI_PDEV_SMEM               0
+#define RMI_PDEV_CMEM_CXL           1
+
+/* RmiPdevTrust type */
+#define RMI_TRUST_SEL               0
+#define RMI_TRUST_COMP              1
+
+/* RmiProgress type */
+#define RMI_PROGRESS_COMPLETE       0
+#define RMI_PROGRESS_INCOMPLETE     1
+
+/* RmiVdevMeasureCacheType type */
+#define RMI_VDEV_CACHE_BLOCKS       0
+#define RMI_VDEV_CACHE_EXCHANGE     1
+
+/* RmiVdevMeasureRaw type */
+#define RMI_VDEV_MEASURE_NOT_RAW       0
+#define RMI_VDEV_MEASURE_RAW           1
+
+/* RmiVdevMeasureSigned type */
+#define RMI_VDEV_MEASURE_NOT_SIGNED       0
+#define RMI_VDEV_MEASURE_SIGNED           1
 
 /* Create the return code of an ABI command from status & index */
 #define PACK_CODE(status, index) (index << 8 | status)
@@ -251,15 +295,11 @@
 #define RSI_PLANE_ENTER                       (0xC40001A3)
 #define RSI_PLANE_REG_READ                    (0xC40001AE)
 #define RSI_PLANE_REG_WRITE                   (0xC40001AF)
-#define RSI_RDEV_CONTINUE                     (0xC40001A4)
-#define RSI_RDEV_GET_DIGESTS                  (0xC40001A5)
-#define RSI_RDEV_GET_INTERFACE_REPORT         (0xC40001A6)
-#define RSI_RDEV_GET_MEASUREMENTS             (0xC40001A7)
-#define RSI_RDEV_GET_STATE                    (0xC40001A8)
-#define RSI_RDEV_LOCK                         (0xC40001A9)
-#define RSI_RDEV_START                        (0xC40001AA)
-#define RSI_RDEV_STOP                         (0xC40001AB)
-#define RSI_RDEV_VALIDATE_IO                  (0xC40001AC)
+
+#define RSI_VDEV_DMA_ENABLE                   (0xC400019C)
+#define RSI_VDEV_GET_INFO                     (0xC400019D)
+#define RSI_VDEV_VALIDATE_MAPPING             (0xC400019F)
+#define RSI_VDEV_DMA_DISABLE                  (0xC40001A4)
 
 /* RsiInterfaceVersion type */
 #define RSI_MAJOR_VERSION    0
@@ -270,17 +310,19 @@
 #define RSI_ERROR_INPUT            1
 #define RSI_ERROR_STATE            2
 #define RSI_ERROR_INCOMPLETE       3
-#define RSI_ERROR_DEVICE           4
+#define RSI_ERROR_UNKNOWN          4
+#define RSI_ERROR_DEVICE           5
 
 /* RsiHashAlgorithm type */
 #define RSI_HASH_SHA_256 0
 #define RSI_HASH_SHA_512 1
+#define RSI_HASH_SHA_384 2
 
 /* RsiRipas type */
 #define RSI_EMPTY        0
 #define RSI_RAM          1
 #define RSI_DESTROYED    2
-#define RSI_IO           3
+#define RSI_DEV          3
 
 /* RsiRipasChangeDestroyed type */
 #define RSI_NO_CHANGE_DESTROYED     0
@@ -301,6 +343,14 @@
 /* RsiPlaneExitReason types */
 #define RSI_EXIT_SYNC              0
 
+/* RsiDevMemCoherent type */
+#define RSI_DEV_MEM_NON_COHERENT      0
+#define RSI_DEV_MEM_COHERENT          1
+
+/* RsiDevMemOrdering type */
+#define RSI_DEV_MEM_NOT_LIMITED_ORDER      0
+#define RSI_DEV_MEM_LIMITED_ORDER          1
+
 /* PSI HVC/SMC IDs
  * PSI (Plane services interface) is a IMPDEF interface between Pn and P0 */
 #define PSI_REALM_CONFIG RSI_REALM_CONFIG
@@ -313,24 +363,16 @@
 #define RSI_FALSE                  0
 #define RSI_TRUE                   1
 
-/* RsiDeviceState type */
-#define RSI_RDEV_NEW                0
-#define RSI_RDEV_NEW_BUSY           1
-#define RSI_RDEV_LOCKED             2
-#define RSI_RDEV_LOCKED_BUSY        3
-#define RSI_RDEV_STARTED            4
-#define RSI_RDEV_STARTED_BUSY       5
-#define RSI_RDEV_STOPPING           6
-#define RSI_RDEV_STOPPED            7
-#define RSI_RDEV_ERROR              8
+/* RsiVdevState type */
+#define RSI_VDEV_NEW           0
+#define RSI_VDEV_UNLOCKED      1
+#define RSI_VDEV_LOCKED        2
+#define RSI_VDEV_STARTED       3
+#define RSI_VDEV_ERROR         4
 
 /* RsiFeature type */
 #define RSI_FEATURE_FALSE           0
 #define RSI_FEATURE_TRUE            1
-
-/* RsiIoShared type */
-#define RSI_IO_PRIVATE              0
-#define RSI_IO_SHARED               1
 
 /* RsiTrap type */
 #define RSI_NO_TRAP                 0

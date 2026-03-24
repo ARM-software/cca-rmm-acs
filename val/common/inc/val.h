@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023-2025, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023-2026, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -55,12 +55,14 @@ typedef enum {
     VAL_PRINTF_DATA1      = 13,
     VAL_PRINTF_DATA2      = 14,
     VAL_CURR_TEST_NAME    = 15,
-    VAL_TEST_USE1         = 512,
-    VAL_TEST_USE2         = 520,
-    VAL_TEST_USE3         = 528,
-    VAL_TEST_USE4         = 536,
-    VAL_TEST_USE5         = 544,
-    VAL_PRINT_OFFSET      = 552,
+    /* 64KB spaced slots: base + (n * 64KB) */
+    VAL_TEST_USE1         = 512 + (0 * 8192),   /* 4 KB */
+    VAL_TEST_USE2         = 512 + (1 * 8192),   /* 68 KB */
+    VAL_TEST_USE3         = 512 + (2 * 8192),   /* 132 KB */
+    VAL_TEST_USE4         = 512 + (3 * 8192),   /* 196 KB */
+    VAL_TEST_USE5         = 512 + (4 * 8192),   /* 260 KB */
+    VAL_TEST_USE6         = 512 + (5 * 8192),   /* 324 KB */
+    VAL_PRINT_OFFSET      = 512 + (6 * 8192),   /* 324 KB */
 } val_shared_region_map_index_te;
 
 #define TEST_NUM_OFFSET OFFSET(VAL_CURR_TEST_NUM)

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2025-2026, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -22,7 +22,7 @@ void mec_feat_support_host(void)
         val_host_rmi_features(1, &featreg1);
         if (featreg1 != 0)
         {
-            LOG(ERROR, "MECID must be zero if FEAT_MEC not supported\n", 0, 0);
+            LOG(ERROR, "MECID must be zero if FEAT_MEC not supported\n");
             val_set_status(RESULT_FAIL(VAL_ERROR_POINT(1)));
             goto exit;
         }
