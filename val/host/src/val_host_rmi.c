@@ -278,7 +278,7 @@ uint64_t val_host_rmi_rec_destroy(uint64_t rec)
 uint64_t val_host_rmi_rec_enter(uint64_t rec, uint64_t run_ptr)
 {
     val_host_rec_run_ts *run = (val_host_rec_run_ts *)run_ptr;
-    val_host_rec_enter_flags_ts rec_enter_flags;
+    val_host_rec_enter_flags_ts rec_enter_flags = {0};
     uint64_t ret;
 
 rec_enter:

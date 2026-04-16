@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2025, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2025-2026, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -7,97 +7,95 @@
 #include "exception_common_realm.h"
 
 #define CONTEXT_ID 0x5555
+#define EXCEPTION_STORE_ALL_GPRS(base_reg)                                    \
+    "str x0,  [" base_reg ", #0]\n\t"                                         \
+    "str x1,  [" base_reg ", #8]\n\t"                                         \
+    "str x2,  [" base_reg ", #16]\n\t"                                        \
+    "str x3,  [" base_reg ", #24]\n\t"                                        \
+    "str x4,  [" base_reg ", #32]\n\t"                                        \
+    "str x5,  [" base_reg ", #40]\n\t"                                        \
+    "str x6,  [" base_reg ", #48]\n\t"                                        \
+    "str x7,  [" base_reg ", #56]\n\t"                                        \
+    "str x8,  [" base_reg ", #64]\n\t"                                        \
+    "str x9,  [" base_reg ", #72]\n\t"                                        \
+    "str x10, [" base_reg ", #80]\n\t"                                        \
+    "str x11, [" base_reg ", #88]\n\t"                                        \
+    "str x12, [" base_reg ", #96]\n\t"                                        \
+    "str x13, [" base_reg ", #104]\n\t"                                       \
+    "str x14, [" base_reg ", #112]\n\t"                                       \
+    "str x15, [" base_reg ", #120]\n\t"                                       \
+    "str x16, [" base_reg ", #128]\n\t"                                       \
+    "str x17, [" base_reg ", #136]\n\t"                                       \
+    "str x18, [" base_reg ", #144]\n\t"                                       \
+    "str x19, [" base_reg ", #152]\n\t"                                       \
+    "str x20, [" base_reg ", #160]\n\t"                                       \
+    "str x21, [" base_reg ", #168]\n\t"                                       \
+    "str x22, [" base_reg ", #176]\n\t"                                       \
+    "str x23, [" base_reg ", #184]\n\t"                                       \
+    "str x24, [" base_reg ", #192]\n\t"                                       \
+    "str x25, [" base_reg ", #200]\n\t"                                       \
+    "str x26, [" base_reg ", #208]\n\t"                                       \
+    "str x27, [" base_reg ", #216]\n\t"                                       \
+    "str x28, [" base_reg ", #224]\n\t"                                       \
+    "str x29, [" base_reg ", #232]\n\t"                                       \
+    "str x30, [" base_reg ", #240]\n\t"
+
+static uint64_t exception_capture_psci_affinity_info(uint64_t affinity,
+                                                     uint64_t *gGPRS,
+                                                     uint64_t *lGPRS)
+{
+    uint64_t ret;
+
+    /*
+     * Capture x0-x30 immediately before the PSCI exit and immediately after
+     * resume in one asm block so the compiler cannot insert C code between
+     * the SMC and the second snapshot.
+     */
+    __asm__ volatile(
+        EXCEPTION_STORE_ALL_GPRS("%x[before]")
+        "mov x0, %x[fid]\n\t"
+        "mov x1, %x[target_affinity]\n\t"
+        "mov x2, xzr\n\t"
+        "mov x3, xzr\n\t"
+        "smc #0\n\t"
+        EXCEPTION_STORE_ALL_GPRS("%x[after]")
+        "mov %x[result], x0\n\t"
+        : [result] "=&r" (ret)
+        : [before] "r" (gGPRS),
+          [after] "r" (lGPRS),
+          [fid] "r" ((uint64_t)PSCI_AFFINITY_INFO_AARCH64),
+          [target_affinity] "r" (affinity)
+        : "memory", "cc");
+
+    return ret;
+}
 
 void exception_rec_exit_psci_realm(void)
 {
     uint64_t index = 0, affinity = 0, mpidr = 0, ret;
-    int lGPRS[EXCEPTION_TEST_MAX_GPRS];
-    int gGPRS[EXCEPTION_TEST_MAX_GPRS];
-
-    register int x0 __asm("x0");
-    register int x1 __asm("x1");
-    register int x2 __asm("x2");
-    register int x3 __asm("x3");
-    register int x4 __asm("x4");
-    register int x5 __asm("x5");
-    register int x6 __asm("x6");
-    register int x7 __asm("x7");
-    register int x8 __asm("x8");
-    register int x9 __asm("x9");
-    register int x10 __asm("x10");
-    register int x11 __asm("x11");
-    register int x12 __asm("x12");
-    register int x13 __asm("x13");
-    register int x14 __asm("x14");
-    register int x15 __asm("x15");
-    register int x16 __asm("x16");
-    register int x17 __asm("x17");
-    register int x18 __asm("x18");
-    register int x19 __asm("x19");
-    register int x20 __asm("x20");
-    register int x21 __asm("x21");
-    register int x22 __asm("x22");
-    register int x23 __asm("x23");
-    register int x24 __asm("x24");
-    register int x25 __asm("x25");
-    register int x26 __asm("x26");
-    register int x27 __asm("x27");
-    register int x28 __asm("x28");
-    register int x29 __asm("x29");
-    register int x30 __asm("x30");
-
-    #define GET_GPRS_VALUES(gprs_array) \
-        do { \
-            gprs_array[0] = x0; \
-            gprs_array[0] = x0; \
-            gprs_array[1] = x1; \
-            gprs_array[2] = x2; \
-            gprs_array[3] = x3; \
-            gprs_array[4] = x4; \
-            gprs_array[5] = x5; \
-            gprs_array[6] = x6; \
-            gprs_array[7] = x7; \
-            gprs_array[8] = x8; \
-            gprs_array[9] = x9; \
-            gprs_array[10] = x10; \
-            gprs_array[11] = x11; \
-            gprs_array[12] = x12; \
-            gprs_array[13] = x13; \
-            gprs_array[14] = x14; \
-            gprs_array[15] = x15; \
-            gprs_array[16] = x16; \
-            gprs_array[17] = x17; \
-            gprs_array[18] = x18; \
-            gprs_array[19] = x19; \
-            gprs_array[20] = x20; \
-            gprs_array[21] = x21; \
-            gprs_array[22] = x22; \
-            gprs_array[23] = x23; \
-            gprs_array[24] = x24; \
-            gprs_array[25] = x25; \
-            gprs_array[26] = x26; \
-            gprs_array[27] = x27; \
-            gprs_array[28] = x28; \
-            gprs_array[29] = x29; \
-            gprs_array[30] = x30; \
-        } while (0)
+    uint64_t lGPRS[EXCEPTION_TEST_MAX_GPRS];
+    uint64_t gGPRS[EXCEPTION_TEST_MAX_GPRS];
 
     val_set_status(RESULT_PASS(VAL_SUCCESS));
 
-    /* Before triggering the rec exit(dueto hostcall) save the gprs values */
-    GET_GPRS_VALUES(gGPRS);
     mpidr = 1;
+
     /* get the second rec affinity*/
     affinity = EXCEPTION_AFFINITY_FROM_MPIDR(mpidr);
-    LOG(TEST, "Affinity info: mpidr : 0x%x, affinity : %d  \n",\
+    LOG(TEST, "Affinity info: mpidr : 0x%x, affinity : %d  \n", \
               mpidr, affinity);
-    /* testing the rec exit dueto psci affinity info */
-    val_psci_affinity_info(affinity, 0);
 
-    /* Upon rec enter again Read the gprs again and compare with earlier saved one */
-    GET_GPRS_VALUES(lGPRS);
+    ret = exception_capture_psci_affinity_info(affinity, gGPRS, lGPRS);
 
-    for (index = 0; index < EXCEPTION_TEST_PSCI_GPRS_CHECK_COUNT; index++)
+    /*
+     * PSCI_AFFINITY_INFO returns the target CPU state, not PSCI_E_SUCCESS.
+     * This probe is used here to force a PSCI REC exit and validate that
+     * x7-x30 are restored correctly on resume.
+     */
+    LOG(TEST, "PSCI_AFFINITY_INFO return value : 0x%x \n", ret);
+
+    for (index = EXCEPTION_TEST_PSCI_GPRS_COMPARE_START;
+         index < EXCEPTION_TEST_MAX_GPRS; index++)
     {
         if (gGPRS[index] != lGPRS[index])
         {
@@ -107,7 +105,6 @@ void exception_rec_exit_psci_realm(void)
             goto test_exit;
         }
     }
-
     /* Check for host rejecting PSCI request */
     ret = val_psci_cpu_on(affinity, val_realm_get_secondary_cpu_entry(), CONTEXT_ID);
     if (ret != PSCI_E_DENIED)
@@ -117,10 +114,8 @@ void exception_rec_exit_psci_realm(void)
         goto test_exit;
     }
 
-
     LOG(TEST, "REALM PSCI Trigger checks are verified \n");
 
 test_exit:
     val_realm_return_to_host();
 }
-

@@ -1,5 +1,5 @@
  /*
- * Copyright (c) 2023, 2025, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2025-2026, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -19,8 +19,8 @@ void exception_copy_exit_to_entry(val_host_rec_enter_ts *rec_enter,
                                            val_host_rec_exit_ts *rec_exit)
 {
     rec_enter->gicv3_hcr = rec_exit->gicv3_hcr;
-    val_memcpy(rec_enter->gprs, rec_exit->gprs, VAL_REC_HVC_NUM_GPRS);
-    val_memcpy(rec_enter->gicv3_lrs, rec_exit->gicv3_lrs, VAL_REC_GIC_NUM_LRS);
+    val_memcpy(rec_enter->gprs, rec_exit->gprs, sizeof(rec_enter->gprs));
+    val_memcpy(rec_enter->gicv3_lrs, rec_exit->gicv3_lrs, sizeof(rec_enter->gicv3_lrs));
 }
 
 uint64_t exception_validate_rec_exit_ripas(exception_rec_exit_ts rec_exit_exception)

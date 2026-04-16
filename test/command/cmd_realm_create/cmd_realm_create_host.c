@@ -356,7 +356,7 @@ static uint64_t params_valid_prep_sequence(void)
 
 static uint64_t g_rec_ready_prep_sequence(uint64_t rd)
 {
-    val_host_realm_ts realm;
+    val_host_realm_ts realm = {0};
     val_host_rec_params_ts rec_params;
 
     realm.rec_count = 1;

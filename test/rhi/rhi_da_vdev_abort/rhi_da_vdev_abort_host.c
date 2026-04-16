@@ -14,12 +14,12 @@ void rhi_da_vdev_abort_host(void)
     uint64_t ret;
     val_host_rec_enter_ts *rec_enter = NULL;
     val_host_pdev_ts pdev_obj;
-    val_host_vdev_ts vdev_obj;
+    val_host_vdev_ts vdev_obj[2];
 
     val_memset(&realm, 0, sizeof(realm));
     val_memset(&pdev_obj, 0, sizeof(pdev_obj));
-    val_memset(&vdev_obj, 0, sizeof(vdev_obj));
-    ret = da_init(&realm, &pdev_obj, &vdev_obj, RMI_VDEV_NEW);
+    val_memset(vdev_obj, 0, sizeof(vdev_obj));
+    ret = da_init(&realm, &pdev_obj, vdev_obj, RMI_VDEV_NEW);
     if (ret)
     {
         LOG(ERROR, "DA init failed, ret=%lx\n", ret);
@@ -42,7 +42,7 @@ void rhi_da_vdev_abort_host(void)
     }
 
     rec_enter = &(((val_host_rec_run_ts *)realm.run[0])->enter);
-    rec_enter->gprs[1] = vdev_obj.vdev_id;
+    rec_enter->gprs[1] = vdev_obj[0].vdev_id;
     ret = val_host_rmi_rec_enter(realm.rec[0], realm.run[0]);
     if (ret)
     {
@@ -56,7 +56,7 @@ void rhi_da_vdev_abort_host(void)
         goto destroy_realm;
     }
 
-    ret = val_host_rhi_da_dispatch(&realm, &pdev_obj, &vdev_obj);
+    ret = val_host_rhi_da_dispatch(&realm, &pdev_obj, vdev_obj);
     if (ret)
     {
         LOG(ERROR, "RHI command failed, ret=%lx\n", ret);
@@ -77,7 +77,7 @@ void rhi_da_vdev_abort_host(void)
         goto destroy_realm;
     }
 
-    ret = val_host_rhi_da_dispatch(&realm, &pdev_obj, &vdev_obj);
+    ret = val_host_rhi_da_dispatch(&realm, &pdev_obj, vdev_obj);
     if (ret)
     {
         LOG(ERROR, "RHI command failed, ret=%lx\n", ret);
@@ -92,7 +92,7 @@ void rhi_da_vdev_abort_host(void)
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(10)));
         goto destroy_realm;
     }
-    if (val_host_vdev_teardown(&realm, &pdev_obj, &vdev_obj))
+    if (val_host_vdev_teardown(&realm, &pdev_obj, vdev_obj))
     {
         LOG(ERROR, "VDEV teardown failed\n");
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(11)));

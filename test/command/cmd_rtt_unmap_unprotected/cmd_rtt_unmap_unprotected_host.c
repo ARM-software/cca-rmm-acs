@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023-2025, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023-2026, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -75,6 +75,11 @@ static uint64_t g_rec_ready_prep_sequence(uint64_t vmid)
 
 static uint64_t g_rd_new_prep_sequence(uint16_t vmid)
 {
+    if (vmid >= NUM_REALMS)
+    {
+        LOG(ERROR, "Invalid VMID %u\n", vmid);
+        return VAL_TEST_PREP_SEQ_FAILED;
+    }
     val_memset(&realm[vmid], 0, sizeof(realm[vmid]));
 
     realm[vmid].s2sz = 40;

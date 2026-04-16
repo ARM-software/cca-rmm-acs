@@ -57,13 +57,13 @@ void rhi_da_vdev_continue_host(void)
     uint64_t ret;
     val_host_rec_enter_ts *rec_enter = NULL;
     val_host_pdev_ts pdev_obj;
-    val_host_vdev_ts vdev_obj;
+    val_host_vdev_ts vdev_obj[2];
     uint64_t rc;
 
     val_memset(&realm, 0, sizeof(realm));
     val_memset(&pdev_obj, 0, sizeof(pdev_obj));
-    val_memset(&vdev_obj, 0, sizeof(vdev_obj));
-    ret = da_init(&realm, &pdev_obj, &vdev_obj, RMI_VDEV_LOCKED);
+    val_memset(vdev_obj, 0, sizeof(vdev_obj));
+    ret = da_init(&realm, &pdev_obj, vdev_obj, RMI_VDEV_LOCKED);
     if (ret)
     {
         LOG(ERROR, "DA init failed, ret=%lx\n", ret);
@@ -86,11 +86,11 @@ void rhi_da_vdev_continue_host(void)
     }
 
     rec_enter = &(((val_host_rec_run_ts *)realm.run[0])->enter);
-    rec_enter->gprs[1] = vdev_obj.vdev_id;
+    rec_enter->gprs[1] = vdev_obj[0].vdev_id;
 
     for (;;)
     {
-        rc = rhi_da_step(&realm, &pdev_obj, &vdev_obj);
+        rc = rhi_da_step(&realm, &pdev_obj, vdev_obj);
         if (rc == RHI_DA_STEP_DONE)
             break;
         if (rc == RHI_DA_STEP_ERROR)
@@ -100,7 +100,7 @@ void rhi_da_vdev_continue_host(void)
     val_set_status(RESULT_PASS(VAL_SUCCESS));
 
 destroy_device:
-    if (val_host_vdev_teardown(&realm, &pdev_obj, &vdev_obj))
+    if (val_host_vdev_teardown(&realm, &pdev_obj, vdev_obj))
     {
         LOG(ERROR, "VDEV teardown failed\n");
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(7)));
