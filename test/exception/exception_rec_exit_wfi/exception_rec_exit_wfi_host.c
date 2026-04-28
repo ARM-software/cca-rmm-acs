@@ -1,5 +1,5 @@
  /*
- * Copyright (c) 2023-2025, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023-2026, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -61,11 +61,8 @@ void exception_rec_exit_wfi_host(void)
     LOG(TEST, "Rec enter WFI Verified\n");
     *wfi_trig = true;
 
-    /* populate the rec exit details into the rec enter and corrupt some possible gprs
-     * in the range 0-6 */
+    /* Populate the rec exit details into the rec enter */
     exception_copy_exit_to_entry(rec_enter, rec_exit);
-
-    rec_enter->gprs[5] = 0;
     rec_enter_flags.trap_wfe = 0;
     rec_enter_flags.trap_wfi = 0;
     val_memcpy(&rec_enter->flags, &rec_enter_flags, sizeof(rec_enter_flags));

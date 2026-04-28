@@ -1,5 +1,5 @@
  /*
- * Copyright (c) 2023, 2025, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2025-2026, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -51,9 +51,11 @@ void exception_rec_exit_psci_host(void)
     }
     else
     {
-        /* corrupting the gpr value*/
-        rec_enter->gprs[5] = 0;
         exception_copy_exit_to_entry(rec_enter, rec_exit);
+
+        /* corrupting the gpr value*/
+        rec_enter->gprs[19] = 0xABCD;
+
         LOG(TEST, "Rec Exit is dueto  psci, ret=%x\n", ret);
         /* if gprs[1] holds the mpidr value then need to send the psci complete message*/
         if (

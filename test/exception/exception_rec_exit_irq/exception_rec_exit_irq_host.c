@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023-2025, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023-2026, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -21,7 +21,7 @@ static int wd_irq_handler(void)
 
 void exception_rec_exit_irq_host(void)
 {
-    val_host_realm_ts realm;
+    val_host_realm_ts realm = {0};
     uint64_t ret;
     val_host_rec_exit_ts *rec_exit = NULL;
     val_host_rec_enter_ts *rec_enter = NULL;

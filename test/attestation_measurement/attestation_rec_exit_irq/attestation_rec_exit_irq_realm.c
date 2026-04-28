@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2025, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2025-2026, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -22,7 +22,7 @@ void attestation_rec_exit_irq_realm(void)
     val_smc_param_ts args = {0,};
     uint64_t token_size = 0, size, max_size, len;
     __attribute__((aligned (PAGE_SIZE))) uint64_t token[MAX_REALM_CCA_TOKEN_SIZE/8] = {0,};
-    uint64_t *granule = token;
+    uint8_t *granule = (uint8_t *)token;
     uint64_t challenge1[8] = {0xb4ea40d262abaf22,
                              0xe8d966127b6d78e2,
                              0x7ce913f20b954277,
@@ -75,7 +75,8 @@ void attestation_rec_exit_irq_realm(void)
                 granule += PAGE_SIZE;
             }
 
-        } while ((args.x0 == RSI_ERROR_INCOMPLETE) && (granule < token + max_size));
+        } while ((args.x0 == RSI_ERROR_INCOMPLETE) &&
+                 (granule < ((uint8_t *)token + max_size)));
 
         *shared_flag3 = 1;
 

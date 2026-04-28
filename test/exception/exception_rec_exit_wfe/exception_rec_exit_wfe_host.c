@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023-2025, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023-2026, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -63,12 +63,11 @@ void exception_rec_exit_wfe_host(void)
     LOG(TEST, "WFE Trigger verified \n");
     *wfe_trig = true;
 
-    /* populate the rec exit details into the rec enter and corrupt some possible gprs
-     * in the range 0-6
-     */
+    /* Populate the rec exit details into the rec enter */
     exception_copy_exit_to_entry(rec_enter, rec_exit);
+    rec_enter_flags.trap_wfe = 0;
+    rec_enter_flags.trap_wfi = 0;
     val_memcpy(&rec_enter->flags, &rec_enter_flags, sizeof(rec_enter_flags));
-    rec_enter->gprs[5] = 0;
     ret = val_host_rmi_rec_enter(realm.rec[0], realm.run[0]);
     if (ret != 0)
     {

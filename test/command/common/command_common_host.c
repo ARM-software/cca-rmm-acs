@@ -195,6 +195,8 @@ uint32_t val_host_rec_create_common(val_host_realm_ts *realm, val_host_rec_param
 
     }
 
+    val_memset(&rec_create_flags, 0x0, sizeof(rec_create_flags));
+
     /* Allocate memory for rec_params */
     rec_params = val_host_mem_alloc(PAGE_SIZE, PAGE_SIZE);
     if (rec_params == NULL)
