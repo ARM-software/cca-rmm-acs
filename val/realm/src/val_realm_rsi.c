@@ -349,17 +349,17 @@ val_smc_param_ts val_realm_rsi_vdev_dma_disable(uint64_t vdev_id)
  *   @param    flags           -  Flags
  *   @param    non_ats_plane   -  Index of Plane whose stage 2 permissions are observed
                                   by non-ATS requests from the device
- *   @param    lock_nonce      -  Nonce generated on most recent transition to LOCKED state
- *   @param    meas_nonce      -  GET_MEASUREMENT request sequence number
- *   @param    report_nonce    -  GET_INTERFACE_REPORT request sequence number
+ *   @param    lock_seq      -  Nonce generated on most recent transition to LOCKED state
+ *   @param    meas_seq      -  GET_MEASUREMENT request sequence number
+ *   @param    report_seq    -  GET_INTERFACE_REPORT request sequence number
  *   @return   SMC return arguments
 **/
 val_smc_param_ts val_realm_rsi_vdev_dma_enable(uint64_t vdev_id, uint64_t flags,
-                                    uint64_t non_ats_plane, uint64_t lock_nonce,
-                                    uint64_t meas_nonce,  uint64_t report_nonce)
+                                    uint64_t non_ats_plane, uint64_t lock_seq,
+                                    uint64_t meas_seq,  uint64_t report_seq)
 {
     return val_smc_call(RSI_VDEV_DMA_ENABLE, vdev_id, flags, non_ats_plane,
-                               lock_nonce, meas_nonce, report_nonce, 0, 0, 0, 0);
+                               lock_seq, meas_seq, report_seq, 0, 0, 0, 0);
 }
 
 /**
@@ -380,16 +380,16 @@ val_smc_param_ts val_realm_rsi_vdev_get_info(uint64_t vdev_id, uint64_t addr)
  *   @param    ipa_top         -  Top of target IPA region
  *   @param    pa_base         -  Base of target PA region
  *   @param    flags           -  Flags
- *   @param    lock_nonce      -  Nonce generated on most recent transition to LOCKED state
- *   @param    meas_nonce      -  GET_MEASUREMENT request sequence number
- *   @param    report_nonce    -  GET_INTERFACE_REPORT request sequence number
+ *   @param    lock_seq      -  Nonce generated on most recent transition to LOCKED state
+ *   @param    meas_seq      -  GET_MEASUREMENT request sequence number
+ *   @param    report_seq    -  GET_INTERFACE_REPORT request sequence number
  *   @return   SMC return arguments
 **/
 val_smc_param_ts val_realm_rsi_vdev_validate_mapping(uint64_t vdev_id, uint64_t ipa_base,
                                                       uint64_t ipa_top, uint64_t pa_base,
-                                                     uint64_t flags, uint64_t lock_nonce,
-                                             uint64_t meas_nonce,  uint64_t report_nonce)
+                                                     uint64_t flags, uint64_t lock_seq,
+                                             uint64_t meas_seq,  uint64_t report_seq)
 {
     return val_smc_call(RSI_VDEV_VALIDATE_MAPPING, vdev_id, ipa_base, ipa_top, pa_base, flags,
-                                                  lock_nonce, meas_nonce, report_nonce, 0, 0);
+                                                  lock_seq, meas_seq, report_seq, 0, 0);
 }

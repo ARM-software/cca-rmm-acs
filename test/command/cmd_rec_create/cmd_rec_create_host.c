@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2025, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2025-2026, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -7,6 +7,7 @@
 
 #include "test_database.h"
 #include "val_host_rmi.h"
+#include "val_host_rmi_sro.h"
 #include "rmi_rec_create_data.h"
 #include "command_common_host.h"
 
@@ -30,12 +31,14 @@ static struct argument_store {
     uint64_t rd_valid;
     uint64_t rec_valid;
     uint64_t params_valid;
+    val_host_tracking_test_region_ts track_region;
 } c_args;
 
 static struct invalid_arguments {
     uint64_t rec_gran;
     uint64_t data_gran;
 } c_args_invalid;
+static uint64_t mpidr_test_rec;
 
 struct arguments {
     uint64_t rd;
@@ -44,17 +47,18 @@ struct arguments {
 };
 
 typedef enum {
-    PARAMS_VALID = 0x0,
-    SKIPPED_MPIDR,
-    AUX_GRAN_UNALINED,
-    INVALID_NUM_AUX,
-    PARAMS_AUX_UNDELEGATED,
-    PARAMS_AUX_RD,
-    PARAMS_AUX_REC,
-    PARAMS_AUX_DATA,
-    PARAMS_AUX_RTT,
-    PARAMS_AUX_ALIASED,
+    PARAMS_VALID = 0x0
 } prep_seq_type;
+
+static uint64_t rec_track_prep_sequence(void)
+{
+    return val_host_tracking_coarse_prep_sequence(&c_args.track_region);
+}
+
+static uint32_t rec_track_cleanup(void)
+{
+    return val_host_tracking_coarse_cleanup(&c_args.track_region);
+}
 
 static uint64_t rec_valid_prep_sequence(void)
 {
@@ -96,81 +100,14 @@ static uint64_t params_prep_sequence(prep_seq_type type)
     uint64_t i;
     for (i = 0; i < (sizeof(params->gprs) / sizeof(params->gprs[0])); i++)
         params->gprs[i] = 0x0;
-
-    /* Fetch the rd of the Realm */
-    uint64_t rd = realm_test[REALM_VALID].rd;
-
-    /* Get aux granules count */
-    uint64_t aux_count;
-    if (val_host_rmi_rec_aux_count(rd, &aux_count)) {
-        LOG(ERROR, "Couldn't obtain the required amount of AUX granules\n");
-        return VAL_TEST_PREP_SEQ_FAILED;
-    }
-
     /* Set these fields to some value */
     params->pc = 0;
     params->flags = RMI_RUNNABLE;
     params->mpidr = MPIDR_VALID;
-    params->num_aux = aux_count;
-
-    /* Create all aux granules */
-    for (i = 0; i < aux_count; i++) {
-        uint64_t aux_rec = g_delegated_prep_sequence();
-        if (aux_rec == VAL_TEST_PREP_SEQ_FAILED)
-            return VAL_TEST_PREP_SEQ_FAILED;
-
-        params->aux[i] = aux_rec;
-    }
 
     switch (type)
     {
         case PARAMS_VALID:
-            break;
-
-        case SKIPPED_MPIDR:
-            params->mpidr = 0xF;
-            break;
-
-        case AUX_GRAN_UNALINED:
-             for (i = 0; i < aux_count; i++) {
-                uint64_t aux_rec = g_delegated_prep_sequence();
-                if (aux_rec == VAL_TEST_PREP_SEQ_FAILED)
-                    return VAL_TEST_PREP_SEQ_FAILED;
-                params->aux[i] = g_unaligned_prep_sequence(aux_rec);
-            }
-            break;
-
-        case INVALID_NUM_AUX:
-            params->num_aux = aux_count + 1;
-            break;
-
-        case PARAMS_AUX_UNDELEGATED:
-            for (i = 0; i < aux_count; i++)
-                params->aux[i] = g_undelegated_prep_sequence();
-            break;
-
-        case PARAMS_AUX_RD:
-            for (i = 0; i < aux_count; i++)
-                params->aux[i] = c_args.rd_valid;
-            break;
-
-        case PARAMS_AUX_REC:
-            for (i = 0; i < aux_count; i++)
-                params->aux[i] = c_args_invalid.rec_gran;
-            break;
-
-        case PARAMS_AUX_DATA:
-            for (i = 0; i < aux_count; i++)
-                params->aux[i] = c_args_invalid.data_gran;
-            break;
-
-        case PARAMS_AUX_RTT:
-            for (i = 0; i < aux_count; i++)
-                params->aux[i] = realm_test[REALM_VALID].rtt_l0_addr;
-            break;
-
-        case PARAMS_AUX_ALIASED:
-            params->aux[1] = params->aux[0];
             break;
 
         default:
@@ -276,18 +213,6 @@ static uint64_t intent_to_seq(struct stimulus *test_data, struct arguments *args
             args->params_ptr = g_unaligned_prep_sequence(c_args.params_valid);
             break;
 
-        case PARAMS_DEV_MEM:
-            args->rd = c_args.rd_valid;
-            args->rec = c_args.rec_valid;
-            args->params_ptr = g_dev_mem_prep_sequence();
-            break;
-
-        case PARAMS_OUTSIDE_OF_PERMITTED_PA:
-            args->rd = c_args.rd_valid;
-            args->rec = c_args.rec_valid;
-            args->params_ptr = g_outside_of_permitted_pa_prep_sequence();
-            break;
-
         case PARAMS_PAS_REALM:
             args->rd = c_args.rd_valid;
             args->rec = c_args.rec_valid;
@@ -308,15 +233,13 @@ static uint64_t intent_to_seq(struct stimulus *test_data, struct arguments *args
             args->params_ptr = c_args.params_valid;
             break;
 
-        case REC_DEV_MEM:
+        case REC_TRACK_COARSE:
             args->rd = c_args.rd_valid;
-            args->rec = g_dev_mem_prep_sequence();
-            args->params_ptr = c_args.params_valid;
-            break;
-
-        case REC_OUTSIDE_OF_PERMITTED_PA:
-            args->rd = c_args.rd_valid;
-            args->rec = g_outside_of_permitted_pa_prep_sequence();
+            args->rec = rec_track_prep_sequence();
+            if (args->rec == VAL_SKIP_CHECK)
+                return VAL_SKIP_CHECK;
+            if (args->rec == VAL_TEST_PREP_SEQ_FAILED)
+                return VAL_ERROR;
             args->params_ptr = c_args.params_valid;
             break;
 
@@ -360,18 +283,6 @@ static uint64_t intent_to_seq(struct stimulus *test_data, struct arguments *args
 
         case RD_UNALIGNED:
             args->rd = g_unaligned_prep_sequence(c_args.rd_valid);
-            args->rec = c_args.rec_valid;
-            args->params_ptr = c_args.params_valid;
-            break;
-
-        case RD_DEV_MEM:
-            args->rd = g_dev_mem_prep_sequence();
-            args->rec = c_args.rec_valid;
-            args->params_ptr = c_args.params_valid;
-            break;
-
-        case RD_OUTSIDE_OF_PERMITTED_PA:
-            args->rd = g_outside_of_permitted_pa_prep_sequence();
             args->rec = c_args.rec_valid;
             args->params_ptr = c_args.params_valid;
             break;
@@ -426,77 +337,19 @@ static uint64_t intent_to_seq(struct stimulus *test_data, struct arguments *args
             args->params_ptr = c_args.params_valid;
             break;
 
-        case MPIDR_SKIPPED:
+        case MPIDR_USED: {
+            uint64_t first_rec = g_delegated_prep_sequence();
+            if (first_rec == VAL_TEST_PREP_SEQ_FAILED ||
+                val_host_rmi_rec_create(c_args.rd_valid, first_rec,
+                                        c_args.params_valid) != RMI_SUCCESS)
+                return VAL_ERROR;
+            realm_test[REALM_VALID].rec[0] = first_rec;
+            mpidr_test_rec = first_rec;
             args->rd = c_args.rd_valid;
             args->rec = c_args.rec_valid;
-            args->params_ptr = params_prep_sequence(SKIPPED_MPIDR);
-            if (args->params_ptr == VAL_TEST_PREP_SEQ_FAILED)
-                return VAL_ERROR;
+            args->params_ptr = c_args.params_valid;
             break;
-
-        case NUM_AUX_INVALID:
-            args->rd = c_args.rd_valid;
-            args->rec = c_args.rec_valid;
-            args->params_ptr = params_prep_sequence(INVALID_NUM_AUX);
-            if (args->params_ptr == VAL_TEST_PREP_SEQ_FAILED)
-                return VAL_ERROR;
-            break;
-
-        case AUX_UNALIGNED:
-            args->rd = c_args.rd_valid;
-            args->rec = c_args.rec_valid;
-            args->params_ptr = params_prep_sequence(AUX_GRAN_UNALINED);
-            if (args->params_ptr == VAL_TEST_PREP_SEQ_FAILED)
-                return VAL_ERROR;
-            break;
-
-        case AUX_ALIASED:
-            args->rd = c_args.rd_valid;
-            args->rec = c_args.rec_valid;
-            args->params_ptr = params_prep_sequence(PARAMS_AUX_ALIASED);
-            if (args->params_ptr == VAL_TEST_PREP_SEQ_FAILED)
-                return VAL_ERROR;
-            break;
-
-        case AUX_UNDELEGATED:
-            args->rd = c_args.rd_valid;
-            args->rec = c_args.rec_valid;
-            args->params_ptr = params_prep_sequence(PARAMS_AUX_UNDELEGATED);
-            if (args->params_ptr == VAL_TEST_PREP_SEQ_FAILED)
-                return VAL_ERROR;
-            break;
-
-        case AUX_RD:
-            args->rd = c_args.rd_valid;
-            args->rec = c_args.rec_valid;
-            args->params_ptr = params_prep_sequence(PARAMS_AUX_RD);
-            if (args->params_ptr == VAL_TEST_PREP_SEQ_FAILED)
-                return VAL_ERROR;
-            break;
-
-        case AUX_REC:
-            args->rd = c_args.rd_valid;
-            args->rec = c_args.rec_valid;
-            args->params_ptr = params_prep_sequence(PARAMS_AUX_REC);
-            if (args->params_ptr == VAL_TEST_PREP_SEQ_FAILED)
-                return VAL_ERROR;
-            break;
-
-        case AUX_RTT:
-            args->rd = c_args.rd_valid;
-            args->rec = c_args.rec_valid;
-            args->params_ptr = params_prep_sequence(PARAMS_AUX_RTT);
-            if (args->params_ptr == VAL_TEST_PREP_SEQ_FAILED)
-                return VAL_ERROR;
-            break;
-
-        case AUX_DATA:
-            args->rd = c_args.rd_valid;
-            args->rec = c_args.rec_valid;
-            args->params_ptr = params_prep_sequence(PARAMS_AUX_DATA);
-            if (args->params_ptr == VAL_TEST_PREP_SEQ_FAILED)
-                return VAL_ERROR;
-            break;
+        }
 
         default:
             /* set status to failure */
@@ -526,19 +379,54 @@ void cmd_rec_create_host(void)
         LOG(TEST, "Check %2d : %s; intent id : 0x%x \n",
               i + 1, test_data[i].msg, test_data[i].label);
 
-        if (intent_to_seq(&test_data[i], &args)) {
+        ret = intent_to_seq(&test_data[i], &args);
+        if (ret == VAL_SKIP_CHECK)
+        {
+            LOG(TEST, "Skipping Check %d\n", (int)(i + 1));
+            continue;
+        }
+        if (ret != VAL_SUCCESS) {
             val_set_status(RESULT_FAIL(VAL_ERROR_POINT(2)));
             goto exit;
         }
 
         ret = val_host_rmi_rec_create(args.rd, args.rec,
-                                    args.params_ptr);
+                                      args.params_ptr);
+        if (test_data[i].label == REC_TRACK_COARSE)
+        {
+            if ((RMI_STATUS(ret) != RMI_ERROR_TRACKING) ||
+                (RMI_TRACKING_LEVEL(ret) != RMI_TRACKING_LEVEL_COARSE) ||
+                (VAL_EXTRACT_BITS(ret, 16, 55) != (args.rec >> PAGE_BITS_4K)))
+            {
+                LOG(ERROR, "REC tracking check returned 0x%lx, expected "
+                    "TRACKING at 0x%lx\n", ret, args.rec);
+                val_set_status(RESULT_FAIL(VAL_ERROR_POINT(3)));
+                goto exit;
+            }
+
+            if (rec_track_cleanup() != VAL_SUCCESS)
+            {
+                LOG(ERROR, "REC tracking setup cleanup failed\n");
+                val_set_status(RESULT_FAIL(VAL_ERROR_POINT(6)));
+                goto exit;
+            }
+            continue;
+        }
+
         if (ret != PACK_CODE(test_data[i].status, test_data[i].index))
         {
             LOG(ERROR, "Test Failure!The ABI call returned: %xExpected: %x\n",
                 ret, PACK_CODE(test_data[i].status, test_data[i].index));
             val_set_status(RESULT_FAIL(VAL_ERROR_POINT(3)));
             goto exit;
+        }
+
+        if (test_data[i].label == MPIDR_USED) {
+            if (val_host_rmi_rec_destroy(mpidr_test_rec) != RMI_SUCCESS) {
+                val_set_status(RESULT_FAIL(VAL_ERROR_POINT(4)));
+                goto exit;
+            }
+            realm_test[REALM_VALID].rec[0] = 0;
         }
     }
 
@@ -560,8 +448,8 @@ void cmd_rec_create_host(void)
 
     LOG(TEST, "Check %2d : Negative Observability\n", ++i);
 
-    ret = val_host_rmi_rec_create(c_args.rd_valid, c_args.rec_valid,
-                                   c_args.params_valid);
+    ret = val_host_rmi_rec_create_smc(c_args.rd_valid, c_args.rec_valid,
+                                  c_args.params_valid).x0;
     /* Now the command should fail with the same parameters (footprint has changed) */
     if (ret == 0) {
         LOG(ERROR, "Negative Observability Check Failed\n");
@@ -572,5 +460,10 @@ void cmd_rec_create_host(void)
     val_set_status(RESULT_PASS(VAL_SUCCESS));
 
 exit:
+    if (rec_track_cleanup() != VAL_SUCCESS)
+    {
+        LOG(ERROR, "REC tracking setup cleanup failed\n");
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(6)));
+    }
     return;
 }

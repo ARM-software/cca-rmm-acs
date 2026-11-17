@@ -16,9 +16,9 @@
 static struct argument_store {
     uint64_t vdev_id_valid;
     uint64_t non_ats_plane_valid;
-    uint64_t lock_nonce_valid;
-    uint64_t meas_nonce_valid;
-    uint64_t report_nonce_valid;
+    uint64_t lock_seq_valid;
+    uint64_t meas_seq_valid;
+    uint64_t report_seq_valid;
 } c_args;
 
 struct arguments {
@@ -55,11 +55,14 @@ static uint64_t valid_input_args_prep_sequence(void)
         non_ats_plane = 0UL;
     }
 
-    args = val_realm_rsi_vdev_dma_enable(vdev_id, 0, non_ats_plane,
-                    vdev_info.lock_nonce,
-                    vdev_info.meas_nonce,
-                    vdev_info.report_nonce);
-    if (args.x0)
+    do {
+        args = val_realm_rsi_vdev_dma_enable(vdev_id, 0, non_ats_plane,
+                        vdev_info.lock_seq,
+                        vdev_info.meas_seq,
+                        vdev_info.report_seq);
+    } while (args.x0 == RSI_INCOMPLETE);
+
+    if (args.x0 != RSI_SUCCESS)
     {
         LOG(ERROR, "RSI_VDEV_DMA_ENABLE failed, ret %x\n", args.x0);
         goto exit;
@@ -67,9 +70,9 @@ static uint64_t valid_input_args_prep_sequence(void)
 
     c_args.vdev_id_valid = vdev_id;
     c_args.non_ats_plane_valid = non_ats_plane;
-    c_args.lock_nonce_valid = vdev_info.lock_nonce;
-    c_args.meas_nonce_valid = vdev_info.meas_nonce;
-    c_args.report_nonce_valid = vdev_info.report_nonce;
+    c_args.lock_seq_valid = vdev_info.lock_seq;
+    c_args.meas_seq_valid = vdev_info.meas_seq;
+    c_args.report_seq_valid = vdev_info.report_seq;
 
     return VAL_SUCCESS;
 
@@ -132,8 +135,11 @@ void cmd_vdev_dma_disable_realm(void)
     val_realm_return_to_host();
 
     LOG(TEST, "\n\tPositive Observability Check\n");
-    cmd_ret = val_realm_rsi_vdev_dma_disable(c_args.vdev_id_valid);
-    if (cmd_ret.x0 != 0)
+    do {
+        cmd_ret = val_realm_rsi_vdev_dma_disable(c_args.vdev_id_valid);
+    } while (cmd_ret.x0 == RSI_INCOMPLETE);
+
+    if (cmd_ret.x0 != RSI_SUCCESS)
     {
         LOG(ERROR, "Command failed. %x\n", cmd_ret.x0);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(4)));

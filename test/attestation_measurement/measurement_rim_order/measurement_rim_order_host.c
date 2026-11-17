@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2025, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2025-2026, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -10,44 +10,34 @@
 #include "val_host_command.h"
 
 #define IPA_ADDR_UNASSIGNED 0x0
+#define RIM_WORDS 8U
 
 static uint64_t rec_create(uint64_t rd)
 {
     /* Delegate granule for the REC */
     uint64_t rec = val_host_delegate_granule();
+    val_host_rec_params_ts *params;
+    uint64_t ret;
+
     if (rec == VAL_ERROR)
         return VAL_ERROR;
 
-    val_host_rec_params_ts *params = val_host_mem_alloc(PAGE_SIZE, PAGE_SIZE);
+    params = val_host_mem_alloc(PAGE_SIZE, PAGE_SIZE);
+    if (params == NULL)
+        return VAL_ERROR;
 
-    uint64_t i;
-
-    for (i = 0; i < (sizeof(params->gprs) / sizeof(params->gprs[0])); i++)
-        params->gprs[i] = 0x0;
+    val_memset(params, 0, PAGE_SIZE);
 
     /* Populate params structure */
     params->pc = 0;
     params->flags = RMI_RUNNABLE;
     params->mpidr = 1;
 
-    uint64_t aux_count;
-
-    if (val_host_rmi_rec_aux_count(rd, &aux_count))
-        return VAL_TEST_PREP_SEQ_FAILED;
-
-    params->num_aux = aux_count;
-
-    /* Create all aux granules */
-    for (i = 0; i < aux_count; i++) {
-        uint64_t aux_rec = val_host_delegate_granule();
-        if (aux_rec == VAL_ERROR)
-            return VAL_ERROR;
-
-        params->aux[i] = aux_rec;
-    }
 
     /* Create the REC */
-    if (val_host_rmi_rec_create(rd, rec, (uint64_t)params)) {
+    ret = val_host_rmi_rec_create(rd, rec, (uint64_t)params);
+    val_host_mem_free(params);
+    if (ret) {
         LOG(ERROR, " REC create failed \n");
         return VAL_ERROR;
     }
@@ -87,6 +77,7 @@ void measurement_rim_order_host(void)
     {
         LOG(ERROR, "Couldn't create the assigned protected mapping\n");
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(3)));
+        goto destroy_realm;
     }
 
     uint64_t data1 = val_host_delegate_granule();
@@ -109,7 +100,7 @@ void measurement_rim_order_host(void)
 
     uint64_t flags1 = RMI_MEASURE_CONTENT;
 
-    if (val_host_rmi_data_create(realm1.rd, data1, IPA_ADDR_UNASSIGNED, src1, flags1))
+    if (val_host_rmi_rtt_data_map_init(realm1.rd, data1, IPA_ADDR_UNASSIGNED, src1, flags1))
     {
         LOG(ERROR, "Data create failed.\n");
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(4)));
@@ -134,6 +125,13 @@ void measurement_rim_order_host(void)
     }
 
     rec_exit1 = &(((val_host_rec_run_ts *)realm1.run[0])->exit);
+    if (rec_exit1->exit_reason != RMI_EXIT_HOST_CALL ||
+        rec_exit1->imm != VAL_SWITCH_TO_HOST || rec_exit1->gprs[0] != 0U)
+    {
+        LOG(ERROR, "Realm 1 did not return a successful RIM read\n");
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(6)));
+        goto destroy_realm;
+    }
 
     val_host_realm_ts realm2;
 
@@ -160,7 +158,7 @@ void measurement_rim_order_host(void)
     }
 
     uint64_t data2 = val_host_delegate_granule();
-    if (data1 == VAL_ERROR)
+    if (data2 == VAL_ERROR)
     {
         LOG(ERROR, " Delegation failed \n");
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(13)));
@@ -179,7 +177,7 @@ void measurement_rim_order_host(void)
 
     uint64_t flags2 = RMI_MEASURE_CONTENT;
 
-    if (val_host_rmi_data_create(realm2.rd, data2, IPA_ADDR_UNASSIGNED, src2, flags2))
+    if (val_host_rmi_rtt_data_map_init(realm2.rd, data2, IPA_ADDR_UNASSIGNED, src2, flags2))
     {
         LOG(ERROR, "Data create failed.\n");
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(9)));
@@ -213,9 +211,17 @@ void measurement_rim_order_host(void)
     }
 
     rec_exit2 = &(((val_host_rec_run_ts *)realm2.run[0])->exit);
+    if (rec_exit2->exit_reason != RMI_EXIT_HOST_CALL ||
+        rec_exit2->imm != VAL_SWITCH_TO_HOST || rec_exit2->gprs[0] != 0U)
+    {
+        LOG(ERROR, "Realm 2 did not return a successful RIM read\n");
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(12)));
+        goto destroy_realm;
+    }
 
-    /* Compare command output with zero initialized structure */
-    if (!val_memcmp(rec_exit1->gprs, rec_exit2->gprs, sizeof(rec_exit1->gprs))) {
+    /* Compare the full Realm measurement returned by RSI_MEASUREMENT_READ. */
+    if (!val_memcmp(&rec_exit1->gprs[1], &rec_exit2->gprs[1],
+                    RIM_WORDS * sizeof(rec_exit1->gprs[0]))) {
         LOG(ERROR, " RIM values are same \n");
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(13)));
         goto destroy_realm;

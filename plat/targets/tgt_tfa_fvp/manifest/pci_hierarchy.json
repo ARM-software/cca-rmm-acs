@@ -6,7 +6,7 @@
         "acs_supported" : 1,
         "rmeda_dvsec_enable": 1,
         "ide_supported": 1,
-        "diagnostics_level": 0x4,
+        "diagnostics_level": 4,
         "__downstream__" : {
             "smmuv3testengine/smmuv3testengine1": {
                 "endpoint.device": 0,
@@ -17,7 +17,8 @@
                 "endpoint.tee_io_supported": 1,
                 "endpoint.certificate_der_filename": "PATH_TO_CERTIFICATE",
                 "endpoint.private_key_filename": "PATH_TO_KEY",
-                "endpoint.bit_mask_of_base_asym_alg": PATH_TO_BASE_ASYM_ALG_BASED_ON_KEY
+                "endpoint.measurement_block_filename": "PATH_TO_MEASUREMENTS",
+                "endpoint.bit_mask_of_base_asym_alg": "PATH_TO_BASE_ASYM_ALG_BASED_ON_KEY"
             },
             "smmuv3testengine/smmuv3testengine2": {
                 "endpoint.device": 0,
@@ -28,7 +29,8 @@
                 "endpoint.tee_io_supported": 1,
                 "endpoint.certificate_der_filename": "PATH_TO_CERTIFICATE",
                 "endpoint.private_key_filename": "PATH_TO_KEY",
-                "endpoint.bit_mask_of_base_asym_alg": PATH_TO_BASE_ASYM_ALG_BASED_ON_KEY
+                "endpoint.measurement_block_filename": "PATH_TO_MEASUREMENTS",
+                "endpoint.bit_mask_of_base_asym_alg": "PATH_TO_BASE_ASYM_ALG_BASED_ON_KEY"
             }
         }
     },
@@ -44,13 +46,26 @@
             "ahci/ahci1": {
                 "endpoint.device": 0,
                 "endpoint.multi_function" : 0,
+                "endpoint.function": 1,
+                "endpoint.doe_supported": 1,
+                "endpoint.ide_supported": 1,
+                "endpoint.tee_io_supported": 1,
+                "endpoint.certificate_der_filename": "PATH_TO_CERTIFICATE",
+                "endpoint.private_key_filename": "PATH_TO_KEY",
+                "endpoint.measurement_block_filename": "PATH_TO_MEASUREMENTS",
+                "endpoint.bit_mask_of_base_asym_alg": "PATH_TO_BASE_ASYM_ALG_BASED_ON_KEY"
+            },
+            "smmuv3testengine/smmuv3testengine4": {
+                "endpoint.device": 0,
+                "endpoint.multi_function": 1,
                 "endpoint.function": 0,
                 "endpoint.doe_supported": 1,
                 "endpoint.ide_supported": 1,
                 "endpoint.tee_io_supported": 1,
                 "endpoint.certificate_der_filename": "PATH_TO_CERTIFICATE",
                 "endpoint.private_key_filename": "PATH_TO_KEY",
-                "endpoint.bit_mask_of_base_asym_alg": PATH_TO_BASE_ASYM_ALG_BASED_ON_KEY
+                "endpoint.measurement_block_filename": "PATH_TO_MEASUREMENTS",
+                "endpoint.bit_mask_of_base_asym_alg": "PATH_TO_BASE_ASYM_ALG_BASED_ON_KEY"
             }
         }
     },
@@ -73,7 +88,8 @@
                 "endpoint.tee_io_supported": 1,
                 "endpoint.certificate_der_filename": "PATH_TO_CERTIFICATE",
                 "endpoint.private_key_filename": "PATH_TO_KEY",
-                "endpoint.bit_mask_of_base_asym_alg": PATH_TO_BASE_ASYM_ALG_BASED_ON_KEY
+                "endpoint.measurement_block_filename": "PATH_TO_MEASUREMENTS",
+                "endpoint.bit_mask_of_base_asym_alg": "PATH_TO_BASE_ASYM_ALG_BASED_ON_KEY"
             }
         }
     }

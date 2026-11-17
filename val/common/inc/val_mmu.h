@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023-2024, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023-2026, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -14,6 +14,8 @@
 #include "xlat_tables_v2.h"
 
 #define MAX_REGION_COUNT 15
+#define ATTR_STAGE2_MEMATTR_SHIFT 2
+#define ATTR_STAGE2_AP_SHIFT      6
 #define ATTR_NORMAL_NONCACHEABLE (0x0ull << 2)
 #define ATTR_NORMAL_WB_WA_RA      (0x1ull << 2)
 #define ATTR_DEVICE               (0x2ull << 2)

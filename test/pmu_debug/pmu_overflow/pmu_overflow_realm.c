@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2025, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2025-2026, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -9,6 +9,8 @@
 #include "val_realm_rsi.h"
 #include "val_pmu.h"
 #include "val_irq.h"
+
+#define PMU_OVERFLOW_TIMEOUT  0x1000000UL
 
 static volatile int handler_flag;
 
@@ -27,7 +29,7 @@ static int rmi_pmu_handler(void)
 
 void pmu_overflow_realm(void)
 {
-    uint64_t timeout = 0x10000000000;
+    uint64_t timeout = PMU_OVERFLOW_TIMEOUT;
     uint64_t dfr0;
 
     /* Below code is executed for REC[0] only */
@@ -62,7 +64,13 @@ void pmu_overflow_realm(void)
     {
     }
 
-    timeout = 0x1000000;
+    if (timeout == 0) {
+        LOG(ERROR, "Timed out waiting for PMU overflow interrupt\n");
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(2)));
+        goto exit;
+    }
+
+    timeout = PMU_OVERFLOW_TIMEOUT;
     while (--timeout && !handler_flag);
     if (handler_flag == 1)
     {

@@ -11,3 +11,5 @@ log.*
 #Ignore build directory
 build/
 BUILD/
+#Ignore pre_commit_data directory
+pre_commit_data/

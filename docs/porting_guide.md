@@ -19,8 +19,55 @@ This document provides the porting steps and the list of PAL APIs.
 - One Non-secure Watchdog timer must be available to help system recovery from any fatal error conditions
 - 64KB Non-secure Non-volatile memory must be available for preserving test data over watchdog timer reset. Each byte of this region must be initialised to 0xFF at power on reset.
 
+## RMM v2.0 tracking requirements
+
+Update the tracking definitions in the target's `pal_config_def.h`:
+
+1. Set `PLATFORM_RMM_RMI_GRANULE_SIZE` and
+   `PLATFORM_RMM_TRACKING_REGION_SIZE` to the RMM configuration used by the
+   platform. ACS currently supports 4 KB RMI granules. For this granule size,
+   region-size encoding 0 selects 1 GB and encoding 1 selects 2 MB. The FVP
+   uses 2 MB regions by default.
+2. Set `PLATFORM_RMM_TRACKING_REGION_BASE` to the start of the tracking region
+   containing the ACS image. It must equal the image base rounded down to the
+   selected tracking-region size. The ACS image and memory pool must be in
+   conventional DRAM. ACS fine-tracks every region they occupy, preparing the
+   memory-pool regions before the image regions.
+3. Reserve `PLATFORM_RMM_TRACKING_SETUP_POOL_BASE` and
+   `PLATFORM_RMM_TRACKING_SETUP_POOL_SIZE` separately from the per-test heap.
+   This pool must be within the ACS DRAM range and large enough for address
+   lists and granules donated during tracking setup. The FVP reserves 10 MB.
+   ACS does not reset this allocator when the RMM is already active because
+   the RMM may still own previously donated granules. Other SRO completion
+   uses the normal test heap.
+4. Set `PLATFORM_TRACKING_TEST_REGION_BASE` to a separate conventional DRAM
+   region for tracking failure-condition tests. It must be aligned to the
+   selected tracking-region size, backed by DRAM for the full region, and
+   outside the ACS image and memory pool. Tests prepare and restore its
+   tracking state as needed.
+5. Define `PLATFORM_RMM_DEVICE_TRACKING_RANGES` as a comma-separated list of
+   `{ base, exclusive_top, RMI_MEM_CATEGORY_* }` entries. On platforms with
+   device assignment, cover the device memory used by the PCI hierarchy. The
+   FVP includes the 32-bit non-coherent PCIe range and the first 1 GB of its
+   64-bit range; extend the latter if the hierarchy uses addresses beyond it.
+
+At startup, ACS checks 4 KB granule support with `RMI_FEATURES(1)` and reads
+the RMM configuration. If the RMM is not active, ACS sets the requested
+configuration when necessary, activates the RMM, and sets the ACS DRAM and
+configured device regions to FINE tracking. If the RMM is already active, its
+configuration must match the platform definitions and these regions must
+already be FINE. A category mismatch or RESERVED region is a setup error.
+
 ## Others
-Sample PCI hierarchy is given in **plat/targets/tgt_tfa_fvp/manifest/pci_hierarchy.json** file. Current DA Foundation tests are validated with this pci hierarchy.
+
+The sample [FVP PCI hierarchy](../plat/targets/tgt_tfa_fvp/manifest/pci_hierarchy.json)
+is the layout used to validate the DA Foundation tests. Replace its placeholder
+paths and asymmetric-algorithm value to match your FVP setup.
+
+The sample [SPDM measurement blocks](../plat/targets/tgt_tfa_fvp/manifest/measurements.json)
+can be used with this hierarchy. Set each endpoint's
+`endpoint.measurement_block_filename` to the path of the measurement file
+accessible to FVP.
 
 ## List of PAL APIs
 

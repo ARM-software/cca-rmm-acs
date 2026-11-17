@@ -46,10 +46,6 @@ uint64_t val_rhi_da_vdev_p2p_unbind(val_host_realm_ts *realm,
 uint64_t da_init(val_host_realm_ts *realm, val_host_pdev_ts *pdev_obj,
                   val_host_vdev_ts *vdev_obj, uint8_t vdev_state);
 
-uint64_t da_create_vdev(val_host_realm_ts *realm, val_host_pdev_ts *pdev_obj,
-                        val_host_vdev_ts *vdev_obj, uint64_t vdev_id,
-                        uint8_t vdev_state);
-
 uint64_t val_rhi_da_vdev_set_tdi_state(val_host_realm_ts *realm,
                                       val_host_vdev_ts *vdev_obj);
 

@@ -12,6 +12,7 @@
 #include "pal_interfaces.h"
 #include "val.h"
 #include "val_host_memory.h"
+#include "val_host_tracking.h"
 #include "pal_common_support.h"
 
 extern const uint32_t  total_tests;
@@ -225,8 +226,8 @@ static void val_host_print_acs_header(void)
    LOG(ALWAYS, " 3. DA Foundation - ALPHA \n\n")
    LOG(ALWAYS, " 4. RHI - BETA \n\n")
    LOG(ALWAYS, "*********************************\n\n")
-#elif defined(RMM_V_1_0)
-   LOG(ALWAYS, "********* RMM v1.0 ACS EAC **********\n\n")
+#elif defined(RMM_V_2_0)
+   LOG(ALWAYS, "********* RMM v2.0 ACS **********\n\n")
 #endif
 }
 
@@ -348,6 +349,29 @@ static void val_host_test_dispatch(bool primary_cpu_boot)
             }
         }
 #endif
+
+#if defined(RMM_V_2_0)
+
+        if (!val_strcmp(SUITE, "all") || !val_strcmp(SUITE, "device_assignment"))
+        {
+            feature_da_supported = val_host_rmm_supports_da();
+            if (!feature_da_supported)
+            {
+                LOG(ALWAYS, "Device Assignment feature not supported, "
+                            "Skipping Device Assignment Suite\n\n");
+                LOG(ALWAYS, "*********************************\n")
+            }
+        }
+
+        if (val_host_tracking_init())
+        {
+            LOG(ERROR, "RMM tracking initialization failed\n");
+            return;
+        }
+
+        LOG(ALWAYS, "\n***********************************\n");
+#endif
+
         /* Iterate over test_list[] to run test one by one */
         for (i = test_num_start ; i <= test_num_end; i++)
         {
@@ -497,4 +521,3 @@ void val_host_main(bool primary_cpu_boot)
     LOG(ALWAYS, "HOST : Entering standby.. \n");
     pal_terminate_simulation();
 }
-

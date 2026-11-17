@@ -22,7 +22,16 @@ bool val_irq_current(void)
     if (pal_irq_handler_dispatcher())
     {
         LOG(ERROR, "Got unexpected interrupt.\n");
+        if (irq_callback != NULL)
+        {
+            irq_callback();
+        }
         return false;
+    }
+
+    if (irq_callback != NULL)
+    {
+        irq_callback();
     }
 
     return true;

@@ -195,17 +195,6 @@ static uint64_t intent_to_seq(struct stimulus *test_data, struct arguments *args
             args->vdev_ptr = c_args.vdev_ptr_valid;
             break;
 
-        case RD_OUTSIDE_OF_PERMITTED_PA:
-            args->rd = g_outside_of_permitted_pa_prep_sequence();
-            args->pdev_ptr = c_args.pdev_ptr_valid;
-            args->vdev_ptr = c_args.vdev_ptr_valid;
-            break;
-
-        case RD_DEV_MEM_MMIO:
-            args->rd = g_dev_mem_prep_sequence();
-            args->pdev_ptr = c_args.pdev_ptr_valid;
-            args->vdev_ptr = c_args.vdev_ptr_valid;
-            break;
 
         case RD_GRAN_STATE_UNDELEGATED:
             args->rd = g_undelegated_prep_sequence();
@@ -219,17 +208,6 @@ static uint64_t intent_to_seq(struct stimulus *test_data, struct arguments *args
             args->vdev_ptr = c_args.vdev_ptr_valid;
             break;
 
-        case PDEV_OUTSIDE_OF_PERMITTED_PA:
-            args->rd = c_args.rd_valid;
-            args->pdev_ptr = g_outside_of_permitted_pa_prep_sequence();
-            args->vdev_ptr = c_args.vdev_ptr_valid;
-            break;
-
-        case PDEV_DEV_MEM_MMIO:
-            args->rd = c_args.rd_valid;
-            args->pdev_ptr = g_dev_mem_prep_sequence();
-            args->vdev_ptr = c_args.vdev_ptr_valid;
-            break;
 
         case PDEV_GRAN_STATE_UNDELEGATED:
             args->rd = c_args.rd_valid;
@@ -243,17 +221,6 @@ static uint64_t intent_to_seq(struct stimulus *test_data, struct arguments *args
             args->vdev_ptr = g_unaligned_prep_sequence(c_args.vdev_ptr_valid);
             break;
 
-        case VDEV_OUTSIDE_OF_PERMITTED_PA:
-            args->rd = c_args.rd_valid;
-            args->pdev_ptr = c_args.pdev_ptr_valid;
-            args->vdev_ptr = g_outside_of_permitted_pa_prep_sequence();
-            break;
-
-        case VDEV_DEV_MEM_MMIO:
-            args->rd = c_args.rd_valid;
-            args->pdev_ptr = c_args.pdev_ptr_valid;
-            args->vdev_ptr = g_dev_mem_prep_sequence();
-            break;
 
         case VDEV_GRAN_STATE_UNDELEGATED:
             args->rd = c_args.rd_valid;
@@ -343,7 +310,7 @@ void cmd_vdev_lock_host(void)
     if (cmd_ret.x0 != 0)
     {
         LOG(ERROR, "Command failed. %x\n", cmd_ret.x0);
-        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(6)));
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(4)));
         goto destroy_device;
     }
 
@@ -351,7 +318,7 @@ void cmd_vdev_lock_host(void)
                                   &c_args.vdev_dev_valid, RMI_VDEV_LOCKED))
     {
         LOG(ERROR, "VDEV communicate failed\n");
-        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(7)));
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(5)));
         goto destroy_device;
     }
 
@@ -359,14 +326,14 @@ void cmd_vdev_lock_host(void)
     if (cmd_ret.x0)
     {
         LOG(ERROR, "VDEV_GET_STATE failed ret %lx.\n", cmd_ret.x0);
-        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(8)));
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(6)));
         goto destroy_device;
     }
 
     if (cmd_ret.x1 != RMI_VDEV_LOCKED)
     {
         LOG(ERROR, "VDEV state should be RMI_VDEV_LOCKED, ret %lx\n", cmd_ret.x1);
-        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(9)));
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(7)));
         goto destroy_device;
     }
 
@@ -378,7 +345,7 @@ destroy_device:
                                &c_args.vdev_dev_valid))
     {
         LOG(ERROR, "VDEV teardown failed\n");
-        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(10)));
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(8)));
         goto exit;
     }
 
@@ -386,7 +353,7 @@ destroy_device:
         val_host_pdev_teardown(&c_args.pdev_dev_valid, c_args.pdev_ptr_valid))
     {
         LOG(ERROR, "PDEV teardown failed\n");
-        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(11)));
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(9)));
         goto exit;
     }
 
@@ -396,15 +363,16 @@ destroy_device:
                                &c_args_invalid.vdev_dev_invalid))
     {
         LOG(ERROR, "VDEV teardown failed\n");
-        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(12)));
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(10)));
         goto exit;
     }
 
-
-    if (val_host_pdev_teardown(&c_args_invalid.pdev_dev_invalid, c_args_invalid.pdev))
+    if (c_args_invalid.pdev &&
+        val_host_pdev_teardown(&c_args_invalid.pdev_dev_invalid,
+                               c_args_invalid.pdev))
     {
         LOG(ERROR, "PDEV teardown failed\n");
-        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(13)));
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(11)));
         goto exit;
     }
 

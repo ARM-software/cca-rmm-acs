@@ -7,19 +7,11 @@
 
 #include "test_database.h"
 #include "val_host_rmi.h"
+#include "val_host_rmi_sro.h"
 #include "rmi_rtt_read_entry_data.h"
 #include "command_common_host.h"
 
 #define IPA_WIDTH 40
-#define START_RTT_LEVEL 0
-#define MAX_GRANULES 256
-
-#define MAP_LEVEL 1
-#define WALK_ERR_LEVEL 2
-#define L3_SIZE PAGE_SIZE
-#define L2_SIZE (512L * L3_SIZE)
-#define L1_SIZE (512L * L2_SIZE)
-#define L0_SIZE (512L * L1_SIZE)
 #define IPA_ADDR_DATA  (4 * PAGE_SIZE)
 
 /*      Valid Realm memory layout
@@ -38,12 +30,19 @@
 #define NUM_REALMS 1
 #define VALID_REALM 0
 
+#define PROTECTED_DESC_ATTR_MASK \
+    (0xFFUL << 2 | 1UL << ATTR_PI_INDEX_1_SHIFT | \
+     1UL << ATTR_PI_INDEX_2_SHIFT | 1UL << ATTR_PI_INDEX_3_SHIFT | \
+     0xFUL << 59)
+
 static val_host_realm_ts realm_test[NUM_REALMS];
 
 static struct argument_store {
     uint64_t rd_valid;
     uint64_t ipa_valid;
     uint64_t level_valid;
+    uint64_t data_pa;
+    uint64_t rtt_addr[VAL_RTT_MAX_LEVEL + 1];
 } c_args;
 
 struct arguments {
@@ -51,6 +50,42 @@ struct arguments {
     uint64_t ipa;
     uint64_t level;
 };
+
+static bool output_mbz_valid(const val_host_rtt_entry_ts *rtte)
+{
+    return (VAL_EXTRACT_BITS(rtte->state, 8, 63) == 0) &&
+           (VAL_EXTRACT_BITS(rtte->ripas, 8, 63) == 0);
+}
+
+static bool protected_desc_valid(uint64_t desc, uint64_t pa)
+{
+    return ((desc & PROTECTED_DESC_ATTR_MASK) == 0) && (OA(desc) == pa);
+}
+
+static uint64_t rtt_unprot_map(uint64_t rd, uint64_t ipa, uint64_t desc)
+{
+    val_host_rmi_rtt_unprot_map_flags_ts map_flags = {0};
+    uint64_t flags = 0;
+    uint64_t oaddr;
+
+    map_flags.oaddr_type = RMI_ADDR_TYPE_SINGLE;
+    map_flags.memattr = VAL_EXTRACT_BITS(desc, ATTR_STAGE2_MEMATTR_SHIFT,
+                                        ATTR_STAGE2_MEMATTR_SHIFT + 2);
+    map_flags.s2ap =
+        (VAL_EXTRACT_BITS(desc, ATTR_STAGE2_AP_SHIFT,
+                          ATTR_STAGE2_AP_SHIFT) << 1) |
+        VAL_EXTRACT_BITS(desc, (ATTR_STAGE2_AP_SHIFT + 1),
+                         (ATTR_STAGE2_AP_SHIFT + 1));
+    val_memcpy(&flags, &map_flags, sizeof(map_flags));
+
+    oaddr = RMI_PAGE_L3 |
+            (1UL << 2) |
+            ADDR_ALIGN_DOWN(desc, PAGE_SIZE) |
+            ((uint64_t)RMI_OP_MEM_UNDELEGATED << 62);
+
+    return val_host_rmi_rtt_unprot_map(rd, ipa, ipa + PAGE_SIZE,
+                                       flags, oaddr);
+}
 
 static uint64_t g_rd_new_prep_sequence(uint16_t vmid)
 {
@@ -79,13 +114,44 @@ static uint64_t rd_valid_prep_sequence(void)
     return g_rd_new_prep_sequence(VALID_REALM);
 }
 
+static uint64_t primary_rtt_path_prep_sequence(void)
+{
+    val_host_rtt_entry_ts rtte;
+    uint64_t ipa_aligned;
+    uint64_t level;
+    uint64_t rtt;
+
+    if (val_host_rmi_rtt_read_entry(c_args.rd_valid, IPA_ADDR_MAPPED,
+                                    VAL_RTT_MAX_LEVEL, &rtte))
+        return VAL_TEST_PREP_SEQ_FAILED;
+
+    c_args.rtt_addr[0] = realm_test[VALID_REALM].rtt_l0_addr;
+    level = rtte.walk_level;
+
+    while (level < VAL_RTT_MAX_LEVEL)
+    {
+        rtt = g_delegated_prep_sequence();
+        if (rtt == VAL_TEST_PREP_SEQ_FAILED)
+            return VAL_TEST_PREP_SEQ_FAILED;
+
+        level++;
+        ipa_aligned = ADDR_ALIGN_DOWN(IPA_ADDR_MAPPED,
+                                      val_host_rtt_level_mapsize(level - 1));
+        if (val_host_rmi_rtt_create(c_args.rd_valid, rtt, ipa_aligned, level))
+            return VAL_TEST_PREP_SEQ_FAILED;
+
+        c_args.rtt_addr[level] = rtt;
+    }
+
+    return VAL_SUCCESS;
+}
 
 static uint64_t ipa_valid_prep_sequence(void)
 {
-    /* RTTE[ipa].state = UNASSIGNED
+    /* RTTE[ipa].state = VOID
        RTTE[ipa].ripas = EMPTY */
 
-    if (create_mapping(IPA_ADDR_MAPPED, false, c_args.rd_valid))
+    if (primary_rtt_path_prep_sequence())
     {
         LOG(ERROR, "Couldn't create the protected mapping\n");
         return VAL_TEST_PREP_SEQ_FAILED;
@@ -150,17 +216,6 @@ static uint64_t intent_to_seq(struct stimulus *test_data, struct arguments *args
             args->level = c_args.level_valid;
             break;
 
-        case RD_DEV_MEM:
-            args->rd = g_dev_mem_prep_sequence();
-            args->ipa = c_args.ipa_valid;
-            args->level = c_args.level_valid;
-            break;
-
-        case RD_OUTSIDE_OF_PERMITTED_PA:
-	    args->rd = g_outside_of_permitted_pa_prep_sequence();
-	    args->ipa = c_args.ipa_valid;
-	    args->level = c_args.level_valid;
-	    break;
 
         case RD_STATE_UNDELEGATED:
             args->rd = g_undelegated_prep_sequence();
@@ -199,11 +254,12 @@ static uint64_t intent_to_seq(struct stimulus *test_data, struct arguments *args
             break;
 
         case RD_STATE_DATA:
-            args->rd = g_data_prep_sequence(c_args.rd_valid, IPA_ADDR_DATA);
-            if (args->rd == VAL_TEST_PREP_SEQ_FAILED) {
-                LOG(ERROR, "REC preparation sequence failed\n");
+            c_args.data_pa = g_data_prep_sequence(c_args.rd_valid, IPA_ADDR_DATA);
+            if (c_args.data_pa == VAL_TEST_PREP_SEQ_FAILED) {
+                LOG(ERROR, "DATA preparation sequence failed\n");
                 return VAL_ERROR;
             }
+            args->rd = c_args.data_pa;
             args->ipa = c_args.ipa_valid;
             args->level = c_args.level_valid;
             break;
@@ -268,95 +324,106 @@ void cmd_rtt_read_entry_host(void)
         }
     }
 
-    LOG(TEST, "Check %2d : Negative Observability\n", ++i);
-    /* Check when command failed X1-X4 is zero*/
-
-    /* Initialize a zero filled reference structure and compare with the command output */
-    val_host_rtt_entry_ts zero_ref = {0};
-    if (val_memcmp(&rtte, &zero_ref, sizeof(rtte))) {
-        LOG(ERROR, " Output arguments are not zero \n");
-        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(4)));
-        goto exit;
-    }
-
     LOG(TEST, "Check %2d : Positive Observability\n", ++i);
 
-    /* Check if walk level matches input level */
+    /* Check the walk level and TABLE descriptor at each non-leaf level. */
     for (i = 0; i < VAL_RTT_MAX_LEVEL; i++) {
         ret = val_host_rmi_rtt_read_entry(c_args.rd_valid, c_args.ipa_valid, i, &rtte);
         if (ret) {
             LOG(ERROR, "READ_ENTRY failed with ret value: %d\n", ret);
-            val_set_status(RESULT_FAIL(VAL_ERROR_POINT(5)));
+            val_set_status(RESULT_FAIL(VAL_ERROR_POINT(4)));
             goto exit;
         }
 
         if (rtte.walk_level != i) {
             LOG(ERROR, "Walk level did not match \n");
+            val_set_status(RESULT_FAIL(VAL_ERROR_POINT(5)));
+            goto exit;
+        }
+
+        if ((rtte.state != RMI_RTTE_TABLE) ||
+            !output_mbz_valid(&rtte) ||
+            !protected_desc_valid(rtte.desc, c_args.rtt_addr[i + 1])) {
+            LOG(ERROR, "Unexpected TABLE descriptor at level %d\n", i);
             val_set_status(RESULT_FAIL(VAL_ERROR_POINT(6)));
             goto exit;
         }
     }
 
-    /* Check if rtte.state[63:8] & rtte.ripas[63:8} are zero */
-    if ((VAL_EXTRACT_BITS(rtte.state, 8, 63) != 0) || (VAL_EXTRACT_BITS(rtte.ripas, 8, 63) != 0)) {
-        LOG(ERROR, "Unused bits of RTTE.state & RTTE.ripas are non zero \n");
-        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(7)));
-        goto exit;
-    }
-
-    /* For the Valid IPA (UNASSIGNED & EMPTY) check for X2(state) and X4(ripas)
-       and X(3) is zero */
+    /* For the valid IPA (VOID and EMPTY), check X2(state), X3(desc) and X4(ripas). */
     ret = val_host_rmi_rtt_read_entry(c_args.rd_valid, c_args.ipa_valid,
                                                        c_args.level_valid, &rtte);
     if (ret) {
         LOG(ERROR, "READ_ENTRY failed with ret value: %d\n", ret);
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(7)));
+        goto exit;
+    }
+
+    if ((rtte.walk_level != c_args.level_valid) ||
+        (rtte.state != RMI_RTTE_VOID) ||
+        (rtte.ripas != RMI_RIPAS_EMPTY) ||
+        (rtte.desc != 0) || !output_mbz_valid(&rtte)) {
+        LOG(ERROR, " Unexpected RTT entry.State is: %d, desc is: 0x%x\n",
+                                                             rtte.state, rtte.desc);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(8)));
         goto exit;
     }
 
-    if (rtte.state != RMI_UNASSIGNED || rtte.state != RMI_EMPTY || rtte.desc != 0) {
-        LOG(ERROR, " Unexpected RTT entry.State is: %d, desc is: 0x%x\n",
-                                                             rtte.state, rtte.desc);
-        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(9)));
-        goto exit;
-    }
-
-    /* For protected IPA with ASSIGNED state check  if MemAttr, S2AP and SH are zeroes */
+    /* For a protected DATA entry, check attributes, address and RIPAS. */
     ret = val_host_rmi_rtt_read_entry(c_args.rd_valid, IPA_ADDR_DATA,
                                                        c_args.level_valid, &rtte);
     if (ret) {
         LOG(ERROR, "READ_ENTRY failed with ret value: %d\n", ret);
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(9)));
+        goto exit;
+    }
+
+    if ((rtte.walk_level != c_args.level_valid) ||
+        (rtte.state != RMI_RTTE_DATA) ||
+        !protected_desc_valid(rtte.desc, c_args.data_pa) ||
+        (rtte.ripas != RMI_RIPAS_RAM) || !output_mbz_valid(&rtte)) {
+        LOG(ERROR, "Unexpected protected DATA descriptor or RIPAS\n");
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(10)));
         goto exit;
     }
 
-    if (rtte.state == RMI_ASSIGNED && VAL_EXTRACT_BITS(rtte.desc, 2, 9) != 0) {
-        LOG(ERROR, " Unexpected descriptor Lower attributes  \n");
+    /* Check unprotected UNMAPPED_NS and MAPPED_NS outputs. */
+    if (create_mapping(IPA_ADDR_UNPROTECTED, false, c_args.rd_valid))
+    {
+        LOG(ERROR, "Couldn't create the unprotected mapping\n");
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(11)));
         goto exit;
     }
 
-    /* For unprotected IPA with Assigned state check for validity fo X3(desc) and X4(ripas) */
-    if (create_mapping(IPA_ADDR_UNPROTECTED, false, c_args.rd_valid))
-    {
-        LOG(ERROR, "Couldn't create the unprotected mapping\n");
+    ret = val_host_rmi_rtt_read_entry(c_args.rd_valid, IPA_ADDR_UNPROTECTED,
+                                      c_args.level_valid, &rtte);
+    if (ret) {
+        LOG(ERROR, "READ_ENTRY failed for UNMAPPED_NS, ret value: %d\n", ret);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(12)));
+        goto exit;
+    }
+
+    if ((rtte.walk_level != c_args.level_valid) ||
+        (rtte.state != RMI_RTTE_VOID) ||
+        (rtte.desc != 0) ||
+        (rtte.ripas != RMI_RIPAS_EMPTY) || !output_mbz_valid(&rtte)) {
+        LOG(ERROR, "Unexpected UNMAPPED_NS output\n");
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(13)));
         goto exit;
     }
 
     uint64_t ns = g_undelegated_prep_sequence();
     if (ns == VAL_TEST_PREP_SEQ_FAILED) {
         LOG(ERROR, "Undelegated preparation sequence failed\n");
-        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(13)));
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(14)));
         goto exit;
     }
 
     uint64_t desc = (ns | ATTR_NORMAL_WB_WA_RA | ATTR_STAGE2_AP_RW);
-    if (val_host_rmi_rtt_map_unprotected(c_args.rd_valid, IPA_ADDR_UNPROTECTED,
-                                                         VAL_RTT_MAX_LEVEL, desc))
+    if (rtt_unprot_map(c_args.rd_valid, IPA_ADDR_UNPROTECTED, desc))
     {
         LOG(ERROR, "Couldn't complete the unprotected mapping\n");
-        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(14)));
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(15)));
         goto exit;
     }
 
@@ -364,14 +431,17 @@ void cmd_rtt_read_entry_host(void)
                                                        c_args.level_valid, &rtte);
     if (ret) {
         LOG(ERROR, "READ_ENTRY failed with ret value: %d\n", ret);
-        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(15)));
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(16)));
         goto exit;
     }
 
-    if (rtte.state == RMI_ASSIGNED && (rtte.desc != desc || rtte.ripas != RMI_EMPTY)) {
+    if ((rtte.walk_level != c_args.level_valid) ||
+        (rtte.state != RMI_RTTE_DATA) ||
+        (rtte.desc != desc) || (rtte.ripas != RMI_RIPAS_EMPTY) ||
+        !output_mbz_valid(&rtte)) {
         LOG(ERROR, " Unexpected RTT entry State is: %d\n", rtte.state);
         LOG(ERROR, " ,desc is: 0x%x & RIPAS is: %d\n", rtte.desc, rtte.ripas);
-        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(16)));
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(17)));
         goto exit;
     }
 

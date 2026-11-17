@@ -77,13 +77,6 @@ static uint64_t intent_to_seq(struct stimulus *test_data, struct arguments *args
             args->vdev_ptr = g_unaligned_prep_sequence(c_args.vdev_ptr_valid);
             break;
 
-        case VDEV_OUTSIDE_OF_PERMITTED_PA:
-            args->vdev_ptr = g_outside_of_permitted_pa_prep_sequence();
-            break;
-
-        case VDEV_DEV_MEM_MMIO:
-            args->vdev_ptr = g_dev_mem_prep_sequence();
-            break;
 
         case VDEV_GRAN_STATE_UNDELEGATED:
             args->vdev_ptr = g_undelegated_prep_sequence();
@@ -146,7 +139,7 @@ void cmd_vdev_get_state_host(void)
     }
 
     /* Check vdev state is VDEV_NEW */
-    if (cmd_ret.x1 != RMI_VDEV_NEW)
+    if (VAL_EXTRACT_BITS(cmd_ret.x1, 0, 7) != RMI_VDEV_NEW)
     {
         LOG(ERROR, "VDEV state should be VDEV_NEW\n");
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(5)));

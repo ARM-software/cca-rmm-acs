@@ -85,29 +85,17 @@ char *val_strcat(char *str1, char *str2, size_t output_buff_size)
 **/
 int val_strcmp(char *str1, char *str2)
 {
-  int ret = 0;
-
   /* Compare str1 to str2 */
-  while (*str1)
+  while ((*str1 != '\0') && (*str2 != '\0'))
     {
-        if (*str1 != *str2) {
-            ret = 1;
-            break;
-        }
+        if (*str1 != *str2)
+            return 1;
 
         str1++;
         str2++;
     }
 
-    if (ret == 0)
-    {
-      return 0;
-    }
-    else
-    {
-      return 1;
-    }
-
+  return (*str1 == *str2) ? 0 : 1;
 }
 
 /**

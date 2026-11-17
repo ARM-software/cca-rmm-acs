@@ -16,13 +16,14 @@
 
 static struct argument_store {
     uint64_t vdev_id_valid;
+    uint64_t vdev_id_new;
     uint64_t ipa_base_valid;
     uint64_t ipa_top_valid;
     uint64_t pa_base_valid;
     uint64_t flags_valid;
-    uint64_t lock_nonce_valid;
-    uint64_t meas_nonce_valid;
-    uint64_t report_nonce_valid;
+    uint64_t lock_seq_valid;
+    uint64_t meas_seq_valid;
+    uint64_t report_seq_valid;
 } c_args;
 
 struct arguments {
@@ -31,9 +32,9 @@ struct arguments {
     uint64_t ipa_top;
     uint64_t pa_base;
     uint64_t flags;
-    uint64_t lock_nonce;
-    uint64_t meas_nonce;
-    uint64_t report_nonce;
+    uint64_t lock_seq;
+    uint64_t meas_seq;
+    uint64_t report_seq;
 };
 
 static uint64_t unaligned_prep_sequence(uint64_t addr)
@@ -56,6 +57,7 @@ static uint64_t valid_input_args_prep_sequence(void)
     val_realm_rsi_dev_mem_flags_ts dev_mem_flags;
     uint64_t flags;
     uint64_t vdev_id;
+    uint64_t pa_base;
     uint8_t *shared_report_buff = (val_get_shared_region_base() + TEST_USE_OFFSET4);
     PAGE_SIZE_ALIGNED val_host_pci_tdisp_device_interface_report_struct_t interface_report = {0};
     pci_tdisp_mmio_range_t mmio_range_struct[MAX_MMIO_RANGE_COUNT];
@@ -63,6 +65,8 @@ static uint64_t valid_input_args_prep_sequence(void)
 
     gv_realm_host_call = val_realm_rsi_host_call_ripas(VAL_SWITCH_TO_HOST);
     vdev_id = gv_realm_host_call->gprs[1];
+    pa_base = gv_realm_host_call->gprs[2];
+    c_args.vdev_id_new = gv_realm_host_call->gprs[3];
 
     args = val_realm_rsi_vdev_get_info(vdev_id, (uint64_t)&vdev_info);
     if (args.x0)
@@ -92,11 +96,11 @@ static uint64_t valid_input_args_prep_sequence(void)
     c_args.ipa_base_valid = mmio_range_struct[0].first_page;
     c_args.ipa_top_valid = c_args.ipa_base_valid +
                            (PAGE_SIZE_4K * mmio_range_struct[0].number_of_pages);
-    c_args.pa_base_valid = c_args.ipa_base_valid;
+    c_args.pa_base_valid = pa_base;
     c_args.flags_valid = flags;
-    c_args.lock_nonce_valid = vdev_info.lock_nonce;
-    c_args.meas_nonce_valid = vdev_info.meas_nonce;
-    c_args.report_nonce_valid = vdev_info.report_nonce;
+    c_args.lock_seq_valid = vdev_info.lock_seq;
+    c_args.meas_seq_valid = vdev_info.meas_seq;
+    c_args.report_seq_valid = vdev_info.report_seq;
 
     return VAL_SUCCESS;
 
@@ -116,9 +120,20 @@ static uint64_t intent_to_seq(struct stimulus *test_data, struct arguments *args
             args->ipa_top = c_args.ipa_top_valid;
             args->pa_base = c_args.pa_base_valid;
             args->flags = c_args.flags_valid;
-            args->lock_nonce = c_args.lock_nonce_valid;
-            args->meas_nonce = c_args.meas_nonce_valid;
-            args->report_nonce = c_args.report_nonce_valid;
+            args->lock_seq = c_args.lock_seq_valid;
+            args->meas_seq = c_args.meas_seq_valid;
+            args->report_seq = c_args.report_seq_valid;
+            break;
+
+        case VDEV_STATE_NOT_LOCKED_OR_STARTED:
+            args->vdev_id = c_args.vdev_id_new;
+            args->ipa_base = c_args.ipa_base_valid;
+            args->ipa_top = c_args.ipa_top_valid;
+            args->pa_base = c_args.pa_base_valid;
+            args->flags = c_args.flags_valid;
+            args->lock_seq = c_args.lock_seq_valid;
+            args->meas_seq = c_args.meas_seq_valid;
+            args->report_seq = c_args.report_seq_valid;
             break;
 
         case IPA_BASE_UNALIGNED:
@@ -127,9 +142,9 @@ static uint64_t intent_to_seq(struct stimulus *test_data, struct arguments *args
             args->ipa_top = c_args.ipa_top_valid;
             args->pa_base = c_args.pa_base_valid;
             args->flags = c_args.flags_valid;
-            args->lock_nonce = c_args.lock_nonce_valid;
-            args->meas_nonce = c_args.meas_nonce_valid;
-            args->report_nonce = c_args.report_nonce_valid;
+            args->lock_seq = c_args.lock_seq_valid;
+            args->meas_seq = c_args.meas_seq_valid;
+            args->report_seq = c_args.report_seq_valid;
             break;
 
         case IPA_TOP_UNALIGNED:
@@ -138,9 +153,9 @@ static uint64_t intent_to_seq(struct stimulus *test_data, struct arguments *args
             args->ipa_top = unaligned_prep_sequence(c_args.ipa_top_valid);
             args->pa_base = c_args.pa_base_valid;
             args->flags = c_args.flags_valid;
-            args->lock_nonce = c_args.lock_nonce_valid;
-            args->meas_nonce = c_args.meas_nonce_valid;
-            args->report_nonce = c_args.report_nonce_valid;
+            args->lock_seq = c_args.lock_seq_valid;
+            args->meas_seq = c_args.meas_seq_valid;
+            args->report_seq = c_args.report_seq_valid;
             break;
 
         case PA_UNALIGNED:
@@ -149,9 +164,9 @@ static uint64_t intent_to_seq(struct stimulus *test_data, struct arguments *args
             args->ipa_top = c_args.ipa_top_valid;
             args->pa_base = unaligned_prep_sequence(c_args.pa_base_valid);
             args->flags = c_args.flags_valid;
-            args->lock_nonce = c_args.lock_nonce_valid;
-            args->meas_nonce = c_args.meas_nonce_valid;
-            args->report_nonce = c_args.report_nonce_valid;
+            args->lock_seq = c_args.lock_seq_valid;
+            args->meas_seq = c_args.meas_seq_valid;
+            args->report_seq = c_args.report_seq_valid;
             break;
 
         case SIZE_INVALID:
@@ -160,9 +175,9 @@ static uint64_t intent_to_seq(struct stimulus *test_data, struct arguments *args
             args->ipa_top = c_args.ipa_base_valid;
             args->pa_base = c_args.pa_base_valid;
             args->flags = c_args.flags_valid;
-            args->lock_nonce = c_args.lock_nonce_valid;
-            args->meas_nonce = c_args.meas_nonce_valid;
-            args->report_nonce = c_args.report_nonce_valid;
+            args->lock_seq = c_args.lock_seq_valid;
+            args->meas_seq = c_args.meas_seq_valid;
+            args->report_seq = c_args.report_seq_valid;
             break;
 
         case REGION_UNPROTECTED:
@@ -171,20 +186,9 @@ static uint64_t intent_to_seq(struct stimulus *test_data, struct arguments *args
             args->ipa_top = args->ipa_base + PAGE_SIZE;
             args->pa_base = args->ipa_base;
             args->flags = c_args.flags_valid;
-            args->lock_nonce = c_args.lock_nonce_valid;
-            args->meas_nonce = c_args.meas_nonce_valid;
-            args->report_nonce = c_args.report_nonce_valid;
-            break;
-
-        case ATTEST_INFO_MISMATCH:
-            args->vdev_id = c_args.vdev_id_valid;
-            args->ipa_base = c_args.ipa_base_valid;
-            args->ipa_top = c_args.ipa_top_valid;
-            args->pa_base = c_args.pa_base_valid;
-            args->flags = c_args.flags_valid;
-            args->lock_nonce = c_args.lock_nonce_valid + 1U;
-            args->meas_nonce = c_args.meas_nonce_valid;
-            args->report_nonce = c_args.report_nonce_valid;
+            args->lock_seq = c_args.lock_seq_valid;
+            args->meas_seq = c_args.meas_seq_valid;
+            args->report_seq = c_args.report_seq_valid;
             break;
 
         default:
@@ -221,8 +225,8 @@ void cmd_rsi_vdev_validate_mapping_realm(void)
 
         cmd_ret = val_realm_rsi_vdev_validate_mapping(args.vdev_id,
                         args.ipa_base, args.ipa_top, args.pa_base,
-                        args.flags, args.lock_nonce,
-                        args.meas_nonce, args.report_nonce);
+                        args.flags, args.lock_seq,
+                        args.meas_seq, args.report_seq);
 
         if (cmd_ret.x0 != PACK_CODE(test_data1[i].status, test_data1[i].index)) {
             LOG(ERROR, "\tTest Failure!\n\tThe ABI call returned: %x\n\tExpected: %x\n",
@@ -241,17 +245,12 @@ void cmd_rsi_vdev_validate_mapping_realm(void)
     do {
         cmd_ret = val_realm_rsi_vdev_validate_mapping(c_args.vdev_id_valid,
                         args.ipa_base, c_args.ipa_top_valid, c_args.pa_base_valid,
-                        c_args.flags_valid, c_args.lock_nonce_valid,
-                        c_args.meas_nonce_valid, c_args.report_nonce_valid);
+                        c_args.flags_valid, c_args.lock_seq_valid,
+                        c_args.meas_seq_valid, c_args.report_seq_valid);
         if (cmd_ret.x0 != RSI_SUCCESS)
         {
             LOG(ERROR, "Command failed. %x\n", cmd_ret.x0);
             val_set_status(RESULT_FAIL(VAL_ERROR_POINT(4)));
-            goto exit;
-        }
-        if (cmd_ret.x2 == RSI_REJECT) {
-            LOG(TEST, "Host rejected mapping validation. Response=0x%lx\n", cmd_ret.x2);
-            val_set_status(RESULT_PASS(VAL_SUCCESS));
             goto exit;
         }
         if (cmd_ret.x2 != RSI_ACCEPT) {

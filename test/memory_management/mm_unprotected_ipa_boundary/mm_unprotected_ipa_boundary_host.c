@@ -1,11 +1,12 @@
 /*
- * Copyright (c) 2023, 2025, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2025-2026, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
  */
 #include "test_database.h"
 #include "val_host_rmi.h"
+#include "val_host_helpers.h"
 
 void mm_unprotected_ipa_boundary_host(void)
 {
@@ -16,7 +17,8 @@ void mm_unprotected_ipa_boundary_host(void)
     uint64_t protected_ipa, unprotected_ipa;
     uint64_t protected_src_pa, protected_target_pa;
     uint64_t unprotected_pa;
-    uint64_t top;
+    uint64_t flags = 0;
+    val_host_rmi_rtt_unmap_flags_ts unmap_flags = {0};
 
     val_memset(&realm, 0, sizeof(realm));
 
@@ -95,7 +97,11 @@ void mm_unprotected_ipa_boundary_host(void)
         goto destroy_realm;
     }
 
-    ret = val_host_rmi_rtt_unmap_unprotected(realm.rd, unprotected_ipa, VAL_RTT_MAX_LEVEL, &top);
+    unmap_flags.oaddr_type = RMI_ADDR_TYPE_SINGLE;
+    val_memcpy(&flags, &unmap_flags, sizeof(unmap_flags));
+    ret = val_host_rmi_rtt_unprot_unmap(realm.rd, unprotected_ipa,
+                                        unprotected_ipa + PAGE_SIZE,
+                                        flags, 0);
     if (ret)
     {
         LOG(ERROR, "val_rmi_rtt_unmap_unprotected failed, ipa=0x%x, ret=0x%x\n",

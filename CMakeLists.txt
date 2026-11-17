@@ -51,7 +51,7 @@ list(APPEND CMAKE_BUILD_TYPE_LIST Release Debug)
 list(APPEND ARM_ARCH_MAJOR_LIST 8 9)
 list(APPEND SECURE_TEST_ENABLE_LIST 1)
 list(APPEND SUITE_COVERAGE_LIST all command none)
-list(APPEND SUITE_COVERAGE_FEATURE_LIST planes mec device_assignment)
+list(APPEND SUITE_COVERAGE_FEATURE_LIST planes mec device_assignment psmmu)
 
 ###
 
@@ -192,9 +192,15 @@ else()
     message(STATUS "[ACS] : SECURE_TEST_ENABLE is define and secure test will run.")
 endif()
 
-if((${SUITE} STREQUAL "attestation_measurement") OR (${SUITE} STREQUAL "all"))
+if(TEST_COMBINE OR SUITE STREQUAL "command" OR
+   SUITE STREQUAL "attestation_measurement" OR SUITE STREQUAL "all")
     set(RMM_ACS_TARGET_QCBOR            ${ROOT_DIR}/external/qcbor  CACHE PATH "Location of Q_CBOR sources.")
     set(RMM_ACS_QCBOR_INCLUDE_PATH      ${RMM_ACS_TARGET_QCBOR}/inc)
+    if(NOT EXISTS ${RMM_ACS_TARGET_QCBOR})
+        message(FATAL_ERROR
+                "QCBOR sources not found at ${RMM_ACS_TARGET_QCBOR}. "
+                "Run 'git submodule update --init --recursive'.")
+    endif()
 endif()
 
 #Check if RMM_SPEC_VER is set, if not default it to ALL
@@ -219,7 +225,7 @@ else()
 
     if(NOT ${SUITE_COVERAGE} IN_LIST SUITE_COVERAGE_LIST)
         message(FATAL_ERROR "[ACS] : Error: Unspported value for -DSUITE_COVERAGE=${SUITE_COVERAGE}, supported values are : ${SUITE_COVERAGE_LIST}")
-    elseif(NOT ${SUITE} IN_LIST SUITE_COVERAGE_FEATURE_LIST)
+    elseif((NOT "${SUITE_COVERAGE}" STREQUAL "none") AND (NOT ${SUITE} IN_LIST SUITE_COVERAGE_FEATURE_LIST))
         message(FATAL_ERROR "[ACS] : Error:  SUITE_COVERAGE is unspported for ${SUITE}, SUITE_COVERAGE is supported for -DSUITE= : ${SUITE_COVERAGE_FEATURE_LIST}")
     else()
         message(STATUS "[ACS] : SUITE_COVERAGE is set to ${SUITE_COVERAGE}")
@@ -238,12 +244,6 @@ if("${SUITE}" IN_LIST SUITE_COVERAGE_FEATURE_LIST)
     endif()
 else()
     add_definitions(-Dd_${SUITE})
-endif()
-
-if(((${SUITE} STREQUAL "attestation_measurement") OR (${SUITE} STREQUAL "all")) AND (NOT EXISTS ${RMM_ACS_TARGET_QCBOR}))
-    message(FATAL_ERROR
-            "QCBOR sources not found at ${RMM_ACS_TARGET_QCBOR}. "
-            "Run 'git submodule update --init --recursive'.")
 endif()
 
 # Set MbedTLS path external/mbedtls.

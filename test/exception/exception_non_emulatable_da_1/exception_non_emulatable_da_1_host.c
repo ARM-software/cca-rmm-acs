@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023-2025, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023-2026, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -15,7 +15,8 @@ void exception_non_emulatable_da_1_host(void)
     val_host_rec_exit_ts *rec_exit = NULL;
     uint32_t index;
     uint64_t ret, mem_attr;
-    uint64_t top;
+    uint64_t flags = 0;
+    val_host_rmi_rtt_unmap_flags_ts unmap_flags = {0};
 
     val_memset(&realm, 0, sizeof(realm));
 
@@ -52,8 +53,13 @@ void exception_non_emulatable_da_1_host(void)
         goto destroy_realm;
     }
 
-    ret = val_host_rmi_rtt_unmap_unprotected(realm.rd, realm.granules[index].ipa,
-                                            realm.granules[index].level, &top);
+    unmap_flags.oaddr_type = RMI_ADDR_TYPE_SINGLE;
+    val_memcpy(&flags, &unmap_flags, sizeof(unmap_flags));
+    ret = val_host_rmi_rtt_unprot_unmap(realm.rd,
+                                        realm.granules[index].ipa,
+                                        realm.granules[index].ipa +
+                                        realm.granules[index].size,
+                                        flags, 0);
     if (ret)
     {
         LOG(ERROR, "val_rmi_rtt_unmap_unprotected failed, ipa=0x%x, ret=0x%x\n",
@@ -78,7 +84,8 @@ void exception_non_emulatable_da_1_host(void)
 
     /* validates the Rec Exit due to DA */
     if (validate_rec_exit_da(rec_exit, realm.granules[index].ipa,
-                                ESR_ISS_DFSC_TTF_L3, NON_EMULATABLE_DA, 0))
+                                ESR_ISS_DFSC_TTF_L3,
+                                NON_EMULATABLE_DA_UNPROTECTED, ESR_WnR_WRITE))
     {
         LOG(ERROR, "REC exit ESR params mismatch\n");
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(7)));

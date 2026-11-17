@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2025, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2025-2026, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -38,9 +38,7 @@ void cmd_multithread_realm_mp_realm(void)
         goto exit;
     }
 
-    if (is_secondary_cpu_booted == 0x1)
-        val_set_status(RESULT_PASS(VAL_SUCCESS));
-    else
+    if (is_secondary_cpu_booted != 0x1)
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(2)));
 
 exit:

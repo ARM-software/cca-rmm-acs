@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2025, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2025-2026, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -11,6 +11,7 @@
 #ifndef SECURE_TEST_ENABLE
 static event_t cpu_booted[32];
 static val_host_realm_ts realm;
+static uint32_t secondary_cpu_error;
 
 static void secondary_cpu(void)
 {
@@ -24,7 +25,8 @@ static void secondary_cpu(void)
     if (ret)
     {
         LOG(ERROR, "Rec enter failed, ret=%x\n", ret);
-        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(1)));
+        secondary_cpu_error = VAL_ERROR_POINT(1);
+        goto signal_primary_cpu;
     }
 
     /* Check that REC exit was due to PSCI_CPU_OFF  */
@@ -32,9 +34,10 @@ static void secondary_cpu(void)
                                 PSCI_CPU_OFF))
     {
         LOG(ERROR, "Something went wrong\n");
-        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(2)));
+        secondary_cpu_error = VAL_ERROR_POINT(2);
     }
 
+signal_primary_cpu:
     /* Tell the primary cpu that the calling cpu has completed the test */
     val_send_event(&cpu_booted[val_get_cpuid(mpidr)]);
 
@@ -90,7 +93,7 @@ void cmd_multithread_realm_mp_host(void)
     }
 
     /* Complete pending PSCI  */
-    ret = val_host_rmi_psci_complete(realm.rec[0], realm.rec[1], PSCI_E_SUCCESS);
+    ret = val_host_rmi_psci_complete(realm.rec[0], PSCI_E_SUCCESS);
     if (ret)
     {
         LOG(ERROR, "val_rmi_psci_complete, ret=%x\n", ret);
@@ -113,6 +116,7 @@ void cmd_multithread_realm_mp_host(void)
         }
 
         LOG(DBG, "Power up secondary cpu mpidr=%x\n", mpidr);
+        secondary_cpu_error = VAL_SUCCESS;
         ret = val_host_power_on_cpu(i);
         if (ret != 0)
         {
@@ -122,6 +126,12 @@ void cmd_multithread_realm_mp_host(void)
         }
 
         val_wait_for_event(&cpu_booted[i]);
+        if (secondary_cpu_error != VAL_SUCCESS)
+        {
+            val_set_status(RESULT_FAIL(secondary_cpu_error));
+            goto destroy_realm;
+        }
+
         LOG(DBG, "Powered off secondary cpu mpidr=%x\n", mpidr);
         break;
     }
@@ -140,7 +150,8 @@ void cmd_multithread_realm_mp_host(void)
         goto destroy_realm;
     }
 
-    val_set_status(RESULT_PASS(VAL_SUCCESS));
+    if (IS_TEST_START(val_get_status()))
+        val_set_status(RESULT_PASS(VAL_SUCCESS));
 
     /* Free test resources */
 #endif

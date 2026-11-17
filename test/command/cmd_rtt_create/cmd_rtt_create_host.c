@@ -7,6 +7,7 @@
 
 #include "test_database.h"
 #include "val_host_rmi.h"
+#include "val_host_rmi_sro.h"
 #include "rmi_rtt_create_data.h"
 #include "command_common_host.h"
 
@@ -48,6 +49,7 @@ static struct argument_store {
     uint64_t rtt_valid;
     uint64_t ipa_valid;
     uint64_t level_valid;
+    val_host_tracking_test_region_ts track_region;
 } c_args;
 
 static struct invalid_arguments {
@@ -60,6 +62,16 @@ struct arguments {
     uint64_t ipa;
     uint64_t level;
 };
+
+static uint64_t rtt_track_prep_sequence(void)
+{
+    return val_host_tracking_coarse_prep_sequence(&c_args.track_region);
+}
+
+static uint32_t rtt_track_cleanup(void)
+{
+    return val_host_tracking_coarse_cleanup(&c_args.track_region);
+}
 
 static uint64_t rtt_valid_prep_sequence(void)
 {
@@ -176,19 +188,6 @@ static uint64_t intent_to_seq(struct stimulus *test_data, struct arguments *args
             args->level = c_args.level_valid;
             break;
 
-        case RD_DEV_MEM:
-            args->rd = g_dev_mem_prep_sequence();
-            args->rtt = c_args.rtt_valid;
-            args->ipa = c_args.ipa_valid;
-            args->level = c_args.level_valid;
-            break;
-
-       case RD_OUTSIDE_OF_PERMITTED_PA:
-            args->rd = g_outside_of_permitted_pa_prep_sequence();
-            args->rtt = c_args.rtt_valid;
-            args->ipa = c_args.ipa_valid;
-            args->level = c_args.level_valid;
-            break;
 
         case RD_STATE_UNDELEGATED:
             args->rd = g_undelegated_prep_sequence();
@@ -272,16 +271,13 @@ static uint64_t intent_to_seq(struct stimulus *test_data, struct arguments *args
             args->level = c_args.level_valid;
             break;
 
-        case RTT_DEV_MEM:
+        case RTT_TRACK_COARSE:
             args->rd = c_args.rd_valid;
-            args->rtt = g_dev_mem_prep_sequence();
-            args->ipa = c_args.ipa_valid;
-            args->level = c_args.level_valid;
-            break;
-
-        case RTT_OUTSIDE_PERMITTED_PA:
-            args->rd = c_args.rd_valid;
-            args->rtt = g_outside_of_permitted_pa_prep_sequence();
+            args->rtt = rtt_track_prep_sequence();
+            if (args->rtt == VAL_SKIP_CHECK)
+                return VAL_SKIP_CHECK;
+            if (args->rtt == VAL_TEST_PREP_SEQ_FAILED)
+                return VAL_ERROR;
             args->ipa = c_args.ipa_valid;
             args->level = c_args.level_valid;
             break;
@@ -375,12 +371,38 @@ void cmd_rtt_create_host(void)
         LOG(TEST, "Check %2d : %s; intent id : 0x%x \n",
               i + 1, test_data[i].msg, test_data[i].label);
 
-        if (intent_to_seq(&test_data[i], &args)) {
+        ret = intent_to_seq(&test_data[i], &args);
+        if (ret == VAL_SKIP_CHECK)
+        {
+            LOG(TEST, "Skipping Check %d\n", (int)(i + 1));
+            continue;
+        }
+        if (ret != VAL_SUCCESS) {
             val_set_status(RESULT_FAIL(VAL_ERROR_POINT(2)));
             goto exit;
         }
 
-        ret = val_host_rmi_rtt_create(args.rd, args.rtt, args.ipa, args.level);
+        ret = val_host_rmi_rtt_create_smc(args.rd, args.rtt, args.ipa, args.level).x0;
+        if (test_data[i].label == RTT_TRACK_COARSE)
+        {
+            if ((RMI_STATUS(ret) != RMI_ERROR_TRACKING) ||
+                (RMI_TRACKING_LEVEL(ret) != RMI_TRACKING_LEVEL_COARSE) ||
+                (VAL_EXTRACT_BITS(ret, 16, 55) != (args.rtt >> PAGE_BITS_4K)))
+            {
+                LOG(ERROR, "RTT tracking check returned 0x%lx, expected "
+                    "TRACKING at 0x%lx\n", ret, args.rtt);
+                val_set_status(RESULT_FAIL(VAL_ERROR_POINT(3)));
+                goto exit;
+            }
+
+            if (rtt_track_cleanup() != VAL_SUCCESS)
+            {
+                LOG(ERROR, "RTT tracking setup cleanup failed\n");
+                val_set_status(RESULT_FAIL(VAL_ERROR_POINT(9)));
+                goto exit;
+            }
+            continue;
+        }
 
         if (ret != PACK_CODE(test_data[i].status, test_data[i].index)) {
             LOG(ERROR, "Test Failure!The ABI call returned: %xExpected: %x\n",
@@ -409,7 +431,7 @@ void cmd_rtt_create_host(void)
     LOG(TEST, "Check %2d : Positive Observability\n", ++i);
 
     ret = val_host_rmi_rtt_create(c_args.rd_valid, c_args.rtt_valid,
-                              c_args.ipa_valid, c_args.level_valid);
+                                  c_args.ipa_valid, c_args.level_valid);
 
     /* Valid call should give success if footprints have not changed */
     if (ret != 0) {
@@ -437,5 +459,10 @@ void cmd_rtt_create_host(void)
     val_set_status(RESULT_PASS(VAL_SUCCESS));
 
 exit:
+    if (rtt_track_cleanup() != VAL_SUCCESS)
+    {
+        LOG(ERROR, "RTT tracking setup cleanup failed\n");
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(9)));
+    }
     return;
 }

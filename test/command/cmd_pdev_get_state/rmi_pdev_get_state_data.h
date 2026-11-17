@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2026, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -9,9 +9,7 @@
 
 enum test_intent {
     PDEV_UNALIGNED = 0X0,
-    PDEV_OUTSIDE_OF_PERMITTED_PA = 0X1,
-    PDEV_DEV_MEM_MMIO = 0X2,
-    PDEV_GRAN_STATE_UNDELEGATED = 0X3
+    PDEV_GRAN_STATE_UNDELEGATED = 0X1,
 };
 
 struct stimulus {
@@ -26,16 +24,6 @@ static struct stimulus test_data[] = {
     {.msg = "pdev_align",
     .abi = RMI_PDEV_GET_STATE,
     .label = PDEV_UNALIGNED,
-    .status = RMI_ERROR_INPUT,
-    .index = 0},
-    {.msg = "pdev_bound",
-    .abi = RMI_PDEV_GET_STATE,
-    .label = PDEV_OUTSIDE_OF_PERMITTED_PA,
-    .status = RMI_ERROR_INPUT,
-    .index = 0},
-    {.msg = "pdev_bound",
-    .abi = RMI_PDEV_GET_STATE,
-    .label = PDEV_DEV_MEM_MMIO,
     .status = RMI_ERROR_INPUT,
     .index = 0},
     {.msg = "pdev_gran_state",

@@ -93,6 +93,10 @@ static uint64_t invalid_pdev_prep_sequence(void)
     if (vdev_dev.vdev == VAL_TEST_PREP_SEQ_FAILED)
         return VAL_TEST_PREP_SEQ_FAILED;
 
+    if (val_host_dev_communicate(&realm, &pdev_dev, &vdev_dev,
+                                 RMI_VDEV_UNLOCKED))
+        return VAL_TEST_PREP_SEQ_FAILED;
+
     c_args_invalid.rd = vdev_dev.realm_rd;
     c_args_invalid.pdev = pdev_dev.pdev;
     c_args_invalid.vdev = vdev_dev.vdev;
@@ -231,19 +235,8 @@ static uint64_t intent_to_seq(struct stimulus *test_data, struct arguments *args
             args->vdev_ptr = c_args.vdev_ptr_valid;
             break;
 
-        case RD_OUTSIDE_OF_PERMITTED_PA:
-            args->rd = g_outside_of_permitted_pa_prep_sequence();
-            args->pdev_ptr = c_args.pdev_ptr_valid;
-            args->vdev_ptr = c_args.vdev_ptr_valid;
-            break;
 
-        case RD_DEV_MEM_MMIO:
-            args->rd = g_dev_mem_prep_sequence();
-            args->pdev_ptr = c_args.pdev_ptr_valid;
-            args->vdev_ptr = c_args.vdev_ptr_valid;
-            break;
-
-        case RD_GRAN_STATE_UNDELEGATED:
+        case RD_STATE_UNDELEGATED:
             args->rd = g_undelegated_prep_sequence();
             args->pdev_ptr = c_args.pdev_ptr_valid;
             args->vdev_ptr = c_args.vdev_ptr_valid;
@@ -255,17 +248,6 @@ static uint64_t intent_to_seq(struct stimulus *test_data, struct arguments *args
             args->vdev_ptr = c_args.vdev_ptr_valid;
             break;
 
-        case PDEV_OUTSIDE_OF_PERMITTED_PA:
-            args->rd = c_args.rd_valid;
-            args->pdev_ptr = g_outside_of_permitted_pa_prep_sequence();
-            args->vdev_ptr = c_args.vdev_ptr_valid;
-            break;
-
-        case PDEV_DEV_MEM_MMIO:
-            args->rd = c_args.rd_valid;
-            args->pdev_ptr = g_dev_mem_prep_sequence();
-            args->vdev_ptr = c_args.vdev_ptr_valid;
-            break;
 
         case PDEV_GRAN_STATE_UNDELEGATED:
             args->rd = c_args.rd_valid;
@@ -279,17 +261,6 @@ static uint64_t intent_to_seq(struct stimulus *test_data, struct arguments *args
             args->vdev_ptr = g_unaligned_prep_sequence(c_args.vdev_ptr_valid);
             break;
 
-        case VDEV_OUTSIDE_OF_PERMITTED_PA:
-            args->rd = c_args.rd_valid;
-            args->pdev_ptr = c_args.pdev_ptr_valid;
-            args->vdev_ptr = g_outside_of_permitted_pa_prep_sequence();
-            break;
-
-        case VDEV_DEV_MEM_MMIO:
-            args->rd = c_args.rd_valid;
-            args->pdev_ptr = c_args.pdev_ptr_valid;
-            args->vdev_ptr = g_dev_mem_prep_sequence();
-            break;
 
         case VDEV_GRAN_STATE_UNDELEGATED:
             args->rd = c_args.rd_valid;
@@ -313,7 +284,7 @@ static uint64_t intent_to_seq(struct stimulus *test_data, struct arguments *args
             args->vdev_ptr = c_args.vdev_ptr_valid;
             break;
 
-        case VDEV_STATE_VDEV_NEW:
+        case VDEV_STATE_VDEV_UNLOCKED:
             args->rd = c_args_invalid.rd;
             args->pdev_ptr = c_args_invalid.pdev;
             args->vdev_ptr = c_args_invalid.vdev;

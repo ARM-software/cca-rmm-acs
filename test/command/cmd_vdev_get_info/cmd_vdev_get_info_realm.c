@@ -11,6 +11,11 @@
 #include "val_realm_framework.h"
 
 #define INVALID_VDEV_ID         0xABC
+
+#define EXPECTED_LOCK_SEQ       1U
+#define EXPECTED_MEAS_SEQ       0U
+#define EXPECTED_REPORT_SEQ     1U
+
 /*  4KB aligned and Protected IPA to which the configuration will be written */
 __attribute__((aligned (PAGE_SIZE))) static uint8_t vdev_get_info[PAGE_SIZE];
 val_realm_rsi_host_call_t *realm_flag_host_call1;
@@ -80,6 +85,42 @@ static uint64_t valid_input_args_prep_sequence(void)
     c_args.addr_valid = (uint64_t)vdev_get_info;
 
     return VAL_SUCCESS;
+}
+
+static uint64_t check_reserved_fields(val_realm_rsi_vdev_info_ts *vdev_info)
+{
+    uint8_t *info = (uint8_t *)vdev_info;
+    uint64_t i;
+
+    if ((vdev_info->flags & ~0x3UL) != 0UL)
+    {
+        LOG(ERROR, "Reserved VDEV flags are nonzero: 0x%lx\n",
+            vdev_info->flags);
+        return VAL_ERROR;
+    }
+
+    for (i = 0x11; i < 0x18; i++)
+        if (info[i] != 0U)
+            goto reserved_nonzero;
+
+    for (i = 0x31; i < 0x38; i++)
+        if (info[i] != 0U)
+            goto reserved_nonzero;
+
+    for (i = 0x41; i < 0x80; i++)
+        if (info[i] != 0U)
+            goto reserved_nonzero;
+
+    for (i = 0x1D0; i < sizeof(*vdev_info); i++)
+        if (info[i] != 0U)
+            goto reserved_nonzero;
+
+    return VAL_SUCCESS;
+
+reserved_nonzero:
+    LOG(ERROR, "Reserved byte at offset 0x%lx is nonzero: 0x%x\n",
+        i, info[i]);
+    return VAL_ERROR;
 }
 
 static uint64_t intent_to_seq(struct stimulus *test_data, struct arguments *args)
@@ -155,6 +196,8 @@ void cmd_vdev_get_info_realm(void)
     val_realm_return_to_host();
 
     LOG(TEST, "\n\tPositive Observability Check\n");
+    val_memset((void *)c_args.addr_valid, 0xFF,
+               sizeof(val_realm_rsi_vdev_info_ts));
     cmd_ret = val_realm_rsi_vdev_get_info(c_args.vdev_id_valid, c_args.addr_valid);
     if (cmd_ret.x0 != 0)
     {
@@ -165,12 +208,38 @@ void cmd_vdev_get_info_realm(void)
 
     val_realm_rsi_vdev_info_ts *rsi_device_info =
                         (val_realm_rsi_vdev_info_ts *)c_args.addr_valid;
-    /* Check cfg.hash_algo as pdev.hash_algo, here it is RMI_HASH_SHA_256*/
-    if (rsi_device_info->hash_algo != RMI_HASH_SHA_256)
+    /* Check cfg.hash_algo as pdev.hash_algo, here it is RSI_HASH_SHA_256*/
+    if (rsi_device_info->hash_algo != RSI_HASH_SHA_256)
     {
         LOG(ERROR, "Hash algo mismatched from PDEV hash algo, ret %x\n",
                                               rsi_device_info->hash_algo);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(7)));
+        goto exit;
+    }
+
+    if (rsi_device_info->state != RSI_VDEV_STARTED)
+    {
+        LOG(ERROR, "VDEV state expected %x, returned %x\n",
+            RSI_VDEV_STARTED, rsi_device_info->state);
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(8)));
+        goto exit;
+    }
+
+    if ((rsi_device_info->lock_seq != EXPECTED_LOCK_SEQ) ||
+        (rsi_device_info->meas_seq != EXPECTED_MEAS_SEQ) ||
+        (rsi_device_info->report_seq != EXPECTED_REPORT_SEQ))
+    {
+        LOG(ERROR, "Unexpected freshness sequences: lock=%lx meas=%lx report=%lx\n",
+            rsi_device_info->lock_seq,
+            rsi_device_info->meas_seq,
+            rsi_device_info->report_seq);
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(9)));
+        goto exit;
+    }
+
+    if (check_reserved_fields(rsi_device_info))
+    {
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(10)));
         goto exit;
     }
 

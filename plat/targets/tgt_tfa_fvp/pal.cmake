@@ -18,6 +18,7 @@ set(PAL_SRC
     ${ROOT_DIR}/plat/driver/src/pal_sp805_watchdog.c
     ${ROOT_DIR}/plat/driver/src/pal_nvm.c
     ${ROOT_DIR}/plat/driver/src/pal_smmuv3_test_engine.c
+    ${ROOT_DIR}/plat/driver/src/pal_psmmu.c
     ${ROOT_DIR}/plat/common/src/pal_smc.c
     ${ROOT_DIR}/plat/common/src/pal_libc.c
     ${ROOT_DIR}/plat/common/src/pal_pcie.c

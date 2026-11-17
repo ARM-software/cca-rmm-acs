@@ -6,15 +6,16 @@
  */
 
 #include "val_rmm.h"
+#include "val_realm_rsi_types.h"
 
 enum test_intent {
     VDEV_IDS_INVALID_VDEV_ID = 0X0,
-    IPA_BASE_UNALIGNED = 0X1,
-    IPA_TOP_UNALIGNED = 0X2,
-    PA_UNALIGNED = 0X3,
-    SIZE_INVALID = 0X4,
-    REGION_UNPROTECTED = 0X5,
-    ATTEST_INFO_MISMATCH = 0X6
+    VDEV_STATE_NOT_LOCKED_OR_STARTED = 0X1,
+    IPA_BASE_UNALIGNED = 0X2,
+    IPA_TOP_UNALIGNED = 0X3,
+    PA_UNALIGNED = 0X4,
+    SIZE_INVALID = 0X5,
+    REGION_UNPROTECTED = 0X6
 };
 
 struct stimulus {
@@ -26,11 +27,16 @@ struct stimulus {
 };
 
 static struct stimulus test_data1[] = {
-//    {.msg = "vdev_id",
-//    .abi = RSI_VDEV_VALIDATE_MAPPING,
-//    .label = VDEV_IDS_INVALID_VDEV_ID,
-//    .status = RSI_ERROR_INPUT,
-//    .index = 0},
+    {.msg = "vdev_id",
+    .abi = RSI_VDEV_VALIDATE_MAPPING,
+    .label = VDEV_IDS_INVALID_VDEV_ID,
+    .status = RSI_ERROR_INPUT,
+    .index = 0},
+    {.msg = "state",
+    .abi = RSI_VDEV_VALIDATE_MAPPING,
+    .label = VDEV_STATE_NOT_LOCKED_OR_STARTED,
+    .status = RSI_ERROR_INPUT,
+    .index = 0},
     {.msg = "ipa_base_align",
     .abi = RSI_VDEV_VALIDATE_MAPPING,
     .label = IPA_BASE_UNALIGNED,
@@ -55,10 +61,5 @@ static struct stimulus test_data1[] = {
     .abi = RSI_VDEV_VALIDATE_MAPPING,
     .label = REGION_UNPROTECTED,
     .status = RSI_ERROR_INPUT,
-    .index = 0},
-    {.msg = "attest_info",
-    .abi = RSI_VDEV_VALIDATE_MAPPING,
-    .label = ATTEST_INFO_MISMATCH,
-    .status = RSI_ERROR_DEVICE,
     .index = 0}
 };

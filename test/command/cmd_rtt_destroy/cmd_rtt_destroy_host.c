@@ -25,6 +25,7 @@
 #define IPA_NO_CHILD_RTT (2 * L2_SIZE)
 #define IPA_FOLDED_RTT (3 * L2_SIZE)
 #define IPA_DESTROYED_RTT (4 * L2_SIZE)
+#define IPA_UNPROTECTED_RTT (1UL << (IPA_WIDTH - 1))
 #define MAP_LEVEL 3
 #define START_RTT_LEVEL 0
 #define MAX_RTT_LEVEL 3
@@ -170,6 +171,17 @@ static uint64_t ipa_valid_prep_sequence(void)
     return IPA_NON_LIVE_RTT;
 }
 
+static uint64_t ipa_unprotected_valid_prep_sequence(void)
+{
+    if (create_mapping(IPA_UNPROTECTED_RTT, false, realm[VALID_REALM].rd))
+    {
+        LOG(ERROR, "Unprotected IPA mapping creation failed\n");
+        return VAL_TEST_PREP_SEQ_FAILED;
+    }
+
+    return IPA_UNPROTECTED_RTT;
+}
+
 static uint64_t rd_valid_prep_sequence(void)
 {
     return g_rd_new_prep_sequence(VALID_REALM);
@@ -202,17 +214,6 @@ static uint64_t intent_to_seq(struct stimulus *test_data, struct arguments *args
             args->level = c_args.level_valid;
             break;
 
-        case RD_OUTSIDE_OF_PERMITTED_PA:
-            args->rd = g_outside_of_permitted_pa_prep_sequence();
-            args->ipa = c_args.ipa_valid;
-            args->level = c_args.level_valid;
-            break;
-
-        case RD_DEV_MEM:
-            args->rd = g_dev_mem_prep_sequence();
-            args->ipa = c_args.ipa_valid;
-            args->level = c_args.level_valid;
-            break;
 
         case RD_STATE_UNDELEGATED:
             args->rd = g_undelegated_prep_sequence();
@@ -298,14 +299,14 @@ static uint64_t intent_to_seq(struct stimulus *test_data, struct arguments *args
             if (args->ipa == VAL_TEST_PREP_SEQ_FAILED)
                 return VAL_ERROR;
             args->level = c_args.level_valid;
-            c_exp_output.top = L1_SIZE;
+            c_exp_output.top = args->ipa;
             break;
 
         case RTT_LIVE:
             args->rd = c_args.rd_valid;
             args->ipa = ipa_live_rtt_prep_sequence();
             args->level = c_args.level_valid;
-            c_exp_output.top = IPA_NON_LIVE_RTT;
+            c_exp_output.top = args->ipa;
             break;
 
         default:
@@ -318,7 +319,7 @@ static uint64_t intent_to_seq(struct stimulus *test_data, struct arguments *args
 
 void cmd_rtt_destroy_host(void)
 {
-    uint64_t ret = 0, i;
+    uint64_t ret = 0, i, unprotected_ipa, unprotected_rtt;
     struct arguments args;
     val_host_rtt_entry_ts rtte;
     val_host_rtt_destroy_ts out_val;
@@ -333,6 +334,7 @@ void cmd_rtt_destroy_host(void)
         LOG(TEST, "Check %2d : %s; intent id : 0x%x \n",
               i + 1, test_data[i].msg, test_data[i].label);
 
+        c_exp_output.top = 0;
         if (intent_to_seq(&test_data[i], &args)) {
             val_set_status(RESULT_FAIL(VAL_ERROR_POINT(2)));
             goto exit;
@@ -346,9 +348,18 @@ void cmd_rtt_destroy_host(void)
             goto exit;
         }
 
-        /* Upon RMI_ERROR_RTT check for top == walk_top */
-        else if (ret == RMI_ERROR_RTT && out_val.top != c_exp_output.top) {
-            LOG(ERROR, " Unexpected command output received. top value: 0x%x \n", out_val.top);
+        /* RMI_ERROR_RTT returns the walk top; failures without a walk return top == 0. */
+        if ((RMI_STATUS(ret) == RMI_ERROR_RTT) &&
+            (out_val.top != c_exp_output.top)) {
+            LOG(ERROR, "Unexpected RTT error top value: 0x%x, expected: 0x%x\n",
+                out_val.top, c_exp_output.top);
+            val_set_status(RESULT_FAIL(VAL_ERROR_POINT(4)));
+            goto exit;
+        }
+
+        if ((RMI_STATUS(ret) != RMI_ERROR_RTT) && (out_val.top != 0)) {
+            LOG(ERROR, "Unexpected non-zero top value on command failure: 0x%x\n",
+                out_val.top);
             val_set_status(RESULT_FAIL(VAL_ERROR_POINT(4)));
             goto exit;
         }
@@ -411,6 +422,65 @@ void cmd_rtt_destroy_host(void)
         goto exit;
     }
 
+    unprotected_ipa = ipa_unprotected_valid_prep_sequence();
+    if (unprotected_ipa == VAL_TEST_PREP_SEQ_FAILED)
+    {
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(10)));
+        goto exit;
+    }
+
+    ret = val_host_rmi_rtt_read_entry(c_args.rd_valid, unprotected_ipa,
+                                      c_args.level_valid - 1, &rtte);
+    if (ret || (rtte.state != RMI_RTTE_TABLE))
+    {
+        LOG(ERROR, "Failed to read the unprotected parent RTTE\n");
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(11)));
+        goto exit;
+    }
+
+    unprotected_rtt = OA(rtte.desc);
+
+    LOG(TEST, "Check %2d : Unprotected IPA Success\n", ++i);
+
+    ret = val_host_rmi_rtt_destroy(c_args.rd_valid, unprotected_ipa,
+                                   c_args.level_valid, &out_val);
+    if (ret)
+    {
+        LOG(ERROR, "Unprotected RTT_DESTROY failed with ret value: %d\n", ret);
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(12)));
+        goto exit;
+    }
+
+    if ((out_val.rtt != unprotected_rtt) ||
+        (out_val.top != (unprotected_ipa + L1_SIZE)))
+    {
+        LOG(ERROR, "Unexpected unprotected output values. rtt = 0x%lx, top = 0x%lx\n",
+            out_val.rtt, out_val.top);
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(13)));
+        goto exit;
+    }
+
+    ret = val_host_rmi_rtt_read_entry(c_args.rd_valid, unprotected_ipa,
+                                      c_args.level_valid - 1, &rtte);
+    if (ret || (rtte.state != RMI_RTTE_VOID))
+    {
+        LOG(ERROR, "Unexpected state after unprotected RTT destruction\n");
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(14)));
+        goto exit;
+    }
+
+    /* RMI_RTTE_VOID is the RMI encoding of the internal RTTE_UNMAPPED_NS state. */
+    ret = val_host_rmi_rtt_create(c_args.rd_valid, out_val.rtt,
+                                  unprotected_ipa, c_args.level_valid);
+    if (ret)
+    {
+        LOG(ERROR, "Unprotected RTT_CREATE failed with ret value: %d\n", ret);
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(15)));
+        goto exit;
+    }
+
+    val_set_status(RESULT_PASS(VAL_SUCCESS));
+
 exit:
     /* Unfold folded RTT to meet postamble requirements */
     ret = val_host_rmi_rtt_read_entry(c_args.rd_valid, IPA_FOLDED_RTT,
@@ -418,7 +488,7 @@ exit:
 
     if (ret) {
         LOG(ERROR, "READ_ENTRY failed with ret value: %d\n", ret);
-        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(10)));
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(16)));
         return;
     }
 
@@ -430,12 +500,10 @@ exit:
         if (ret)
         {
             LOG(ERROR, "val_host_create_rtt_level failed\n");
-            val_set_status(RESULT_FAIL(VAL_ERROR_POINT(12)));
+            val_set_status(RESULT_FAIL(VAL_ERROR_POINT(17)));
             return;
         }
     }
-
-    val_set_status(RESULT_PASS(VAL_SUCCESS));
 
     return;
 }

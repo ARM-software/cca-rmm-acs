@@ -62,7 +62,7 @@ typedef enum {
     VAL_TEST_USE4         = 512 + (3 * 8192),   /* 196 KB */
     VAL_TEST_USE5         = 512 + (4 * 8192),   /* 260 KB */
     VAL_TEST_USE6         = 512 + (5 * 8192),   /* 324 KB */
-    VAL_PRINT_OFFSET      = 512 + (6 * 8192),   /* 324 KB */
+    VAL_PRINT_OFFSET      = 512 + (6 * 8192),   /* 388 KB */
 } val_shared_region_map_index_te;
 
 #define TEST_NUM_OFFSET OFFSET(VAL_CURR_TEST_NUM)
@@ -77,6 +77,7 @@ typedef enum {
 #define TEST_USE_OFFSET3 OFFSET(VAL_TEST_USE3)
 #define TEST_USE_OFFSET4 OFFSET(VAL_TEST_USE4)
 #define TEST_USE_OFFSET5 OFFSET(VAL_TEST_USE5)
+#define TEST_USE_OFFSET6 OFFSET(VAL_TEST_USE6)
 #define PRINT_OFFSET OFFSET(VAL_PRINT_OFFSET)
 
 

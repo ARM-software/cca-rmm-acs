@@ -18,7 +18,7 @@ static struct argument_store {
     uint64_t vdev_ptr_valid;
     uint64_t data_ptr_valid;
     uint64_t req_addr_valid;
-    uint64_t resp_addr_valid;
+    uint64_t rsp_addr_valid;
     uint64_t rd_valid;
     val_host_vdev_ts vdev_dev_valid;
     val_host_pdev_ts pdev_dev_valid;
@@ -28,6 +28,7 @@ static struct argument_store {
 static struct invalid_argument_store {
     uint64_t pdev_ptr;
     val_host_pdev_ts pdev_dev_invalid;
+    val_host_realm_ts realm_invalid;
 } c_args_invalid;
 
 struct arguments {
@@ -37,6 +38,23 @@ struct arguments {
     uint64_t data_ptr;
 };
 
+static uint64_t invalid_realm_prep_sequence(void)
+{
+    val_host_realm_ts *realm = &c_args_invalid.realm_invalid;
+
+    val_memset(realm, 0, sizeof(*realm));
+    realm->s2sz = 40;
+    realm->hash_algo = RMI_HASH_SHA_256;
+    realm->s2_starting_level = 0;
+    realm->num_s2_sl_rtts = 1;
+    realm->vmid = 2;
+
+    if (val_host_realm_create_common(realm))
+        return VAL_TEST_PREP_SEQ_FAILED;
+
+    return realm->rd;
+}
+
 static uint64_t req_unaligned_prep_sequence(void)
 {
     val_host_dev_comm_enter_ts *dev_comm_enter = NULL;
@@ -45,14 +63,14 @@ static uint64_t req_unaligned_prep_sequence(void)
     dev_comm_enter = &(((val_host_dev_comm_data_ts *)data_ptr)->enter);
 
     dev_comm_enter->req_addr = c_args.req_addr_valid + 1;
-    dev_comm_enter->resp_addr = c_args.resp_addr_valid;
+    dev_comm_enter->rsp_addr = c_args.rsp_addr_valid;
     dev_comm_enter->status = RMI_DEV_COMM_NONE;
-    dev_comm_enter->resp_len = 0;
+    dev_comm_enter->rsp_len = 0;
 
     return (uint64_t)data_ptr;
 }
 
-static uint64_t resp_unaligned_prep_sequence(void)
+static uint64_t rsp_unaligned_prep_sequence(void)
 {
     val_host_dev_comm_enter_ts *dev_comm_enter = NULL;
     val_host_dev_comm_data_ts *data_ptr = val_host_mem_alloc(PAGE_SIZE, PAGE_SIZE);
@@ -60,9 +78,9 @@ static uint64_t resp_unaligned_prep_sequence(void)
     dev_comm_enter = &(((val_host_dev_comm_data_ts *)data_ptr)->enter);
 
     dev_comm_enter->req_addr = c_args.req_addr_valid;
-    dev_comm_enter->resp_addr = c_args.resp_addr_valid + 1;
+    dev_comm_enter->rsp_addr = c_args.rsp_addr_valid + 1;
     dev_comm_enter->status = RMI_DEV_COMM_NONE;
-    dev_comm_enter->resp_len = 0;
+    dev_comm_enter->rsp_len = 0;
 
     return (uint64_t)data_ptr;
 }
@@ -77,9 +95,9 @@ static uint64_t req_realm_pas_prep_sequence(void)
     dev_comm_enter->req_addr = g_delegated_prep_sequence();
     if (dev_comm_enter->req_addr == VAL_TEST_PREP_SEQ_FAILED)
         return VAL_ERROR;
-    dev_comm_enter->resp_addr = c_args.resp_addr_valid;
+    dev_comm_enter->rsp_addr = c_args.rsp_addr_valid;
     dev_comm_enter->status = RMI_DEV_COMM_NONE;
-    dev_comm_enter->resp_len = 0;
+    dev_comm_enter->rsp_len = 0;
 
     return (uint64_t)data_ptr;
 }
@@ -92,14 +110,14 @@ static uint64_t req_secure_pas_prep_sequence(void)
     dev_comm_enter = &(((val_host_dev_comm_data_ts *)data_ptr)->enter);
 
     dev_comm_enter->req_addr = g_secure_prep_sequence();
-    dev_comm_enter->resp_addr = c_args.resp_addr_valid;
+    dev_comm_enter->rsp_addr = c_args.rsp_addr_valid;
     dev_comm_enter->status = RMI_DEV_COMM_NONE;
-    dev_comm_enter->resp_len = 0;
+    dev_comm_enter->rsp_len = 0;
 
     return (uint64_t)data_ptr;
 }
 
-static uint64_t resp_realm_pas_prep_sequence(void)
+static uint64_t rsp_realm_pas_prep_sequence(void)
 {
     val_host_dev_comm_enter_ts *dev_comm_enter = NULL;
     val_host_dev_comm_data_ts *data_ptr = val_host_mem_alloc(PAGE_SIZE, PAGE_SIZE);
@@ -107,16 +125,16 @@ static uint64_t resp_realm_pas_prep_sequence(void)
     dev_comm_enter = &(((val_host_dev_comm_data_ts *)data_ptr)->enter);
 
     dev_comm_enter->req_addr = c_args.req_addr_valid;
-    dev_comm_enter->resp_addr = g_delegated_prep_sequence();
-    if (dev_comm_enter->resp_addr == VAL_TEST_PREP_SEQ_FAILED)
+    dev_comm_enter->rsp_addr = g_delegated_prep_sequence();
+    if (dev_comm_enter->rsp_addr == VAL_TEST_PREP_SEQ_FAILED)
         return VAL_ERROR;
     dev_comm_enter->status = RMI_DEV_COMM_NONE;
-    dev_comm_enter->resp_len = 0;
+    dev_comm_enter->rsp_len = 0;
 
     return (uint64_t)data_ptr;
 }
 
-static uint64_t resp_secure_pas_prep_sequence(void)
+static uint64_t rsp_secure_pas_prep_sequence(void)
 {
     val_host_dev_comm_enter_ts *dev_comm_enter = NULL;
     val_host_dev_comm_data_ts *data_ptr = val_host_mem_alloc(PAGE_SIZE, PAGE_SIZE);
@@ -124,14 +142,14 @@ static uint64_t resp_secure_pas_prep_sequence(void)
     dev_comm_enter = &(((val_host_dev_comm_data_ts *)data_ptr)->enter);
 
     dev_comm_enter->req_addr = c_args.req_addr_valid;
-    dev_comm_enter->resp_addr = g_secure_prep_sequence();
+    dev_comm_enter->rsp_addr = g_secure_prep_sequence();
     dev_comm_enter->status = RMI_DEV_COMM_NONE;
-    dev_comm_enter->resp_len = 0;
+    dev_comm_enter->rsp_len = 0;
 
     return (uint64_t)data_ptr;
 }
 
-static uint64_t resp_len_prep_sequence(void)
+static uint64_t rsp_len_prep_sequence(void)
 {
     val_host_dev_comm_enter_ts *dev_comm_enter = NULL;
     val_host_dev_comm_data_ts *data_ptr = val_host_mem_alloc(PAGE_SIZE, PAGE_SIZE);
@@ -139,9 +157,9 @@ static uint64_t resp_len_prep_sequence(void)
     dev_comm_enter = &(((val_host_dev_comm_data_ts *)data_ptr)->enter);
 
     dev_comm_enter->req_addr = c_args.req_addr_valid;
-    dev_comm_enter->resp_addr = c_args.resp_addr_valid;
+    dev_comm_enter->rsp_addr = c_args.rsp_addr_valid;
     dev_comm_enter->status = RMI_DEV_COMM_NONE;
-    dev_comm_enter->resp_len = PAGE_SIZE + 1;
+    dev_comm_enter->rsp_len = PAGE_SIZE + 1;
 
     return (uint64_t)data_ptr;
 }
@@ -221,7 +239,7 @@ static uint64_t valid_input_args_prep_sequence(void)
     }
 
     /* Check VDEV state is RMI_VDEV_NEW */
-    if (args.x1 != RMI_VDEV_NEW)
+    if (VAL_EXTRACT_BITS(args.x1, 0, 7) != RMI_VDEV_NEW)
     {
         LOG(ERROR, "VDEV state should be RMI_VDEV_NEW, ret %lx\n", args.x1);
         return VAL_TEST_PREP_SEQ_FAILED;
@@ -233,7 +251,7 @@ static uint64_t valid_input_args_prep_sequence(void)
     c_args.pdev_dev_valid = pdev_dev;
     c_args.realm_valid = realm;
     c_args.req_addr_valid = vdev_dev.dev_comm_data->enter.req_addr;
-    c_args.resp_addr_valid = vdev_dev.dev_comm_data->enter.resp_addr;
+    c_args.rsp_addr_valid = vdev_dev.dev_comm_data->enter.rsp_addr;
     c_args.data_ptr_valid = (uint64_t)vdev_dev.dev_comm_data;
 
     return VAL_SUCCESS;
@@ -252,21 +270,8 @@ static uint64_t intent_to_seq(struct stimulus *test_data, struct arguments *args
             args->data_ptr = c_args.data_ptr_valid;
             break;
 
-        case RD_OUTSIDE_OF_PERMITTED_PA:
-            args->rd = g_outside_of_permitted_pa_prep_sequence();
-            args->pdev_ptr = c_args.pdev_ptr_valid;
-            args->vdev_ptr = c_args.vdev_ptr_valid;
-            args->data_ptr = c_args.data_ptr_valid;
-            break;
 
-        case RD_DEV_MEM_MMIO:
-            args->rd = g_dev_mem_prep_sequence();
-            args->pdev_ptr = c_args.pdev_ptr_valid;
-            args->vdev_ptr = c_args.vdev_ptr_valid;
-            args->data_ptr = c_args.data_ptr_valid;
-            break;
-
-        case RD_GRAN_STATE_UNDELEGATED:
+        case RD_STATE_UNDELEGATED:
             args->rd = g_undelegated_prep_sequence();
             args->pdev_ptr = c_args.pdev_ptr_valid;
             args->vdev_ptr = c_args.vdev_ptr_valid;
@@ -280,19 +285,6 @@ static uint64_t intent_to_seq(struct stimulus *test_data, struct arguments *args
             args->data_ptr = c_args.data_ptr_valid;
             break;
 
-        case PDEV_OUTSIDE_OF_PERMITTED_PA:
-            args->rd = c_args.rd_valid;
-            args->pdev_ptr = g_outside_of_permitted_pa_prep_sequence();
-            args->vdev_ptr = c_args.vdev_ptr_valid;
-            args->data_ptr = c_args.data_ptr_valid;
-            break;
-
-        case PDEV_DEV_MEM_MMIO:
-            args->rd = c_args.rd_valid;
-            args->pdev_ptr = g_dev_mem_prep_sequence();
-            args->vdev_ptr = c_args.vdev_ptr_valid;
-            args->data_ptr = c_args.data_ptr_valid;
-            break;
 
         case PDEV_GRAN_STATE_UNDELEGATED:
             args->rd = c_args.rd_valid;
@@ -308,19 +300,6 @@ static uint64_t intent_to_seq(struct stimulus *test_data, struct arguments *args
             args->data_ptr = c_args.data_ptr_valid;
             break;
 
-        case VDEV_OUTSIDE_OF_PERMITTED_PA:
-            args->rd = c_args.rd_valid;
-            args->pdev_ptr = c_args.pdev_ptr_valid;
-            args->vdev_ptr = g_outside_of_permitted_pa_prep_sequence();
-            args->data_ptr = c_args.data_ptr_valid;
-            break;
-
-        case VDEV_DEV_MEM_MMIO:
-            args->rd = c_args.rd_valid;
-            args->pdev_ptr = c_args.pdev_ptr_valid;
-            args->vdev_ptr = g_dev_mem_prep_sequence();
-            args->data_ptr = c_args.data_ptr_valid;
-            break;
 
         case VDEV_GRAN_STATE_UNDELEGATED:
             args->rd = c_args.rd_valid;
@@ -375,34 +354,34 @@ static uint64_t intent_to_seq(struct stimulus *test_data, struct arguments *args
             args->data_ptr = req_secure_pas_prep_sequence();
             break;
 
-        case RESP_UNALIGNED:
+        case RSP_UNALIGNED:
             args->rd = c_args.rd_valid;
             args->pdev_ptr = c_args.pdev_ptr_valid;
             args->vdev_ptr = c_args.vdev_ptr_valid;
-            args->data_ptr = resp_unaligned_prep_sequence();
+            args->data_ptr = rsp_unaligned_prep_sequence();
             break;
 
-        case RESP_PAS_REALM:
+        case RSP_PAS_REALM:
             args->rd = c_args.rd_valid;
             args->pdev_ptr = c_args.pdev_ptr_valid;
             args->vdev_ptr = c_args.vdev_ptr_valid;
-            args->data_ptr = resp_realm_pas_prep_sequence();
+            args->data_ptr = rsp_realm_pas_prep_sequence();
             if (args->data_ptr == VAL_ERROR)
                 return VAL_ERROR;
             break;
 
-        case RESP_PAS_SECURE:
+        case RSP_PAS_SECURE:
             args->rd = c_args.rd_valid;
             args->pdev_ptr = c_args.pdev_ptr_valid;
             args->vdev_ptr = c_args.vdev_ptr_valid;
-            args->data_ptr = resp_secure_pas_prep_sequence();
+            args->data_ptr = rsp_secure_pas_prep_sequence();
             break;
 
-        case INVALID_RESP_LEN:
+        case INVALID_RSP_LEN:
             args->rd = c_args.rd_valid;
             args->pdev_ptr = c_args.pdev_ptr_valid;
             args->vdev_ptr = c_args.vdev_ptr_valid;
-            args->data_ptr = resp_len_prep_sequence();
+            args->data_ptr = rsp_len_prep_sequence();
             break;
 
         case INVALID_PDEV:
@@ -414,10 +393,26 @@ static uint64_t intent_to_seq(struct stimulus *test_data, struct arguments *args
             args->data_ptr = c_args.data_ptr_valid;
             break;
 
+        case PDEV_GRAN_STATE_UNDELEGATED_INVALID_PDEV:
+            args->rd = c_args.rd_valid;
+            args->pdev_ptr = g_undelegated_prep_sequence();
+            args->vdev_ptr = c_args.vdev_ptr_valid;
+            args->data_ptr = c_args.data_ptr_valid;
+            break;
+
         case VDEV_GRAN_STATE_UNDELEGATED_INVALID_PDEV:
             args->rd = c_args.rd_valid;
             args->pdev_ptr = c_args_invalid.pdev_ptr;
             args->vdev_ptr = g_undelegated_prep_sequence();
+            args->data_ptr = c_args.data_ptr_valid;
+            break;
+
+        case VDEV_REALM:
+            args->rd = invalid_realm_prep_sequence();
+            if (args->rd == VAL_TEST_PREP_SEQ_FAILED)
+                return VAL_TEST_PREP_SEQ_FAILED;
+            args->pdev_ptr = c_args.pdev_ptr_valid;
+            args->vdev_ptr = c_args.vdev_ptr_valid;
             args->data_ptr = c_args.data_ptr_valid;
             break;
 
@@ -467,15 +462,31 @@ void cmd_vdev_communicate_host(void)
             val_set_status(RESULT_FAIL(VAL_ERROR_POINT(3)));
             goto destroy_device;
         }
+
+        cmd_ret = val_host_rmi_vdev_get_state(c_args.vdev_ptr_valid);
+        if (cmd_ret.x0 ||
+            (VAL_EXTRACT_BITS(cmd_ret.x1, 0, 7) != RMI_VDEV_NEW))
+        {
+            LOG(ERROR, "Failed command changed the VDEV state, ret %lx state %lx\n",
+                cmd_ret.x0, VAL_EXTRACT_BITS(cmd_ret.x1, 0, 7));
+            val_set_status(RESULT_FAIL(VAL_ERROR_POINT(4)));
+            goto destroy_device;
+        }
     }
 
     LOG(TEST, "\n\tPositive Observability Check\n");
-    cmd_ret = val_host_rmi_vdev_communicate(c_args.rd_valid, c_args.pdev_ptr_valid,
-                                     c_args.vdev_ptr_valid, c_args.data_ptr_valid);
-    if (cmd_ret.x0 != 0)
+    if (val_host_dev_communicate(&c_args.realm_valid, &c_args.pdev_dev_valid,
+                                 &c_args.vdev_dev_valid, RMI_VDEV_UNLOCKED))
     {
-        LOG(ERROR, "Command failed. %x\n", cmd_ret.x0);
-        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(4)));
+        LOG(ERROR, "VDEV communication failed\n");
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(5)));
+        goto destroy_device;
+    }
+
+    if (!val_host_dev_comm_complete(c_args.vdev_dev_valid.dev_comm_data->exit.flags))
+    {
+        LOG(ERROR, "Communication completed without the complete indication\n");
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(6)));
         goto destroy_device;
     }
 
@@ -483,27 +494,74 @@ void cmd_vdev_communicate_host(void)
     if (cmd_ret.x0)
     {
         LOG(ERROR, "VDEV get state failed ret %lx\n", cmd_ret.x0);
-        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(5)));
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(7)));
         goto destroy_device;
     }
 
     /* Check VDEV state is RMI_VDEV_UNLOCK */
-    if (cmd_ret.x1 != RMI_VDEV_UNLOCKED)
+    if (VAL_EXTRACT_BITS(cmd_ret.x1, 0, 7) != RMI_VDEV_UNLOCKED)
     {
         LOG(ERROR, "VDEV state should be RMI_VDEV_UNLOCK, ret %lx\n", cmd_ret.x1);
-        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(6)));
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(8)));
+        goto destroy_device;
+    }
+
+    cmd_ret = val_host_rmi_vdev_communicate(c_args.rd_valid, c_args.pdev_ptr_valid,
+                                             c_args.vdev_ptr_valid,
+                                             c_args.data_ptr_valid);
+    if (cmd_ret.x0 != RMI_ERROR_DEVICE)
+    {
+        LOG(ERROR, "Expected RMI_ERROR_DEVICE for DEV_COMM_IDLE, ret %lx\n",
+            cmd_ret.x0);
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(9)));
+        goto destroy_device;
+    }
+
+    LOG(TEST, "\n\tCommunication Error Observability Check\n");
+    cmd_ret = val_host_rmi_vdev_lock(c_args.rd_valid, c_args.pdev_ptr_valid,
+                                     c_args.vdev_ptr_valid);
+    if (cmd_ret.x0 != RMI_SUCCESS)
+    {
+        LOG(ERROR, "RMI_VDEV_LOCK failed, ret %lx\n", cmd_ret.x0);
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(10)));
+        goto destroy_device;
+    }
+
+    if (val_host_dev_communicate_error(&c_args.realm_valid,
+                                       &c_args.pdev_dev_valid,
+                                       &c_args.vdev_dev_valid))
+    {
+        LOG(ERROR, "Failed to report VDEV communication error\n");
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(11)));
+        goto destroy_device;
+    }
+
+    cmd_ret = val_host_rmi_vdev_get_state(c_args.vdev_ptr_valid);
+    if (cmd_ret.x0 ||
+        (VAL_EXTRACT_BITS(cmd_ret.x1, 0, 7) != RMI_VDEV_ERROR))
+    {
+        LOG(ERROR, "VDEV state should be RMI_VDEV_ERROR, ret %lx state %lx\n",
+            cmd_ret.x0, VAL_EXTRACT_BITS(cmd_ret.x1, 0, 7));
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(12)));
         goto destroy_device;
     }
 
     val_set_status(RESULT_PASS(VAL_SUCCESS));
 
 destroy_device:
+    if (c_args_invalid.realm_invalid.rd &&
+        val_host_realm_destroy(c_args_invalid.realm_invalid.rd))
+    {
+        LOG(ERROR, "Invalid Realm teardown failed\n");
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(13)));
+    }
+
     if (c_args.vdev_ptr_valid &&
         val_host_vdev_teardown(&c_args.realm_valid, &c_args.pdev_dev_valid,
                                &c_args.vdev_dev_valid))
     {
         LOG(ERROR, "VDEV teardown failed\n");
-        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(8)));
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(14)));
         goto exit;
     }
 
@@ -511,7 +569,7 @@ destroy_device:
         val_host_pdev_teardown(&c_args.pdev_dev_valid, c_args.pdev_ptr_valid))
     {
         LOG(ERROR, "PDEV teardown failed\n");
-        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(9)));
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(15)));
         goto exit;
     }
 
@@ -519,7 +577,7 @@ destroy_device:
         val_host_pdev_teardown(&c_args_invalid.pdev_dev_invalid, c_args_invalid.pdev_ptr))
     {
         LOG(ERROR, "PDEV teardown failed\n");
-        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(11)));
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(16)));
         goto exit;
     }
 

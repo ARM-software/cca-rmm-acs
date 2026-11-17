@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023-2025, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023-2026, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -56,11 +56,6 @@ static uint64_t intent_to_seq(struct stimulus *test_data, struct arguments *args
         case TOP_UNALIGNED:
             args->base = c_args.base_valid;
             args->top = unaligned_prep_sequence(c_args.top_valid);
-            break;
-
-        case SIZE_INVALID:
-            args->base = c_args.base_valid;
-            args->top = args->base - PAGE_SIZE;
             break;
 
         case REGION_UNPROTECTED:
@@ -121,14 +116,17 @@ void cmd_ipa_state_get_realm(void)
         goto exit;
     }
 
-    if ((cmd_ret.x2 != RSI_RAM) || (VAL_EXTRACT_BITS(cmd_ret.x2, 8, 63) != 0)) {
+    if ((cmd_ret.x1 != c_args.top_valid) ||
+        (cmd_ret.x1 <= c_args.base_valid) ||
+        (cmd_ret.x2 != RSI_RAM) ||
+        (VAL_EXTRACT_BITS(cmd_ret.x2, 8, 63) != 0)) {
         LOG(ERROR, "Positive Observability failed.\n");
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(4)));
         goto exit;
     }
 
+    val_set_status(RESULT_PASS(VAL_SUCCESS));
+
 exit:
     val_realm_return_to_host();
 }
-
-

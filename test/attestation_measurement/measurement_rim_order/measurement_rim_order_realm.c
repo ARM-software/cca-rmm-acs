@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2025, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2025-2026, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -32,6 +32,7 @@ void measurement_rim_order_realm(void)
     gv_realm_host_call.gprs[5] = args.x5;
     gv_realm_host_call.gprs[6] = args.x6;
     gv_realm_host_call.gprs[7] = args.x7;
+    gv_realm_host_call.gprs[8] = args.x8;
 
     val_realm_rsi_host_call_struct((uint64_t)&gv_realm_host_call);
 

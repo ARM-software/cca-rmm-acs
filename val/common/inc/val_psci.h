@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2026, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -10,14 +10,18 @@
 
 #include "val_smc.h"
 
+/* ACS has 1:1 mapping for REC_NUM and REC_MPIDR */
+#define REC_NUM(n) n
+
 #define PSCI_CPU_SUSPEND_AARCH64       0xc4000001
 #define PSCI_CPU_ON_AARCH64            0xc4000003
 #define PSCI_AFFINITY_INFO_AARCH64     0xc4000004
-#define PSCI_VERSION                   0x84000000
-#define PSCI_CPU_OFF                   0x84000002
-#define PSCI_SYSTEM_OFF                0x84000008
-#define PSCI_SYSTEM_RESET              0x84000009
-#define PSCI_FEATURES                  0x8400000A
+#define PSCI_VERSION                   0xc4000000
+#define PSCI_CPU_OFF                   0xc4000002
+#define PSCI_CPU_OFF_HOST              0x84000002
+#define PSCI_SYSTEM_OFF                0xc4000008
+#define PSCI_SYSTEM_RESET              0xc4000009
+#define PSCI_FEATURES                  0xc400000A
 
 #define PSCI_E_OFF                  0x1
 #define PSCI_E_SUCCESS              0x0
@@ -37,6 +41,7 @@ uint64_t val_psci_cpu_on(uint64_t target_cpu,
                         uint64_t entry_point_address,
                         uint64_t context_id);
 uint64_t val_psci_cpu_off(void);
+uint64_t val_psci_cpu_off_host(void);
 uint64_t val_psci_cpu_suspend(uint64_t power_state,
                         uint64_t entry_point_address,
                         uint64_t context_id);

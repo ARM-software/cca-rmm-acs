@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2025, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2025-2026, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -45,7 +45,7 @@ void cmd_multithread_realm_up_host(void)
     }
 
     /* Complete pending PSCI  */
-    ret = val_host_rmi_psci_complete(realm.rec[0], realm.rec[1], PSCI_E_SUCCESS);
+    ret = val_host_rmi_psci_complete(realm.rec[0], PSCI_E_SUCCESS);
     if (ret)
     {
         LOG(ERROR, "val_rmi_psci_complete, ret=%x\n", ret);
@@ -85,7 +85,8 @@ void cmd_multithread_realm_up_host(void)
         goto destroy_realm;
     }
 
-    val_set_status(RESULT_PASS(VAL_SUCCESS));
+    if (IS_TEST_START(val_get_status()))
+        val_set_status(RESULT_PASS(VAL_SUCCESS));
 
     /* Free test resources */
 destroy_realm:

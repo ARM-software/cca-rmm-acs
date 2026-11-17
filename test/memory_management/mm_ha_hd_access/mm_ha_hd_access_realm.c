@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2025, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2025-2026, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -70,6 +70,33 @@ void mm_ha_hd_access_realm(void)
     }
 
 exit:
+    /* Return after completing the Realm stage-1 HA/HD checks. */
     val_exception_setup(NULL, NULL);
+    gv_realm_host_call = val_realm_rsi_host_call_ripas(VAL_SWITCH_TO_HOST);
+
+    /*
+     * The Host supplies an unprotected IPA backed by a read-only stage-2
+     * mapping. The following write must cause a stage-2 permission fault
+     * and exit to the Host.
+     */
+    ipa_base = gv_realm_host_call->gprs[1];
+
+    mem_desc.virtual_address = ipa_base;
+    mem_desc.physical_address = ipa_base;
+    mem_desc.length = PAGE_SIZE;
+    mem_desc.attributes = MT_RW_DATA | MT_REALM;
+    if (val_realm_pgt_create(&mem_desc))
+    {
+        LOG(ERROR, "Unprotected VA to IPA mapping failed\n");
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(5)));
+        goto final_exit;
+    }
+
+    *(volatile uint32_t *)ipa_base = 0x200;
+
+    LOG(ERROR, "Write unexpectedly succeeded through read-only stage-2 mapping\n");
+    val_set_status(RESULT_FAIL(VAL_ERROR_POINT(6)));
+
+final_exit:
     val_realm_return_to_host();
 }

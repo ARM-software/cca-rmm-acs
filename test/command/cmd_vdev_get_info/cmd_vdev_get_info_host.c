@@ -20,7 +20,6 @@ void cmd_vdev_get_info_host(void)
     val_host_rec_exit_ts *rec_exit = NULL;
     val_host_rec_enter_ts *rec_enter = NULL;
     uint64_t ret;
-    val_smc_param_ts args;
     uint64_t out_top;
     uint32_t rp_bdf, status;
     val_host_pdev_flags_ts pdev_flags;
@@ -104,15 +103,7 @@ void cmd_vdev_get_info_host(void)
             goto destroy_device;
         }
 
-        if (rec_exit->exit_reason == RMI_EXIT_VDEV_REQUEST) {
-            args = val_host_rmi_vdev_complete(realm.rec[0], vdev_dev.vdev);
-            if (args.x0)
-            {
-                LOG(ERROR, "VDEV complete failed ret %x\n", args.x0);
-                val_set_status(RESULT_FAIL(VAL_ERROR_POINT(6)));
-                goto destroy_device;
-            }
-        } else if (rec_exit->exit_reason == RMI_EXIT_RIPAS_CHANGE) {
+        if (rec_exit->exit_reason == RMI_EXIT_RIPAS_CHANGE) {
             ret = val_host_rmi_rtt_set_ripas(realm.rd, realm.rec[0], rec_exit->ripas_base,
                                             rec_exit->ripas_top, &out_top);
             if (ret)
@@ -141,47 +132,29 @@ void cmd_vdev_get_info_host(void)
         goto destroy_device;
     }
 
-    if (rec_exit->exit_reason == RMI_EXIT_VDEV_REQUEST) {
-        args = val_host_rmi_vdev_complete(realm.rec[0], vdev_dev.vdev);
-        if (args.x0)
-        {
-            LOG(ERROR, "VDEV complete failed ret %x\n", args.x0);
-            val_set_status(RESULT_FAIL(VAL_ERROR_POINT(10)));
-            goto destroy_device;
-        }
-    }
-
-    /* Enter realm.rec[0]  */
-    ret = val_host_rmi_rec_enter(realm.rec[0], realm.run[0]);
-    if (ret)
-    {
-        LOG(ERROR, "\tRec enter failed, ret=%x\n", ret);
-        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(11)));
-        goto destroy_device;
-    }
-
     /* Check that REC Exit was due to host call*/
     if (rec_exit->exit_reason != RMI_EXIT_HOST_CALL) {
         LOG(ERROR, "\tUnexpected REC exit, %d. ESR: %lx \n", rec_exit->exit_reason,
                                                                     rec_exit->esr);
-        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(12)));
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(10)));
         goto destroy_device;
     }
 
-    val_set_status(RESULT_PASS(VAL_SUCCESS));
+    if (IS_TEST_START(val_get_status()))
+        val_set_status(RESULT_PASS(VAL_SUCCESS));
 
 destroy_device:
     if (vdev_dev.vdev &&
         val_host_vdev_teardown(&realm, &pdev_dev, &vdev_dev))
     {
-        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(13)));
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(11)));
         goto exit;
     }
 
     if (pdev_dev.pdev &&
         val_host_pdev_teardown(&pdev_dev, pdev_dev.pdev))
     {
-        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(14)));
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(12)));
         goto exit;
     }
 

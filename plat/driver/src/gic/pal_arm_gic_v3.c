@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2026, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -111,6 +111,14 @@ unsigned int arm_gic_is_intr_pending(unsigned int num)
 void arm_gic_intr_clear(unsigned int num)
 {
     gicv3_set_icpendr(num);
+}
+
+void arm_gic_intr_set_pending(unsigned int num)
+{
+    if (!IS_SPI(num)) {
+        return;
+    }
+    gicv3_set_ispendr(num);
 }
 
 void arm_gic_end_of_intr(unsigned int raw_iar)

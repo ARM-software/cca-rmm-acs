@@ -79,6 +79,7 @@ if(NOT ${SUITE} STREQUAL "command")
 endif()
 
 list(APPEND TEST_SRC ${COMMAND_TEST_SRC})
+list(REMOVE_DUPLICATES TEST_SRC)
 list(APPEND TEST_SRC
     ${ROOT_DIR}/test/database/test_database_realm.c
 )
@@ -101,6 +102,29 @@ else()
 
 # test source directory
 set(TEST_SOURCE_DIR ${ROOT_DIR}/test)
+
+# Only suites with attestation tests need the shared QCBOR support.
+set(ATTESTATION_SUPPORT_LIB "")
+if(SUITE STREQUAL "all" OR SUITE STREQUAL "command" OR
+   SUITE STREQUAL "attestation_measurement")
+    set(ATTESTATION_SUPPORT_LIB ${EXE_NAME}_attestation_support_lib)
+    add_library(${ATTESTATION_SUPPORT_LIB} STATIC
+        "${TEST_SOURCE_DIR}/common/attestation_realm.c"
+        "${RMM_ACS_TARGET_QCBOR}/src/qcbor_decode.c"
+        "${RMM_ACS_TARGET_QCBOR}/src/UsefulBuf.c"
+        "${RMM_ACS_TARGET_QCBOR}/src/ieee754.c"
+    )
+    target_include_directories(${ATTESTATION_SUPPORT_LIB} PRIVATE ${TEST_INCLUDE})
+    target_link_libraries(${ATTESTATION_SUPPORT_LIB} PUBLIC ${XLAT-LIB})
+    list(APPEND COMPILE_LIST
+        "${TEST_SOURCE_DIR}/common/attestation_realm.c"
+        "${RMM_ACS_TARGET_QCBOR}/src/qcbor_decode.c"
+        "${RMM_ACS_TARGET_QCBOR}/src/UsefulBuf.c"
+        "${RMM_ACS_TARGET_QCBOR}/src/ieee754.c"
+    )
+    set(COMPILE_LIST ${COMPILE_LIST} PARENT_SCOPE)
+endif()
+
 if(SUITE STREQUAL "all")
     # Get all the test pool components
     _get_sub_dir_list(SUITE_LIST ${TEST_SOURCE_DIR})
@@ -121,18 +145,13 @@ foreach(SUITE ${SUITE_LIST})
     foreach(TEST ${TEST_LIST})
         #message(STATUS "[ACS] : Compiling sources from ${TEST} Test")
         file(GLOB TEST_SRC "${TEST_SOURCE_DIR}/${SUITE}/${TEST}/${TEST}_realm.c")
-        if(${SUITE} STREQUAL "attestation_measurement")
-            list(APPEND TEST_SRC
-                    "${RMM_ACS_TARGET_QCBOR}/src/qcbor_decode.c"
-                    "${RMM_ACS_TARGET_QCBOR}/src/UsefulBuf.c"
-                    "${RMM_ACS_TARGET_QCBOR}/src/ieee754.c"
-                )
-        endif()
         if(${SUITE} STREQUAL "planes" OR ${SUITE} STREQUAL "device_assignment")
             list(APPEND TEST_SRC ${TEST_SOURCE_DIR}/${SUITE}/*/${TEST}/${TEST}_realm.c)
         endif()
         list(APPEND TEST_SRC ${TEST_SOURCE_DIR}/database/test_database_realm.c)
         file(GLOB TEST_COMMON_FILE ${TEST_SOURCE_DIR}/common/*_realm.c)
+        list(REMOVE_ITEM TEST_COMMON_FILE
+            "${TEST_SOURCE_DIR}/common/attestation_realm.c")
         foreach(COMMON_FILE1 ${TEST_COMMON_FILE})
             list(APPEND TEST_SRC ${COMMON_FILE1})
         endforeach()
@@ -150,7 +169,8 @@ foreach(SUITE ${SUITE_LIST})
         target_include_directories(${TEST_LIB} PRIVATE ${TEST_INCLUDE})
         target_link_libraries(${TEST_LIB} PUBLIC ${XLAT-LIB})
         file(MAKE_DIRECTORY ${BUILD}/output/${SUITE}/${TEST})
-        create_executable(${EXE_NAME} ${BUILD}/output/${SUITE}/${TEST} ${TEST})
+        create_executable(${EXE_NAME} ${BUILD}/output/${SUITE}/${TEST}
+            ${TEST} ${ATTESTATION_SUPPORT_LIB})
         remove_definitions(-Dd_${TEST})
         unset(TEST_SRC)
     endforeach()

@@ -92,7 +92,8 @@ uint64_t interface_report_decoding(uint8_t *report_buff,
             value = 0;
             for (k = 1; k <= mmio_range_size_in_bytes[j]; k++)
             {
-                value = value | report_buff[offset - k] << (8 * (mmio_range_size_in_bytes[j] - k));
+                value |= ((uint64_t)report_buff[offset - k]) <<
+                         (8U * (mmio_range_size_in_bytes[j] - k));
             }
 
             switch (j)

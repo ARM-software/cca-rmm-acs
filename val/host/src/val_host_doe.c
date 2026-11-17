@@ -9,7 +9,8 @@
 #include "val_host_doe.h"
 
 uint64_t val_host_pcie_doe_communicate(uint32_t bdf, uint32_t doe_cap_base,
-             void *req_buf, size_t req_sz, void *rsp_buf, size_t *rsp_sz, uint8_t req_type)
+             void *req_buf, size_t req_sz, void *rsp_buf, size_t rsp_buf_sz,
+             size_t *rsp_sz, uint8_t req_type)
 {
     uint64_t rc;
 
@@ -21,7 +22,7 @@ uint64_t val_host_pcie_doe_communicate(uint32_t bdf, uint32_t doe_cap_base,
     }
 
     rc = val_host_pcie_doe_recv_resp(bdf, doe_cap_base, (uint32_t *)rsp_buf,
-                rsp_sz);
+                                     rsp_buf_sz, rsp_sz);
     return rc;
 }
 
@@ -84,38 +85,52 @@ uint32_t val_host_pcie_doe_send_req(uint32_t bdf, uint32_t doe_cap_base, uint32_
   @return  success/failure
 **/
 uint32_t val_host_pcie_doe_recv_resp(uint32_t bdf, uint32_t doe_cap_base, uint32_t *resp_addr,
-                                                                  uint64_t *resp_len)
+                                      size_t resp_buf_sz, uint64_t *resp_len)
 {
-    uint32_t value, length;
+    uint32_t value, status;
+    uint32_t header1 = 0U, header2 = 0U, length, payload_length;
     uint64_t i;
 
-    val_pcie_read_cfg(bdf, doe_cap_base + DOE_STATUS_REG, &value);
-    if (!(VAL_EXTRACT_BITS(value, DOE_STATUS_REG_READY, DOE_STATUS_REG_READY)))
+    val_pcie_read_cfg(bdf, doe_cap_base + DOE_STATUS_REG, &status);
+    if (!(VAL_EXTRACT_BITS(status, DOE_STATUS_REG_READY, DOE_STATUS_REG_READY)))
     {
-        LOG(ERROR, "DOE Ready bit is not set: %x\n", value);
+        LOG(ERROR, "DOE Ready bit is not set: status=0x%x, BDF=0x%x, DOE cap=0x%x\n",
+            status, bdf, doe_cap_base);
         return VAL_ERROR;
     }
 
-    val_pcie_read_cfg(bdf, doe_cap_base + DOE_STATUS_REG, &value);
+    val_pcie_read_cfg(bdf, doe_cap_base + DOE_STATUS_REG, &status);
 
-    if (VAL_EXTRACT_BITS(value, DOE_STATUS_REG_ERROR, DOE_STATUS_REG_ERROR))
+    if (VAL_EXTRACT_BITS(status, DOE_STATUS_REG_ERROR, DOE_STATUS_REG_ERROR))
     {
-        LOG(ERROR, "DOE Error bit is set\n");
+        LOG(ERROR, "DOE Error bit is set: status=0x%x, BDF=0x%x, DOE cap=0x%x\n",
+            status, bdf, doe_cap_base);
         return VAL_ERROR;
     }
 
     /* Reading DOE Header 1 */
-    val_pcie_read_cfg(bdf, doe_cap_base + DOE_READ_DATA_MAILBOX_REG, &value);
+    val_pcie_read_cfg(bdf, doe_cap_base + DOE_READ_DATA_MAILBOX_REG, &header1);
     val_pcie_write_cfg(bdf, doe_cap_base + DOE_READ_DATA_MAILBOX_REG, 0);
 
     /* Reading DOE Header 2 - Length */
-    val_pcie_read_cfg(bdf, doe_cap_base + DOE_READ_DATA_MAILBOX_REG, &value);
+    val_pcie_read_cfg(bdf, doe_cap_base + DOE_READ_DATA_MAILBOX_REG, &header2);
     val_pcie_write_cfg(bdf, doe_cap_base + DOE_READ_DATA_MAILBOX_REG, 0);
 
-    length = value - VAL_HOST_DOE_HEADER_LENGTH;
-    *resp_len = (uint64_t)length * 4;
+    length = VAL_EXTRACT_BITS(header2, 0, VAL_HOST_DOE_LENGTH_END_BIT);
+    if ((length < VAL_HOST_DOE_HEADER_LENGTH) ||
+        ((length - VAL_HOST_DOE_HEADER_LENGTH) >
+         (resp_buf_sz / sizeof(uint32_t))))
+    {
+        LOG(ERROR, "Invalid DOE response length: 0x%x, BDF=0x%x, DOE cap=0x%x, "
+            "status=0x%x, header1=0x%x, header2=0x%x\n",
+            length, bdf, doe_cap_base, status, header1, header2);
+        return VAL_ERROR;
+    }
 
-    for (i = 0; i < length; i++)
+    payload_length = length - VAL_HOST_DOE_HEADER_LENGTH;
+    *resp_len = (uint64_t)payload_length * sizeof(uint32_t);
+
+    for (i = 0; i < payload_length; i++)
     {
         val_pcie_read_cfg(bdf, doe_cap_base + DOE_READ_DATA_MAILBOX_REG, &value);
         val_pcie_write_cfg(bdf, doe_cap_base + DOE_READ_DATA_MAILBOX_REG, 0);

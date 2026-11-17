@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023-2025, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023-2026, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -69,7 +69,8 @@ void exception_non_emulatable_da_host(void)
 
     /* validates the Rec Exit due to DA */
     if (validate_rec_exit_da(rec_exit, realm.granules[index].ipa,
-                                ESR_ISS_DFSC_PF_L3, NON_EMULATABLE_DA, 0))
+                                ESR_ISS_DFSC_PF_L3,
+                                NON_EMULATABLE_DA_UNPROTECTED, ESR_WnR_READ))
     {
         LOG(ERROR, "REC exit ESR params mismatch\n");
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(7)));

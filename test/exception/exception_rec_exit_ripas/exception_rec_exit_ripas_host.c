@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2025, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2025-2026, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -94,7 +94,7 @@ void exception_rec_exit_ripas_host(void)
     }
     exception_rec_exit.ripas_base = ripas_ipa;
     exception_rec_exit.ripas_top = ripas_ipa + ripas_size;
-    exception_rec_exit.ripas_value = RSI_EMPTY;
+    exception_rec_exit.ripas_value = RMI_EMPTY;
     exception_rec_exit.exception_ripas_exit_intent = EXCEPTION_RIPAS_EXIT_ACCEPT;
     exception_rec_exit.realm = &realm;
     ret = exception_validate_rec_exit_ripas(exception_rec_exit);
@@ -136,7 +136,7 @@ void exception_rec_exit_ripas_host(void)
     }
     exception_rec_exit.ripas_base = ripas_ipa;
     exception_rec_exit.ripas_top = ripas_ipa + ripas_size;
-    exception_rec_exit.ripas_value = RSI_RAM;
+    exception_rec_exit.ripas_value = RMI_RAM;
     exception_rec_exit.exception_ripas_exit_intent = EXCEPTION_RIPAS_EXIT_ACCEPT;
     exception_rec_exit.realm = &realm;
     ret = exception_validate_rec_exit_ripas(exception_rec_exit);
@@ -178,7 +178,7 @@ void exception_rec_exit_ripas_host(void)
     }
     exception_rec_exit.ripas_base = ripas_ipa;
     exception_rec_exit.ripas_top = ripas_ipa + ripas_size;
-    exception_rec_exit.ripas_value = RSI_EMPTY;
+    exception_rec_exit.ripas_value = RMI_EMPTY;
     exception_rec_exit.exception_ripas_exit_intent = EXCEPTION_RIPAS_EXIT_PARTIAL;
     exception_rec_exit.realm = &realm;
     ret = exception_validate_rec_exit_ripas(exception_rec_exit);
@@ -220,7 +220,7 @@ void exception_rec_exit_ripas_host(void)
     }
     exception_rec_exit.ripas_base = ripas_ipa + 0x1000;
     exception_rec_exit.ripas_top = ripas_ipa + 0x2000;
-    exception_rec_exit.ripas_value = RSI_EMPTY;
+    exception_rec_exit.ripas_value = RMI_EMPTY;
     exception_rec_exit.exception_ripas_exit_intent = EXCEPTION_RIPAS_EXIT_REJECT;
     exception_rec_exit.realm = &realm;
     ret = exception_validate_rec_exit_ripas(exception_rec_exit);

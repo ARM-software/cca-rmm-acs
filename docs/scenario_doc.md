@@ -12,6 +12,7 @@ This document provides a consolidated list of scenario documents designed to tes
 | [Memory Management](./memory_management_scenarios.md) |
 | [Planes](./planes_scenarios.rst) |
 | [PMU and Debug](./pmu_debug.md) |
+| [PSMMU](./psmmu_scenarios.md) |
 | [RHI](./rhi_scenarios.md) |
 
 ## License

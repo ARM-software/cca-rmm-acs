@@ -10,17 +10,21 @@
 
 /*command testcase declaration starts here*/
 DECLARE_TEST_FN(cmd_rmi_version);
-DECLARE_TEST_FN(cmd_granule_delegate);
-DECLARE_TEST_FN(cmd_granule_undelegate);
+DECLARE_TEST_FN(cmd_granule_range_delegate);
+DECLARE_TEST_FN(cmd_granule_range_undelegate);
+DECLARE_TEST_FN(cmd_granule_tracking_get);
+DECLARE_TEST_FN(cmd_granule_tracking_set);
+DECLARE_TEST_FN(cmd_gpt_l1_create);
+DECLARE_TEST_FN(cmd_gpt_l1_destroy);
 DECLARE_TEST_FN(cmd_realm_create);
 DECLARE_TEST_FN(cmd_rsi_version);
 DECLARE_TEST_FN(cmd_realm_activate);
 DECLARE_TEST_FN(cmd_rtt_read_entry);
 DECLARE_TEST_FN(cmd_rtt_init_ripas);
 DECLARE_TEST_FN(cmd_rtt_create);
-DECLARE_TEST_FN(cmd_data_create);
-DECLARE_TEST_FN(cmd_data_create_unknown);
-DECLARE_TEST_FN(cmd_rtt_map_unprotected);
+DECLARE_TEST_FN(cmd_rtt_data_map_init);
+DECLARE_TEST_FN(cmd_rtt_data_map);
+DECLARE_TEST_FN(cmd_rtt_unprot_map);
 DECLARE_TEST_FN(cmd_rec_create);
 DECLARE_TEST_FN(cmd_rec_enter);
 DECLARE_TEST_FN(cmd_realm_config);
@@ -28,12 +32,20 @@ DECLARE_TEST_FN(cmd_ipa_state_get);
 DECLARE_TEST_FN(cmd_ipa_state_set);
 DECLARE_TEST_FN(cmd_psci_complete);
 DECLARE_TEST_FN(cmd_rmi_features);
-DECLARE_TEST_FN(cmd_rec_aux_count);
-DECLARE_TEST_FN(cmd_data_destroy);
+DECLARE_TEST_FN(cmd_rmm_activate);
+DECLARE_TEST_FN(cmd_rmm_state_get);
+DECLARE_TEST_FN(cmd_rmm_config_get);
+DECLARE_TEST_FN(cmd_rmm_config_set);
+DECLARE_TEST_FN(cmd_op_cancel);
+DECLARE_TEST_FN(cmd_op_continue);
+DECLARE_TEST_FN(cmd_op_mem_donate);
+DECLARE_TEST_FN(cmd_op_mem_reclaim);
+DECLARE_TEST_FN(cmd_rtt_data_unmap);
 DECLARE_TEST_FN(cmd_realm_destroy);
+DECLARE_TEST_FN(cmd_realm_terminate);
 DECLARE_TEST_FN(cmd_rec_destroy);
 DECLARE_TEST_FN(cmd_rtt_destroy);
-DECLARE_TEST_FN(cmd_rtt_unmap_unprotected);
+DECLARE_TEST_FN(cmd_rtt_unprot_unmap);
 DECLARE_TEST_FN(cmd_psci_version);
 DECLARE_TEST_FN(cmd_psci_features);
 DECLARE_TEST_FN(cmd_cpu_off);
@@ -66,12 +78,15 @@ DECLARE_TEST_FN(cmd_plane_reg_read);
 DECLARE_TEST_FN(cmd_plane_reg_write);
 DECLARE_TEST_FN(cmd_mec_set_shared);
 DECLARE_TEST_FN(cmd_mec_set_private);
-DECLARE_TEST_FN(cmd_pdev_aux_count);
-DECLARE_TEST_FN(cmd_vdev_aux_count);
 DECLARE_TEST_FN(cmd_pdev_get_state);
 DECLARE_TEST_FN(cmd_vdev_get_state);
 DECLARE_TEST_FN(cmd_pdev_destroy);
 DECLARE_TEST_FN(cmd_pdev_stop);
+DECLARE_TEST_FN(cmd_pdev_stream_connect);
+DECLARE_TEST_FN(cmd_pdev_stream_complete);
+DECLARE_TEST_FN(cmd_pdev_stream_disconnect);
+DECLARE_TEST_FN(cmd_pdev_stream_key_purge);
+DECLARE_TEST_FN(cmd_pdev_stream_key_refresh);
 DECLARE_TEST_FN(cmd_pdev_abort);
 DECLARE_TEST_FN(cmd_vdev_abort);
 DECLARE_TEST_FN(cmd_vdev_get_info);
@@ -82,7 +97,6 @@ DECLARE_TEST_FN(cmd_pdev_communicate);
 DECLARE_TEST_FN(cmd_pdev_set_pubkey);
 DECLARE_TEST_FN(cmd_vdev_destroy);
 DECLARE_TEST_FN(cmd_vdev_communicate);
-DECLARE_TEST_FN(cmd_vdev_complete);
 DECLARE_TEST_FN(cmd_pdev_create);
 DECLARE_TEST_FN(cmd_vdev_create);
 DECLARE_TEST_FN(cmd_vdev_lock);
@@ -90,9 +104,20 @@ DECLARE_TEST_FN(cmd_vdev_start);
 DECLARE_TEST_FN(cmd_vdev_unlock);
 DECLARE_TEST_FN(cmd_vdev_get_interface_report);
 DECLARE_TEST_FN(cmd_vdev_get_measurements);
-DECLARE_TEST_FN(cmd_vdev_map);
-DECLARE_TEST_FN(cmd_vdev_unmap);
-DECLARE_TEST_FN(cmd_rmi_vdev_validate_mapping);
+DECLARE_TEST_FN(cmd_rtt_dev_map);
+DECLARE_TEST_FN(cmd_rtt_dev_unmap);
+DECLARE_TEST_FN(cmd_rtt_dev_validate);
+DECLARE_TEST_FN(cmd_psmmu_info);
+DECLARE_TEST_FN(cmd_psmmu_activate);
+DECLARE_TEST_FN(cmd_psmmu_deactivate);
+DECLARE_TEST_FN(cmd_psmmu_irq_notify);
+DECLARE_TEST_FN(cmd_psmmu_event_consume);
+DECLARE_TEST_FN(cmd_psmmu_st_l2_create);
+DECLARE_TEST_FN(cmd_psmmu_st_l2_destroy);
+DECLARE_TEST_FN(cmd_dpt_l0_create);
+DECLARE_TEST_FN(cmd_dpt_l0_destroy);
+DECLARE_TEST_FN(cmd_dpt_l1_create);
+DECLARE_TEST_FN(cmd_dpt_l1_destroy);
 
 /*command testcase declaration ends here*/
 
@@ -111,7 +136,6 @@ DECLARE_TEST_FN(attestation_rpv_value);
 DECLARE_TEST_FN(attestation_challenge_data_verification);
 DECLARE_TEST_FN(attestation_token_init);
 DECLARE_TEST_FN(attestation_realm_measurement_type);
-DECLARE_TEST_FN(attestation_platform_challenge_size);
 DECLARE_TEST_FN(attestation_rem_extend_check);
 DECLARE_TEST_FN(attestation_rem_extend_check_realm_token);
 DECLARE_TEST_FN(attestation_rec_exit_irq);
@@ -122,10 +146,29 @@ DECLARE_TEST_FN(mm_ripas_change);
 DECLARE_TEST_FN(mm_ripas_change_reject);
 DECLARE_TEST_FN(mm_ripas_change_partial);
 DECLARE_TEST_FN(mm_hipas_assigned_ripas_empty_da_ia);
+DECLARE_TEST_FN(mm_rsi_ripas_empty_protected_ipa);
 DECLARE_TEST_FN(mm_hipas_unassigned_ns_da_ia);
 DECLARE_TEST_FN(mm_unprotected_ipa_boundary);
 DECLARE_TEST_FN(mm_protected_ipa_boundary);
 DECLARE_TEST_FN(mm_gpf_exception);
+DECLARE_TEST_FN(mm_rmi_physical_granule_size);
+DECLARE_TEST_FN(mm_supported_rmi_granule_sizes);
+DECLARE_TEST_FN(mm_rmi_granule_size_not_smaller);
+DECLARE_TEST_FN(mm_granule_tracking_set_sro_reclaim);
+DECLARE_TEST_FN(mm_rtt_data_map_init_tracking);
+DECLARE_TEST_FN(mm_rtt_data_map_init_granule_state);
+DECLARE_TEST_FN(mm_gpt_l1_create_sro_donate);
+DECLARE_TEST_FN(mm_gpt_l1_destroy_sro_reclaim);
+DECLARE_TEST_FN(mm_sro_reclaim_request);
+DECLARE_TEST_FN(mm_sro_reclaim_more);
+DECLARE_TEST_FN(mm_sro_reclaim_complete);
+DECLARE_TEST_FN(mm_sro_cancel_donate_request);
+DECLARE_TEST_FN(mm_sro_cancel_reclaim_request);
+DECLARE_TEST_FN(mm_sro_cancel_observable_rejected);
+DECLARE_TEST_FN(mm_rmi_granule_tracking_region_size);
+DECLARE_TEST_FN(mm_sro_invalid_donation);
+DECLARE_TEST_FN(mm_sro_invalid_handle);
+DECLARE_TEST_FN(mm_sro_intermediate_continue);
 DECLARE_TEST_FN(mm_rtt_translation_table);
 DECLARE_TEST_FN(mm_rtt_fold_assigned);
 DECLARE_TEST_FN(mm_rtt_fold_unassigned);
@@ -166,18 +209,27 @@ DECLARE_TEST_FN(exception_non_emulatable_da_3);
 /*Exception model declaration ends here*/
 
 /*GIC testcase declaration starts here*/
-DECLARE_TEST_FN(gic_hcr_invalid);
-DECLARE_TEST_FN(gic_ctrl_list_invalid);
-DECLARE_TEST_FN(gic_ctrl_list);
-DECLARE_TEST_FN(gic_obsv_vmcr);
-DECLARE_TEST_FN(gic_timer_val_read);
-DECLARE_TEST_FN(gic_timer_rel1_trig);
-DECLARE_TEST_FN(gic_timer_nsel2_trig);
-DECLARE_TEST_FN(gic_ctrl_hcr);
+DECLARE_TEST_FN(gic_rec_entry_gic_state_preserved);
+DECLARE_TEST_FN(gic_lr_hw_rejected);
+DECLARE_TEST_FN(gic_pmr_masks_irq_exit);
+DECLARE_TEST_FN(gic_rec_exit_gic_state_preserved);
+DECLARE_TEST_FN(gic_rec_exit_vgic_disabled);
+DECLARE_TEST_FN(gic_sgi_sysreg_write_trap);
+DECLARE_TEST_FN(gic_trapped_icc_sysreg_access);
+DECLARE_TEST_FN(gic_arch_timer_available);
+DECLARE_TEST_FN(gic_el2_timer_asserts);
+DECLARE_TEST_FN(gic_counter_monotonic);
+DECLARE_TEST_FN(gic_counter_equal);
+DECLARE_TEST_FN(gic_el1_timer_irq_exit);
+DECLARE_TEST_FN(gic_rec_exit_timer_state);
 /*GIC testcase declaration ends here*/
 
 /*PMU and DEBUG testcase declaration starts here*/
 DECLARE_TEST_FN(pmu_overflow);
+DECLARE_TEST_FN(debug_feature_discovery);
+DECLARE_TEST_FN(pmu_assigned_state);
+DECLARE_TEST_FN(pmu_host_retained);
+DECLARE_TEST_FN(pmu_cycle_counter);
 /*PMU and DEBUG testcase declaration ends here*/
 
 /* Planes test declaration starts here */
@@ -220,8 +272,33 @@ DECLARE_TEST_FN(lfa_test);
 
 /*DA testcase declaration starts here*/
 DECLARE_TEST_FN(da_offchip_pcie);
+DECLARE_TEST_FN(da_spdm_measurement_cache);
+DECLARE_TEST_FN(da_spdm_measurement_signature);
+DECLARE_TEST_FN(da_spdm_measurement_reference);
+DECLARE_TEST_FN(da_pdev_stream_ncoh_addr_range);
+DECLARE_TEST_FN(da_pdev_stream_addr_overlap);
+DECLARE_TEST_FN(da_pdev_stream_ide_sid_unique);
+DECLARE_TEST_FN(da_pdev_stream_rid_overlap);
 DECLARE_TEST_FN(da_pdev_single_active_transaction);
+DECLARE_TEST_FN(da_pdev_create_tdisp_en);
+DECLARE_TEST_FN(da_pdev_max_num_vdevs);
+DECLARE_TEST_FN(da_integrated_pdev_rid_range);
+DECLARE_TEST_FN(da_pdev_ready_secure_comm);
 /*DA testcase declaration ends here*/
+
+
+/*PSMMU testcase declaration starts here*/
+DECLARE_TEST_FN(psmmu_activate_sro_donate);
+DECLARE_TEST_FN(psmmu_deactivate_sro_reclaim);
+DECLARE_TEST_FN(psmmu_st_l2_create_sro_donate);
+DECLARE_TEST_FN(psmmu_st_l2_destroy_sro_reclaim);
+DECLARE_TEST_FN(psmmu_interrupt_handling);
+DECLARE_TEST_FN(dpt_l0_create_sro_donate);
+DECLARE_TEST_FN(dpt_l0_create_alignment);
+DECLARE_TEST_FN(dpt_l0_destroy_sro_reclaim);
+DECLARE_TEST_FN(dpt_l1_create_sro_donate);
+DECLARE_TEST_FN(dpt_l1_destroy_sro_reclaim);
+/*PSMMU testcase declaration ends here*/
 
 /*RHI testcase declaration starts here*/
 DECLARE_TEST_FN(rhi_session_version);
@@ -252,16 +329,28 @@ DECLARE_TEST_FN(rhi_da_vdev_set_tdi_state);
 #else /* TEST_FUNC_DATABASE */
 /* Add test funcs to the respective host/realm/secure test_list array */
 #if (defined(d_all) || defined(d_command))
-    #if (defined(RMM_V_1_0))
+    #if (defined(RMM_V_2_0))
         #if (defined(TEST_COMBINE) || defined(d_cmd_rmi_version))
         HOST_TEST(command, command, cmd_rmi_version),
         #endif
-        #if (defined(TEST_COMBINE) || defined(d_cmd_granule_delegate))
-        HOST_TEST(command, command, cmd_granule_delegate),
+        #if (defined(TEST_COMBINE) || defined(d_cmd_granule_range_delegate))
+        HOST_TEST(command, command, cmd_granule_range_delegate),
         #endif
-        #if (defined(TEST_COMBINE) || defined(d_cmd_granule_undelegate))
-        HOST_TEST(command, command, cmd_granule_undelegate),
+        #if (defined(TEST_COMBINE) || defined(d_cmd_granule_range_undelegate))
+        HOST_TEST(command, command, cmd_granule_range_undelegate),
         #endif
+        #if (defined(TEST_COMBINE) || defined(d_cmd_granule_tracking_get))
+        HOST_TEST(command, command, cmd_granule_tracking_get),
+        #endif
+        #if (defined(TEST_COMBINE) || defined(d_cmd_granule_tracking_set))
+        HOST_TEST(command, command, cmd_granule_tracking_set),
+        #endif
+        // #if (defined(TEST_COMBINE) || defined(d_cmd_gpt_l1_create))
+        // HOST_TEST(command, command, cmd_gpt_l1_create),
+        // #endif
+        // #if (defined(TEST_COMBINE) || defined(d_cmd_gpt_l1_destroy))
+        // HOST_TEST(command, command, cmd_gpt_l1_destroy),
+        // #endif
         #if (defined(TEST_COMBINE) || defined(d_cmd_realm_create))
         HOST_TEST(command, command, cmd_realm_create),
         #endif
@@ -271,23 +360,23 @@ DECLARE_TEST_FN(rhi_da_vdev_set_tdi_state);
         #if (defined(TEST_COMBINE) || defined(d_cmd_rtt_create))
         HOST_TEST(command, command, cmd_rtt_create),
         #endif
-        #if (defined(TEST_COMBINE) || defined(d_cmd_rtt_map_unprotected))
-        HOST_TEST(command, command, cmd_rtt_map_unprotected),
+        #if (defined(TEST_COMBINE) || defined(d_cmd_rtt_unprot_map))
+        HOST_TEST(command, command, cmd_rtt_unprot_map),
         #endif
-        #if (defined(TEST_COMBINE) || defined(d_cmd_data_create_unknown))
-        HOST_TEST(command, command, cmd_data_create_unknown),
+        #if (defined(TEST_COMBINE) || defined(d_cmd_rtt_data_map))
+        HOST_TEST(command, command, cmd_rtt_data_map),
         #endif
         #if (defined(TEST_COMBINE) || defined(d_cmd_rmi_features))
         HOST_TEST(command, command, cmd_rmi_features),
         #endif
-        #if (defined(TEST_COMBINE) || defined(d_cmd_rec_aux_count))
-        HOST_TEST(command, command, cmd_rec_aux_count),
-        #endif
-        #if (defined(TEST_COMBINE) || defined(d_cmd_data_destroy))
-        HOST_TEST(command, command, cmd_data_destroy),
+        #if (defined(TEST_COMBINE) || defined(d_cmd_rtt_data_unmap))
+        HOST_TEST(command, command, cmd_rtt_data_unmap),
         #endif
         #if (defined(TEST_COMBINE) || defined(d_cmd_realm_destroy))
         HOST_TEST(command, command, cmd_realm_destroy),
+        #endif
+        #if (defined(TEST_COMBINE) || defined(d_cmd_realm_terminate))
+        HOST_TEST(command, command, cmd_realm_terminate),
         #endif
         #if (defined(TEST_COMBINE) || defined(d_cmd_rec_destroy))
         HOST_TEST(command, command, cmd_rec_destroy),
@@ -295,8 +384,8 @@ DECLARE_TEST_FN(rhi_da_vdev_set_tdi_state);
         #if (defined(TEST_COMBINE) || defined(d_cmd_rtt_destroy))
         HOST_TEST(command, command, cmd_rtt_destroy),
         #endif
-        #if (defined(TEST_COMBINE) || defined(d_cmd_rtt_unmap_unprotected))
-        HOST_TEST(command, command, cmd_rtt_unmap_unprotected),
+        #if (defined(TEST_COMBINE) || defined(d_cmd_rtt_unprot_unmap))
+        HOST_TEST(command, command, cmd_rtt_unprot_unmap),
         #endif
         #if (defined(TEST_COMBINE) || defined(d_cmd_rtt_fold))
         HOST_TEST(command, command, cmd_rtt_fold),
@@ -310,14 +399,32 @@ DECLARE_TEST_FN(rhi_da_vdev_set_tdi_state);
         #if (defined(TEST_COMBINE) || defined(d_cmd_rtt_init_ripas))
         HOST_REALM_TEST(command, command, cmd_rtt_init_ripas),
         #endif
-        #if (defined(TEST_COMBINE) || defined(d_cmd_data_create))
-        HOST_REALM_TEST(command, command, cmd_data_create),
+        #if (defined(TEST_COMBINE) || defined(d_cmd_rtt_data_map_init))
+        HOST_REALM_TEST(command, command, cmd_rtt_data_map_init),
         #endif
         #if (defined(TEST_COMBINE) || defined(d_cmd_rec_create))
         HOST_REALM_TEST(command, command, cmd_rec_create),
         #endif
         #if (defined(TEST_COMBINE) || defined(d_cmd_rec_enter))
         HOST_REALM_TEST(command, command, cmd_rec_enter),
+        #endif
+        #if (defined(TEST_COMBINE) || defined(d_cmd_rmm_config_get))
+        HOST_TEST(command, command, cmd_rmm_config_get),
+        #endif
+        #if (defined(TEST_COMBINE) || defined(d_cmd_rmm_config_set))
+        HOST_TEST(command, command, cmd_rmm_config_set),
+        #endif
+        #if (defined(TEST_COMBINE) || defined(d_cmd_op_cancel))
+        HOST_TEST(command, command, cmd_op_cancel),
+        #endif
+        #if (defined(TEST_COMBINE) || defined(d_cmd_op_continue))
+        HOST_TEST(command, command, cmd_op_continue),
+        #endif
+        #if (defined(TEST_COMBINE) || defined(d_cmd_op_mem_donate))
+        HOST_TEST(command, command, cmd_op_mem_donate),
+        #endif
+        #if (defined(TEST_COMBINE) || defined(d_cmd_op_mem_reclaim))
+        HOST_TEST(command, command, cmd_op_mem_reclaim),
         #endif
         #if (defined(TEST_COMBINE) || defined(d_cmd_multithread_realm_up))
         HOST_REALM_TEST(command, command, cmd_multithread_realm_up),
@@ -385,7 +492,13 @@ DECLARE_TEST_FN(rhi_da_vdev_set_tdi_state);
         #if (defined(TEST_COMBINE) || defined(d_cmd_secure_test))
         HOST_SECURE_TEST(command, command, cmd_secure_test),
         #endif
-    #endif /* #if (defined(RMM_V_1_0)*/
+        #if (defined(TEST_COMBINE) || defined(d_cmd_rmm_activate))
+        HOST_TEST(command, command, cmd_rmm_activate),
+        #endif
+        #if (defined(TEST_COMBINE) || defined(d_cmd_rmm_state_get))
+        HOST_TEST(command, command, cmd_rmm_state_get),
+        #endif
+    #endif /* #if defined(RMM_V_2_0) */
 #endif /* (SUITE == all || SUITE == command) */
 
 #if (defined(d_all) || defined(d_command) || defined(d_planes_command))
@@ -447,13 +560,7 @@ DECLARE_TEST_FN(rhi_da_vdev_set_tdi_state);
 #endif /* (SUITE == all || SUITE == command || SUITE == mec_command) */
 
 #if (defined(d_all) || defined(d_command) || defined(d_device_assignment_command))
-    #if defined(RMM_V_1_1)
-        #if (defined(TEST_COMBINE) || defined(d_cmd_pdev_aux_count))
-        HOST_TEST(command, device_assignment, cmd_pdev_aux_count),
-        #endif
-        #if (defined(TEST_COMBINE) || defined(d_cmd_vdev_aux_count))
-        HOST_TEST(command, device_assignment, cmd_vdev_aux_count),
-        #endif
+    #if defined(RMM_V_2_0)
         #if (defined(TEST_COMBINE) || defined(d_cmd_pdev_get_state))
         HOST_TEST(command, device_assignment, cmd_pdev_get_state),
         #endif
@@ -478,9 +585,9 @@ DECLARE_TEST_FN(rhi_da_vdev_set_tdi_state);
         #if (defined(TEST_COMBINE) || defined(d_cmd_rsi_vdev_validate_mapping))
         HOST_REALM_TEST(command, device_assignment, cmd_rsi_vdev_validate_mapping),
         #endif
-        //#if (defined(TEST_COMBINE) || defined(d_cmd_vdev_dma_disable))
-        //HOST_REALM_TEST(command, device_assignment, cmd_vdev_dma_disable),
-        //#endif
+        #if (defined(TEST_COMBINE) || defined(d_cmd_vdev_dma_disable))
+        HOST_REALM_TEST(command, device_assignment, cmd_vdev_dma_disable),
+        #endif
         #if (defined(TEST_COMBINE) || defined(d_cmd_pdev_communicate))
         HOST_TEST(command, device_assignment, cmd_pdev_communicate),
         #endif
@@ -496,29 +603,44 @@ DECLARE_TEST_FN(rhi_da_vdev_set_tdi_state);
         #if (defined(TEST_COMBINE) || defined(d_cmd_pdev_create))
         HOST_TEST(command, device_assignment, cmd_pdev_create),
         #endif
+        #if (defined(TEST_COMBINE) || defined(d_cmd_pdev_stream_connect))
+        HOST_TEST(command, device_assignment, cmd_pdev_stream_connect),
+        #endif
+        #if (defined(TEST_COMBINE) || defined(d_cmd_pdev_stream_complete))
+        HOST_TEST(command, device_assignment, cmd_pdev_stream_complete),
+        #endif
+        #if (defined(TEST_COMBINE) || defined(d_cmd_pdev_stream_disconnect))
+        HOST_TEST(command, device_assignment, cmd_pdev_stream_disconnect),
+        #endif
+        // #if (defined(TEST_COMBINE) || defined(d_cmd_pdev_stream_key_purge))
+        // HOST_TEST(command, device_assignment, cmd_pdev_stream_key_purge),
+        // #endif
+        #if (defined(TEST_COMBINE) || defined(d_cmd_pdev_stream_key_refresh))
+        HOST_TEST(command, device_assignment, cmd_pdev_stream_key_refresh),
+        #endif
         #if (defined(TEST_COMBINE) || defined(d_cmd_vdev_create))
         HOST_TEST(command, device_assignment, cmd_vdev_create),
         #endif
         #if (defined(TEST_COMBINE) || defined(d_cmd_vdev_lock))
         HOST_TEST(command, device_assignment, cmd_vdev_lock),
         #endif
-        #if (defined(TEST_COMBINE) || defined(d_cmd_vdev_map))
-        HOST_REALM_TEST(command, device_assignment, cmd_vdev_map),
+        #if (defined(TEST_COMBINE) || defined(d_cmd_rtt_dev_map))
+        HOST_REALM_TEST(command, device_assignment, cmd_rtt_dev_map),
         #endif
         #if (defined(TEST_COMBINE) || defined(d_cmd_vdev_start))
         HOST_TEST(command, device_assignment, cmd_vdev_start),
         #endif
-        // #if (defined(TEST_COMBINE) || defined(d_cmd_vdev_abort))
-        // HOST_TEST(command, device_assignment, cmd_vdev_abort),
-        // #endif
+        #if (defined(TEST_COMBINE) || defined(d_cmd_vdev_abort))
+        HOST_TEST(command, device_assignment, cmd_vdev_abort),
+        #endif
         #if (defined(TEST_COMBINE) || defined(d_cmd_vdev_unlock))
         HOST_TEST(command, device_assignment, cmd_vdev_unlock),
         #endif
-        #if (defined(TEST_COMBINE) || defined(d_cmd_vdev_unmap))
-        HOST_TEST(command, device_assignment, cmd_vdev_unmap),
+        #if (defined(TEST_COMBINE) || defined(d_cmd_rtt_dev_unmap))
+        HOST_TEST(command, device_assignment, cmd_rtt_dev_unmap),
         #endif
-        #if (defined(TEST_COMBINE) || defined(d_cmd_rmi_vdev_validate_mapping))
-        HOST_REALM_TEST(command, device_assignment, cmd_rmi_vdev_validate_mapping),
+        #if (defined(TEST_COMBINE) || defined(d_cmd_rtt_dev_validate))
+        HOST_REALM_TEST(command, device_assignment, cmd_rtt_dev_validate),
         #endif
         #if (defined(TEST_COMBINE) || defined(d_cmd_vdev_get_interface_report))
         HOST_TEST(command, device_assignment, cmd_vdev_get_interface_report),
@@ -526,14 +648,48 @@ DECLARE_TEST_FN(rhi_da_vdev_set_tdi_state);
         #if (defined(TEST_COMBINE) || defined(d_cmd_vdev_get_measurements))
         HOST_TEST(command, device_assignment, cmd_vdev_get_measurements),
         #endif
-        #if (defined(TEST_COMBINE) || defined(d_cmd_vdev_complete))
-        HOST_REALM_TEST(command, device_assignment, cmd_vdev_complete),
-        #endif
-    #endif /* #if defined(RMM_V_1_1) */
+    #endif /* #if defined(RMM_V_2_0) */
 #endif /* (SUITE == all || SUITE == command || SUITE == device_assignment_command) */
 
+#if (defined(d_all) || defined(d_command) || defined(d_psmmu_command))
+    #if defined(RMM_V_2_0)
+        #if (defined(TEST_COMBINE) || defined(d_cmd_psmmu_info))
+        HOST_TEST(command, psmmu, cmd_psmmu_info),
+        #endif
+        #if (defined(TEST_COMBINE) || defined(d_cmd_psmmu_activate))
+        HOST_TEST(command, psmmu, cmd_psmmu_activate),
+        #endif
+        #if (defined(TEST_COMBINE) || defined(d_cmd_psmmu_deactivate))
+        HOST_TEST(command, psmmu, cmd_psmmu_deactivate),
+        #endif
+        #if (defined(TEST_COMBINE) || defined(d_cmd_psmmu_irq_notify))
+        HOST_TEST(command, psmmu, cmd_psmmu_irq_notify),
+        #endif
+        #if (defined(TEST_COMBINE) || defined(d_cmd_psmmu_event_consume))
+        HOST_TEST(command, psmmu, cmd_psmmu_event_consume),
+        #endif
+        #if (defined(TEST_COMBINE) || defined(d_cmd_psmmu_st_l2_create))
+        HOST_TEST(command, psmmu, cmd_psmmu_st_l2_create),
+        #endif
+        #if (defined(TEST_COMBINE) || defined(d_cmd_psmmu_st_l2_destroy))
+        HOST_TEST(command, psmmu, cmd_psmmu_st_l2_destroy),
+        #endif
+        #if (defined(TEST_COMBINE) || defined(d_cmd_dpt_l0_create))
+        HOST_TEST(command, psmmu, cmd_dpt_l0_create),
+        #endif
+        #if (defined(TEST_COMBINE) || defined(d_cmd_dpt_l0_destroy))
+        HOST_TEST(command, psmmu, cmd_dpt_l0_destroy),
+        #endif
+        #if (defined(TEST_COMBINE) || defined(d_cmd_dpt_l1_create))
+        HOST_TEST(command, psmmu, cmd_dpt_l1_create),
+        #endif
+        #if (defined(TEST_COMBINE) || defined(d_cmd_dpt_l1_destroy))
+        HOST_TEST(command, psmmu, cmd_dpt_l1_destroy),
+        #endif
+    #endif /* #if defined(RMM_V_2_0) */
+#endif /* command/psmmu_command */
 
-#if defined(RMM_V_1_0)
+#if defined(RMM_V_2_0)
     #if (defined(d_all) || defined(d_exception))
         #if (defined(TEST_COMBINE) || defined(d_exception_rec_exit_wfe))
             HOST_REALM_TEST(exception, exception, exception_rec_exit_wfe),
@@ -577,39 +733,68 @@ DECLARE_TEST_FN(rhi_da_vdev_set_tdi_state);
         #if (defined(TEST_COMBINE) || defined(d_exception_non_emulatable_da_3))
             HOST_REALM_TEST(exception, exception, exception_non_emulatable_da_3),
         #endif
-
+        #if (defined(TEST_COMBINE) || defined(d_exception_rec_exit_fiq))
+            HOST_REALM_SECURE_TEST(exception, exception, exception_rec_exit_fiq),
+        #endif
     #endif /* #if (defined(d_all) || defined(d_exception)) */
 
     #if (defined(d_all) || defined(d_gic))
-        #if (defined(TEST_COMBINE) || defined(d_gic_timer_nsel2_trig))
-        HOST_REALM_TEST(gic, gic, gic_timer_nsel2_trig),
+        #if (defined(TEST_COMBINE) || defined(d_gic_rec_entry_gic_state_preserved))
+        HOST_REALM_TEST(gic, gic, gic_rec_entry_gic_state_preserved),
         #endif
-        #if (defined(TEST_COMBINE) || defined(d_gic_hcr_invalid))
-        HOST_REALM_TEST(gic, gic, gic_hcr_invalid),
+        #if (defined(TEST_COMBINE) || defined(d_gic_lr_hw_rejected))
+        HOST_REALM_TEST(gic, gic, gic_lr_hw_rejected),
         #endif
-        #if (defined(TEST_COMBINE) || defined(d_gic_ctrl_list_invalid))
-        HOST_REALM_TEST(gic, gic, gic_ctrl_list_invalid),
+        #if (defined(TEST_COMBINE) || defined(d_gic_pmr_masks_irq_exit))
+        HOST_REALM_TEST(gic, gic, gic_pmr_masks_irq_exit),
         #endif
-        #if (defined(TEST_COMBINE) || defined(d_gic_ctrl_list))
-        HOST_REALM_TEST(gic, gic, gic_ctrl_list),
+        #if (defined(TEST_COMBINE) || defined(d_gic_rec_exit_gic_state_preserved))
+        HOST_REALM_TEST(gic, gic, gic_rec_exit_gic_state_preserved),
         #endif
-        #if (defined(TEST_COMBINE) || defined(d_gic_obsv_vmcr))
-        HOST_REALM_TEST(gic, gic, gic_obsv_vmcr),
+        #if (defined(TEST_COMBINE) || defined(d_gic_rec_exit_vgic_disabled))
+        HOST_REALM_TEST(gic, gic, gic_rec_exit_vgic_disabled),
         #endif
-        #if (defined(TEST_COMBINE) || defined(d_gic_timer_val_read))
-        HOST_REALM_TEST(gic, gic, gic_timer_val_read),
+        #if (defined(TEST_COMBINE) || defined(d_gic_sgi_sysreg_write_trap))
+        HOST_REALM_TEST(gic, gic, gic_sgi_sysreg_write_trap),
         #endif
-        #if (defined(TEST_COMBINE) || defined(d_gic_timer_rel1_trig))
-        HOST_REALM_TEST(gic, gic, gic_timer_rel1_trig),
+        #if (defined(TEST_COMBINE) || defined(d_gic_trapped_icc_sysreg_access))
+        HOST_REALM_TEST(gic, gic, gic_trapped_icc_sysreg_access),
         #endif
-        #if (defined(TEST_COMBINE) || defined(d_gic_ctrl_hcr))
-        HOST_REALM_TEST(gic, gic, gic_ctrl_hcr),
+        #if (defined(TEST_COMBINE) || defined(d_gic_arch_timer_available))
+        HOST_REALM_TEST(gic, gic, gic_arch_timer_available),
+        #endif
+        #if (defined(TEST_COMBINE) || defined(d_gic_el2_timer_asserts))
+        HOST_REALM_TEST(gic, gic, gic_el2_timer_asserts),
+        #endif
+        #if (defined(TEST_COMBINE) || defined(d_gic_counter_monotonic))
+        HOST_REALM_TEST(gic, gic, gic_counter_monotonic),
+        #endif
+        #if (defined(TEST_COMBINE) || defined(d_gic_counter_equal))
+        HOST_REALM_TEST(gic, gic, gic_counter_equal),
+        #endif
+        #if (defined(TEST_COMBINE) || defined(d_gic_el1_timer_irq_exit))
+        HOST_REALM_TEST(gic, gic, gic_el1_timer_irq_exit),
+        #endif
+        #if (defined(TEST_COMBINE) || defined(d_gic_rec_exit_timer_state))
+        HOST_REALM_TEST(gic, gic, gic_rec_exit_timer_state),
         #endif
     #endif /* #if (defined(d_all) || defined(d_gic)) */
 
     #if (defined(d_all) || defined(d_pmu_debug))
         #if (defined(TEST_COMBINE) || defined(d_pmu_overflow))
         HOST_REALM_TEST(pmu_debug, pmu_debug, pmu_overflow),
+        #endif
+        #if (defined(TEST_COMBINE) || defined(d_debug_feature_discovery))
+        HOST_TEST(pmu_debug, pmu_debug, debug_feature_discovery),
+        #endif
+        #if (defined(TEST_COMBINE) || defined(d_pmu_assigned_state))
+        HOST_REALM_TEST(pmu_debug, pmu_debug, pmu_assigned_state),
+        #endif
+        #if (defined(TEST_COMBINE) || defined(d_pmu_host_retained))
+        HOST_REALM_TEST(pmu_debug, pmu_debug, pmu_host_retained),
+        #endif
+        #if (defined(TEST_COMBINE) || defined(d_pmu_cycle_counter))
+        HOST_REALM_TEST(pmu_debug, pmu_debug, pmu_cycle_counter),
         #endif
     #endif /* #if (defined(d_all) || defined(d_pmu_debug)) */
 
@@ -643,10 +828,6 @@ DECLARE_TEST_FN(rhi_da_vdev_set_tdi_state);
         HOST_REALM_TEST(attestation_measurement, attestation_measurement,
                                      attestation_realm_measurement_type),
         #endif
-        #if (defined(TEST_COMBINE) || defined(d_attestation_platform_challenge_size))
-        HOST_REALM_TEST(attestation_measurement, attestation_measurement,
-                                    attestation_platform_challenge_size),
-        #endif
         #if (defined(TEST_COMBINE) || defined(d_attestation_rem_extend_check))
         HOST_REALM_TEST(attestation_measurement, attestation_measurement,
                                            attestation_rem_extend_check),
@@ -677,6 +858,9 @@ DECLARE_TEST_FN(rhi_da_vdev_set_tdi_state);
         #if (defined(TEST_COMBINE) || defined(d_mm_hipas_assigned_ripas_empty_da_ia))
         HOST_REALM_TEST(memory_management, memory_management, mm_hipas_assigned_ripas_empty_da_ia),
         #endif
+        #if (defined(TEST_COMBINE) || defined(d_mm_rsi_ripas_empty_protected_ipa))
+        HOST_REALM_TEST(memory_management, memory_management, mm_rsi_ripas_empty_protected_ipa),
+        #endif
         #if (defined(TEST_COMBINE) || defined(d_mm_ripas_destroyed_da))
         HOST_REALM_TEST(memory_management, memory_management, mm_ripas_destroyed_da),
         #endif
@@ -691,6 +875,60 @@ DECLARE_TEST_FN(rhi_da_vdev_set_tdi_state);
         #endif
         #if (defined(TEST_COMBINE) || defined(d_mm_protected_ipa_boundary))
         HOST_REALM_TEST(memory_management, memory_management, mm_protected_ipa_boundary),
+        #endif
+        #if (defined(TEST_COMBINE) || defined(d_mm_rmi_physical_granule_size))
+        HOST_TEST(memory_management, memory_management, mm_rmi_physical_granule_size),
+        #endif
+        #if (defined(TEST_COMBINE) || defined(d_mm_supported_rmi_granule_sizes))
+        HOST_TEST(memory_management, memory_management, mm_supported_rmi_granule_sizes),
+        #endif
+        #if (defined(TEST_COMBINE) || defined(d_mm_rmi_granule_size_not_smaller))
+        HOST_TEST(memory_management, memory_management, mm_rmi_granule_size_not_smaller),
+        #endif
+        #if (defined(TEST_COMBINE) || defined(d_mm_granule_tracking_set_sro_reclaim))
+        HOST_TEST(memory_management, memory_management, mm_granule_tracking_set_sro_reclaim),
+        #endif
+        #if (defined(TEST_COMBINE) || defined(d_mm_rtt_data_map_init_tracking))
+        HOST_TEST(memory_management, memory_management, mm_rtt_data_map_init_tracking),
+        #endif
+        #if (defined(TEST_COMBINE) || defined(d_mm_rtt_data_map_init_granule_state))
+        HOST_TEST(memory_management, memory_management, mm_rtt_data_map_init_granule_state),
+        #endif
+        #if (defined(TEST_COMBINE) || defined(d_mm_gpt_l1_create_sro_donate))
+        HOST_TEST(memory_management, memory_management, mm_gpt_l1_create_sro_donate),
+        #endif
+        #if (defined(TEST_COMBINE) || defined(d_mm_gpt_l1_destroy_sro_reclaim))
+        HOST_TEST(memory_management, memory_management, mm_gpt_l1_destroy_sro_reclaim),
+        #endif
+        #if (defined(TEST_COMBINE) || defined(d_mm_sro_reclaim_request))
+        HOST_TEST(memory_management, memory_management, mm_sro_reclaim_request),
+        #endif
+        #if (defined(TEST_COMBINE) || defined(d_mm_sro_reclaim_more))
+        HOST_TEST(memory_management, memory_management, mm_sro_reclaim_more),
+        #endif
+        #if (defined(TEST_COMBINE) || defined(d_mm_sro_reclaim_complete))
+        HOST_TEST(memory_management, memory_management, mm_sro_reclaim_complete),
+        #endif
+        #if (defined(TEST_COMBINE) || defined(d_mm_sro_cancel_donate_request))
+        HOST_TEST(memory_management, memory_management, mm_sro_cancel_donate_request),
+        #endif
+        #if (defined(TEST_COMBINE) || defined(d_mm_sro_cancel_reclaim_request))
+        HOST_TEST(memory_management, memory_management, mm_sro_cancel_reclaim_request),
+        #endif
+        #if (defined(TEST_COMBINE) || defined(d_mm_sro_cancel_observable_rejected))
+        HOST_TEST(memory_management, memory_management, mm_sro_cancel_observable_rejected),
+        #endif
+        #if (defined(TEST_COMBINE) || defined(d_mm_rmi_granule_tracking_region_size))
+        HOST_TEST(memory_management, memory_management, mm_rmi_granule_tracking_region_size),
+        #endif
+        #if (defined(TEST_COMBINE) || defined(d_mm_sro_invalid_donation))
+        HOST_TEST(memory_management, memory_management, mm_sro_invalid_donation),
+        #endif
+        #if (defined(TEST_COMBINE) || defined(d_mm_sro_invalid_handle))
+        HOST_TEST(memory_management, memory_management, mm_sro_invalid_handle),
+        #endif
+        #if (defined(TEST_COMBINE) || defined(d_mm_sro_intermediate_continue))
+        HOST_TEST(memory_management, memory_management, mm_sro_intermediate_continue),
         #endif
         #if (defined(TEST_COMBINE) || defined(d_mm_rtt_translation_table))
         HOST_REALM_TEST(memory_management, memory_management, mm_rtt_translation_table),
@@ -734,7 +972,7 @@ DECLARE_TEST_FN(rhi_da_vdev_set_tdi_state);
         #endif
 
     #endif /* #if (defined(d_all) || defined(d_memory_management)) */
-#endif /* #if defined(RMM_V_1_0) */
+#endif /* #if defined(RMM_V_2_0) */
 
 #if defined(RMM_V_1_1)
     #if (defined(d_all) || defined(d_planes))
@@ -833,14 +1071,50 @@ DECLARE_TEST_FN(rhi_da_vdev_set_tdi_state);
         #endif
     #endif /* #if (defined(d_all) || defined(d_lfa)) */
 
+#endif
+
+#if defined(RMM_V_2_0)
     #if (defined(d_all) || defined(d_device_assignment))
         #if (defined(TEST_COMBINE) || defined(d_da_offchip_pcie))
         HOST_REALM_TEST(device_assignment, device_assignment, da_offchip_pcie),
         #endif
+        #if (defined(TEST_COMBINE) || defined(d_da_spdm_measurement_cache))
+        HOST_TEST(device_assignment, device_assignment, da_spdm_measurement_cache),
+        #endif
+        #if (defined(TEST_COMBINE) || defined(d_da_spdm_measurement_signature))
+        HOST_TEST(device_assignment, device_assignment, da_spdm_measurement_signature),
+        #endif
+        #if (defined(TEST_COMBINE) || defined(d_da_spdm_measurement_reference))
+        HOST_TEST(device_assignment, device_assignment, da_spdm_measurement_reference),
+        #endif
+        // #if (defined(TEST_COMBINE) || defined(d_da_pdev_stream_ncoh_addr_range))
+        // HOST_TEST(device_assignment, device_assignment, da_pdev_stream_ncoh_addr_range),
+        // #endif
+        // #if (defined(TEST_COMBINE) || defined(d_da_pdev_stream_addr_overlap))
+        // HOST_TEST(device_assignment, device_assignment, da_pdev_stream_addr_overlap),
+        // #endif
+        // #if (defined(TEST_COMBINE) || defined(d_da_pdev_stream_ide_sid_unique))
+        // HOST_TEST(device_assignment, device_assignment, da_pdev_stream_ide_sid_unique),
+        // #endif
+        // #if (defined(TEST_COMBINE) || defined(d_da_pdev_stream_rid_overlap))
+        // HOST_TEST(device_assignment, device_assignment, da_pdev_stream_rid_overlap),
+        // #endif
 //        #if (defined(TEST_COMBINE) || defined(d_da_pdev_single_active_transaction))
 //        HOST_REALM_TEST(device_assignment, device_assignment,
 //                                            da_pdev_single_active_transaction),
 //        #endif
+        #if (defined(TEST_COMBINE) || defined(d_da_pdev_create_tdisp_en))
+        HOST_TEST(device_assignment, device_assignment, da_pdev_create_tdisp_en),
+        #endif
+        #if (defined(TEST_COMBINE) || defined(d_da_pdev_max_num_vdevs))
+        HOST_TEST(device_assignment, device_assignment, da_pdev_max_num_vdevs),
+        #endif
+        #if (defined(TEST_COMBINE) || defined(d_da_integrated_pdev_rid_range))
+        HOST_TEST(device_assignment, device_assignment, da_integrated_pdev_rid_range),
+        #endif
+        #if (defined(TEST_COMBINE) || defined(d_da_pdev_ready_secure_comm))
+        HOST_TEST(device_assignment, device_assignment, da_pdev_ready_secure_comm),
+        #endif
         #if (defined(TEST_COMBINE) || defined(d_mm_hipas_assigned_dev_ripas_empty_da_ia))
         HOST_REALM_TEST(device_assignment, device_assignment,
                             mm_hipas_assigned_dev_ripas_empty_da_ia),
@@ -926,11 +1200,43 @@ DECLARE_TEST_FN(rhi_da_vdev_set_tdi_state);
         #if (defined(TEST_COMBINE) || defined(d_rhi_hostconf_features))
         HOST_REALM_TEST(rhi, rhi, rhi_hostconf_features),
         #endif
-        #if (defined(TEST_COMBINE) || defined(d_rhi_hostconf_get_ipa_change_alignment_test))
+        #if (defined(TEST_COMBINE) || defined(d_rhi_hostconf_get_ipa_change_alignment))
         HOST_REALM_TEST(rhi, rhi, rhi_hostconf_get_ipa_change_alignment),
         #endif
     #endif /* #if (defined(d_all) || defined(d_rhi)) */
 
-#endif /* #if defined(RMM_V_1_1) */
+    #if (defined(d_all) || defined(d_psmmu))
+        #if (defined(TEST_COMBINE) || defined(d_psmmu_activate_sro_donate))
+        HOST_TEST(psmmu, psmmu, psmmu_activate_sro_donate),
+        #endif
+        #if (defined(TEST_COMBINE) || defined(d_psmmu_deactivate_sro_reclaim))
+        HOST_TEST(psmmu, psmmu, psmmu_deactivate_sro_reclaim),
+        #endif
+        #if (defined(TEST_COMBINE) || defined(d_psmmu_st_l2_create_sro_donate))
+        HOST_TEST(psmmu, psmmu, psmmu_st_l2_create_sro_donate),
+        #endif
+        #if (defined(TEST_COMBINE) || defined(d_psmmu_st_l2_destroy_sro_reclaim))
+        HOST_TEST(psmmu, psmmu, psmmu_st_l2_destroy_sro_reclaim),
+        #endif
+        #if (defined(TEST_COMBINE) || defined(d_psmmu_interrupt_handling))
+        HOST_TEST(psmmu, psmmu, psmmu_interrupt_handling),
+        #endif
+        #if (defined(TEST_COMBINE) || defined(d_dpt_l0_create_sro_donate))
+        HOST_TEST(psmmu, psmmu, dpt_l0_create_sro_donate),
+        #endif
+        #if (defined(TEST_COMBINE) || defined(d_dpt_l0_create_alignment))
+        HOST_TEST(psmmu, psmmu, dpt_l0_create_alignment),
+        #endif
+        #if (defined(TEST_COMBINE) || defined(d_dpt_l0_destroy_sro_reclaim))
+        HOST_TEST(psmmu, psmmu, dpt_l0_destroy_sro_reclaim),
+        #endif
+        #if (defined(TEST_COMBINE) || defined(d_dpt_l1_create_sro_donate))
+        HOST_TEST(psmmu, psmmu, dpt_l1_create_sro_donate),
+        #endif
+        #if (defined(TEST_COMBINE) || defined(d_dpt_l1_destroy_sro_reclaim))
+        HOST_TEST(psmmu, psmmu, dpt_l1_destroy_sro_reclaim),
+        #endif
+    #endif /* #if (defined(d_all) || defined(d_psmmu)) */
+#endif /* #if defined(RMM_V_2_0) */
 
 #endif /* TEST_FUNC_DATABASE */

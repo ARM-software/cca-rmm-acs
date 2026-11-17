@@ -7,13 +7,14 @@
 
 #include "test_database.h"
 #include "val_host_rmi.h"
+#include "val_host_rmi_sro.h"
+#include "val_host_sro.h"
 #include "rmi_vdev_unlock_data.h"
 #include "command_common_host.h"
 #include "val_host_pcie.h"
 #include "val_host_helpers.h"
 
 #define VALID_REALM   1
-#define VDEV_MAP_TEST_IPA   0x4000100000
 
 static uint32_t num_bdf;
 
@@ -30,6 +31,10 @@ static struct argument_store {
     uint64_t rd_valid;
     uint64_t pdev_ptr_valid;
     uint64_t vdev_ptr_valid;
+    uint64_t mapped_ipa;
+    uint64_t mapped_pa;
+    bool mapped;
+    bool mapped_pa_delegated;
     val_host_vdev_ts vdev_dev_valid;
     val_host_pdev_ts pdev_dev_valid;
     val_host_realm_ts realm_valid;
@@ -40,6 +45,12 @@ struct arguments {
     uint64_t pdev_ptr;
     uint64_t vdev_ptr;
 };
+
+static uint64_t addr_range_desc_4k(uint64_t addr, uint64_t count)
+{
+    return val_host_rmi_addr_range_desc(addr, count, RMI_PAGE_L3,
+                                    RMI_OP_MEM_DELEGATED);
+}
 
 static uint64_t rd_new_prep_sequence(void)
 {
@@ -92,6 +103,10 @@ static uint64_t invalid_pdev_prep_sequence(void)
     vdev_dev.vdev_id = 1;
     vdev_dev.vdev = g_vdev_new_prep_sequence(&pdev_dev, &vdev_dev, &realm);
     if (vdev_dev.vdev == VAL_TEST_PREP_SEQ_FAILED)
+        return VAL_TEST_PREP_SEQ_FAILED;
+
+    if (val_host_dev_communicate(&realm, &pdev_dev, &vdev_dev,
+                                 RMI_VDEV_UNLOCKED))
         return VAL_TEST_PREP_SEQ_FAILED;
 
     c_args_invalid.rd = vdev_dev.realm_rd;
@@ -214,6 +229,109 @@ exit:
     return VAL_TEST_PREP_SEQ_FAILED;
 }
 
+static uint64_t gran_mapped_prep_sequence(void)
+{
+    uint64_t flags, map_idx, ret;
+    val_host_rmi_rtt_prot_map_flags_ts map_flags;
+
+    c_args.mapped_ipa = ipa_protected_unassigned_empty_prep_sequence(c_args.rd_valid);
+    if (c_args.mapped_ipa == VAL_TEST_PREP_SEQ_FAILED)
+        return VAL_TEST_PREP_SEQ_FAILED;
+
+    if ((c_args.pdev_dev_valid.ncoh_num_addr_range == 0U) ||
+        ((c_args.pdev_dev_valid.ncoh_addr_range[0].top -
+          c_args.pdev_dev_valid.ncoh_addr_range[0].base) < PAGE_SIZE))
+    {
+        LOG(ERROR, "PDEV has no usable non-coherent device-memory range\n");
+        return VAL_TEST_PREP_SEQ_FAILED;
+    }
+
+    if (c_args.realm_valid.dev_granules_mapped_count >= VAL_MAX_DEV_GRANULES_MAP)
+    {
+        LOG(ERROR, "Exceeded max tracked VDEV_MAP regions\n");
+        return VAL_TEST_PREP_SEQ_FAILED;
+    }
+
+    c_args.mapped_pa = c_args.pdev_dev_valid.ncoh_addr_range[0].base;
+    ret = val_host_rmi_granule_range_delegate(c_args.mapped_pa,
+                                               c_args.mapped_pa + PAGE_SIZE);
+    if (ret)
+    {
+        LOG(ERROR, "Granule delegation failed, PA=0x%lx ret=0x%lx\n",
+            c_args.mapped_pa, ret);
+        return VAL_TEST_PREP_SEQ_FAILED;
+    }
+    c_args.mapped_pa_delegated = true;
+
+    val_memset(&map_flags, 0, sizeof(map_flags));
+    map_flags.oaddr_type = RMI_ADDR_TYPE_SINGLE;
+    val_memcpy(&flags, &map_flags, sizeof(map_flags));
+
+    ret = val_host_rmi_rtt_dev_map(c_args.rd_valid, c_args.vdev_ptr_valid,
+                                   c_args.mapped_ipa,
+                                   c_args.mapped_ipa + PAGE_SIZE,
+                                   flags,
+                                   addr_range_desc_4k(c_args.mapped_pa, 1U));
+    if (ret)
+    {
+        LOG(ERROR, "RTT DEV map failed, ret=0x%lx\n", ret);
+        (void)val_host_rmi_granule_range_undelegate(c_args.mapped_pa,
+                                                     c_args.mapped_pa + PAGE_SIZE);
+        c_args.mapped_pa_delegated = false;
+        return VAL_TEST_PREP_SEQ_FAILED;
+    }
+    c_args.mapped = true;
+
+    map_idx = c_args.realm_valid.dev_granules_mapped_count;
+    c_args.realm_valid.dev_granules[map_idx].ipa = c_args.mapped_ipa;
+    c_args.realm_valid.dev_granules[map_idx].size = PAGE_SIZE;
+    c_args.realm_valid.dev_granules[map_idx].level = VAL_RTT_MAX_LEVEL;
+    c_args.realm_valid.dev_granules[map_idx].pa = c_args.mapped_pa;
+    c_args.realm_valid.dev_granules_mapped_count++;
+
+    return VAL_SUCCESS;
+}
+
+static uint64_t gran_mapped_cleanup(void)
+{
+    uint64_t flags, ret;
+    val_host_rmi_rtt_unmap_flags_ts unmap_flags;
+
+    if (c_args.mapped)
+    {
+        val_memset(&unmap_flags, 0, sizeof(unmap_flags));
+        unmap_flags.oaddr_type = RMI_ADDR_TYPE_SINGLE;
+        val_memcpy(&flags, &unmap_flags, sizeof(unmap_flags));
+
+        ret = val_host_rmi_rtt_dev_unmap(c_args.rd_valid, c_args.mapped_ipa,
+                                         c_args.mapped_ipa + PAGE_SIZE,
+                                         flags, 0U);
+        if (ret)
+        {
+            LOG(ERROR, "RTT DEV unmap failed, ret=0x%lx\n", ret);
+            return ret;
+        }
+
+        c_args.mapped = false;
+        c_args.realm_valid.dev_granules_mapped_count = 0;
+    }
+
+    if (c_args.mapped_pa_delegated)
+    {
+        ret = val_host_rmi_granule_range_undelegate(c_args.mapped_pa,
+                                                     c_args.mapped_pa + PAGE_SIZE);
+        if (ret)
+        {
+            LOG(ERROR, "Granule undelegation failed, PA=0x%lx ret=0x%lx\n",
+                c_args.mapped_pa, ret);
+            return ret;
+        }
+        c_args.mapped_pa_delegated = false;
+    }
+
+    return VAL_SUCCESS;
+}
+
 static uint64_t intent_to_seq(struct stimulus *test_data, struct arguments *args)
 {
     enum test_intent label = test_data->label;
@@ -226,17 +344,6 @@ static uint64_t intent_to_seq(struct stimulus *test_data, struct arguments *args
             args->vdev_ptr = c_args.vdev_ptr_valid;
             break;
 
-        case RD_OUTSIDE_OF_PERMITTED_PA:
-            args->rd = g_outside_of_permitted_pa_prep_sequence();
-            args->pdev_ptr = c_args.pdev_ptr_valid;
-            args->vdev_ptr = c_args.vdev_ptr_valid;
-            break;
-
-        case RD_DEV_MEM_MMIO:
-            args->rd = g_dev_mem_prep_sequence();
-            args->pdev_ptr = c_args.pdev_ptr_valid;
-            args->vdev_ptr = c_args.vdev_ptr_valid;
-            break;
 
         case RD_GRAN_STATE_UNDELEGATED:
             args->rd = g_undelegated_prep_sequence();
@@ -250,17 +357,6 @@ static uint64_t intent_to_seq(struct stimulus *test_data, struct arguments *args
             args->vdev_ptr = c_args.vdev_ptr_valid;
             break;
 
-        case PDEV_OUTSIDE_OF_PERMITTED_PA:
-            args->rd = c_args.rd_valid;
-            args->pdev_ptr = g_outside_of_permitted_pa_prep_sequence();
-            args->vdev_ptr = c_args.vdev_ptr_valid;
-            break;
-
-        case PDEV_DEV_MEM_MMIO:
-            args->rd = c_args.rd_valid;
-            args->pdev_ptr = g_dev_mem_prep_sequence();
-            args->vdev_ptr = c_args.vdev_ptr_valid;
-            break;
 
         case PDEV_GRAN_STATE_UNDELEGATED:
             args->rd = c_args.rd_valid;
@@ -274,17 +370,6 @@ static uint64_t intent_to_seq(struct stimulus *test_data, struct arguments *args
             args->vdev_ptr = g_unaligned_prep_sequence(c_args.vdev_ptr_valid);
             break;
 
-        case VDEV_OUTSIDE_OF_PERMITTED_PA:
-            args->rd = c_args.rd_valid;
-            args->pdev_ptr = c_args.pdev_ptr_valid;
-            args->vdev_ptr = g_outside_of_permitted_pa_prep_sequence();
-            break;
-
-        case VDEV_DEV_MEM_MMIO:
-            args->rd = c_args.rd_valid;
-            args->pdev_ptr = c_args.pdev_ptr_valid;
-            args->vdev_ptr = g_dev_mem_prep_sequence();
-            break;
 
         case VDEV_GRAN_STATE_UNDELEGATED:
             args->rd = c_args.rd_valid;
@@ -308,7 +393,7 @@ static uint64_t intent_to_seq(struct stimulus *test_data, struct arguments *args
             args->vdev_ptr = c_args.vdev_ptr_valid;
             break;
 
-        case VDEV_STATE_VDEV_NEW:
+        case VDEV_STATE_VDEV_UNLOCKED:
             args->rd = c_args_invalid.rd;
             args->pdev_ptr = c_args_invalid.pdev;
             args->vdev_ptr = c_args_invalid.vdev;
@@ -318,6 +403,14 @@ static uint64_t intent_to_seq(struct stimulus *test_data, struct arguments *args
             args->rd = c_args.rd_valid;
             args->pdev_ptr = c_args_invalid.pdev;
             args->vdev_ptr = g_undelegated_prep_sequence();
+            break;
+
+        case GRAN_MAPPED:
+            if (gran_mapped_prep_sequence() == VAL_TEST_PREP_SEQ_FAILED)
+                return VAL_TEST_PREP_SEQ_FAILED;
+            args->rd = c_args.rd_valid;
+            args->pdev_ptr = c_args.pdev_ptr_valid;
+            args->vdev_ptr = c_args.vdev_ptr_valid;
             break;
 
         default:
@@ -365,40 +458,23 @@ void cmd_vdev_unlock_host(void)
             val_set_status(RESULT_FAIL(VAL_ERROR_POINT(3)));
             goto destroy_device;
         }
-    }
 
-    cmd_ret = val_host_rmi_vdev_get_state(c_args.vdev_ptr_valid);
-    if (cmd_ret.x0)
-    {
-        LOG(ERROR, "VDEV_GET_STATE failed ret %lx.\n", cmd_ret.x0);
-        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(12)));
-        goto destroy_device;
-    }
+        if (test_data[i].label == GRAN_MAPPED)
+        {
+            if (cmd_ret.x1 != c_args.mapped_pa)
+            {
+                LOG(ERROR, "Unexpected assigned Granule PA: 0x%lx, expected 0x%lx\n",
+                    cmd_ret.x1, c_args.mapped_pa);
+                val_set_status(RESULT_FAIL(VAL_ERROR_POINT(4)));
+                goto destroy_device;
+            }
 
-    /* Check VDEV state is RMI_VDEV_LOCKED */
-    if (cmd_ret.x1 != RMI_VDEV_LOCKED)
-    {
-        LOG(ERROR, "VDEV state should be RMI_VDEV_LOCKED, ret %lx\n", cmd_ret.x1);
-        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(13)));
-        goto destroy_device;
-    }
-
-    LOG(TEST, "\n\tPositive Observability Check\n");
-    cmd_ret = val_host_rmi_vdev_unlock(c_args.rd_valid, c_args.pdev_ptr_valid,
-                                                        c_args.vdev_ptr_valid);
-    if (cmd_ret.x0 != 0)
-    {
-        LOG(ERROR, "Command failed. %x\n", cmd_ret.x0);
-        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(4)));
-        goto destroy_device;
-    }
-
-    if (val_host_dev_communicate(&c_args.realm_valid, &c_args.pdev_dev_valid,
-                                  &c_args.vdev_dev_valid, RMI_VDEV_UNLOCKED))
-    {
-        LOG(ERROR, "VDEV communicate failed\n");
-        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(5)));
-        goto destroy_device;
+            if (gran_mapped_cleanup())
+            {
+                val_set_status(RESULT_FAIL(VAL_ERROR_POINT(5)));
+                goto destroy_device;
+            }
+        }
     }
 
     cmd_ret = val_host_rmi_vdev_get_state(c_args.vdev_ptr_valid);
@@ -409,22 +485,62 @@ void cmd_vdev_unlock_host(void)
         goto destroy_device;
     }
 
+    /* Check VDEV state is RMI_VDEV_LOCKED */
+    if (cmd_ret.x1 != RMI_VDEV_LOCKED)
+    {
+        LOG(ERROR, "VDEV state should be RMI_VDEV_LOCKED, ret %lx\n", cmd_ret.x1);
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(7)));
+        goto destroy_device;
+    }
+
+    LOG(TEST, "\n\tPositive Observability Check\n");
+    cmd_ret = val_host_rmi_vdev_unlock(c_args.rd_valid, c_args.pdev_ptr_valid,
+                                                        c_args.vdev_ptr_valid);
+    if (cmd_ret.x0 != 0)
+    {
+        LOG(ERROR, "Command failed. %x\n", cmd_ret.x0);
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(8)));
+        goto destroy_device;
+    }
+
+    if (val_host_dev_communicate(&c_args.realm_valid, &c_args.pdev_dev_valid,
+                                  &c_args.vdev_dev_valid, RMI_VDEV_UNLOCKED))
+    {
+        LOG(ERROR, "VDEV communicate failed\n");
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(9)));
+        goto destroy_device;
+    }
+
+    cmd_ret = val_host_rmi_vdev_get_state(c_args.vdev_ptr_valid);
+    if (cmd_ret.x0)
+    {
+        LOG(ERROR, "VDEV_GET_STATE failed ret %lx.\n", cmd_ret.x0);
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(10)));
+        goto destroy_device;
+    }
+
     if (cmd_ret.x1 != RMI_VDEV_UNLOCKED)
     {
         LOG(ERROR, "VDEV state should be RMI_VDEV_UNLOCKED, ret %lx\n", cmd_ret.x1);
-        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(7)));
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(11)));
         goto destroy_device;
     }
 
     val_set_status(RESULT_PASS(VAL_SUCCESS));
 
 destroy_device:
+    if (gran_mapped_cleanup())
+    {
+        LOG(ERROR, "Mapped Granule cleanup failed\n");
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(12)));
+    }
+
     if (c_args.vdev_ptr_valid &&
         val_host_vdev_teardown(&c_args.realm_valid, &c_args.pdev_dev_valid,
                                &c_args.vdev_dev_valid))
     {
         LOG(ERROR, "VDEV teardown failed\n");
-        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(8)));
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(13)));
         goto exit;
     }
 
@@ -433,7 +549,7 @@ destroy_device:
         val_host_pdev_teardown(&c_args.pdev_dev_valid, c_args.pdev_ptr_valid))
     {
         LOG(ERROR, "PDEV teardown failed\n");
-        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(9)));
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(14)));
         goto exit;
     }
 
@@ -443,7 +559,7 @@ destroy_device:
                                &c_args_invalid.vdev_dev_invalid))
     {
         LOG(ERROR, "VDEV teardown failed\n");
-        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(10)));
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(15)));
         goto exit;
     }
 
@@ -452,7 +568,7 @@ destroy_device:
         val_host_pdev_teardown(&c_args_invalid.pdev_dev_invalid, c_args_invalid.pdev))
     {
         LOG(ERROR, "PDEV teardown failed\n");
-        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(11)));
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(16)));
         goto exit;
     }
 

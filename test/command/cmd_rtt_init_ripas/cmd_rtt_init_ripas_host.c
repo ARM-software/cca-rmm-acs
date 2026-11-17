@@ -19,20 +19,10 @@
 #define L1_SIZE (512L * L2_SIZE)
 #define L0_SIZE (512L * L1_SIZE)
 
-/*      Valid Realm memory layout
- *
- * ipa: 0x0 (1st L2 Table Entry)
- *  ------------------------------------
- * |        RTTE.state = TABLE          | -> L3: HIPAS = ASSIGNED, RIPAS = RAM
- *  ------------------------------------
- * | HIPAS = UNASSIGNED, RIPAS = EMPTY  |
- *  ------------------------------------
- * ipa: 0x400000
- *
- */
+/* Keep the VOID success range separate from the fixed DATA-entry test IPA. */
 
-#define IPA_ADDR_VALID 0
-#define IPA_ADDR_DATA  (4 * PAGE_SIZE)
+#define IPA_ADDR_VALID (8 * PAGE_SIZE)
+#define IPA_ADDR_DATA  (16 * PAGE_SIZE)
 
 #define NUM_REALMS 4
 #define MAX_REALMS 5
@@ -129,6 +119,13 @@ static uint64_t g_rd_null_prep_sequence(void)
     if (rd == VAL_TEST_PREP_SEQ_FAILED)
         return VAL_TEST_PREP_SEQ_FAILED;
 
+    ret = val_host_rmi_realm_terminate(rd);
+    if (ret)
+    {
+        LOG(ERROR, "Couldn't terminate the Realm, ret: %d\n", ret);
+        return VAL_TEST_PREP_SEQ_FAILED;
+    }
+
     ret = val_host_rmi_realm_destroy(rd);
     if (ret)
     {
@@ -175,11 +172,10 @@ static uint64_t base_valid_prep_sequence(void)
     return IPA_ADDR_VALID;
 }
 
-/* top_align requires top to greater than or equal to next level aligned IPA after base
- * Since we create mapping till L3, top >= base + L3_SIZE */
+/* Cover two adjacent leaf entries in the successful VOID range. */
 static uint64_t top_valid_prep_sequence(void)
 {
-    return IPA_ADDR_VALID + L3_SIZE;
+    return IPA_ADDR_VALID + (2 * L3_SIZE);
 }
 
 static uint64_t valid_input_args_prep_sequence(void)
@@ -197,6 +193,28 @@ static uint64_t valid_input_args_prep_sequence(void)
     return VAL_SUCCESS;
 }
 
+static uint64_t no_progress_walk_prep_sequence(uint64_t base, uint64_t top)
+{
+    val_host_rtt_entry_ts rtte;
+
+    /* A granule-sized range cannot consume the level-2 entry at base. */
+    if (((base % L2_SIZE) != 0U) || (top <= base) ||
+        ((top - base) >= L2_SIZE))
+    {
+        LOG(ERROR, "No-progress range does not end inside one level-2 entry\n");
+        return VAL_TEST_PREP_SEQ_FAILED;
+    }
+
+    if (val_host_rmi_rtt_read_entry(c_args.rd_valid, base, MAP_LEVEL, &rtte) ||
+        (rtte.walk_level != 2) || (rtte.state != RMI_RTTE_VOID))
+    {
+        LOG(ERROR, "No-progress setup did not reach a level-2 VOID entry\n");
+        return VAL_TEST_PREP_SEQ_FAILED;
+    }
+
+    return VAL_SUCCESS;
+}
+
 static uint64_t intent_to_seq(struct stimulus *test_data, struct arguments *args)
 {
     enum test_intent label = test_data->label;
@@ -209,17 +227,6 @@ static uint64_t intent_to_seq(struct stimulus *test_data, struct arguments *args
             args->top = c_args.top_valid;
             break;
 
-        case RD_DEV_MEM:
-            args->rd = g_dev_mem_prep_sequence();
-            args->base = c_args.base_valid;
-            args->top = c_args.top_valid;
-            break;
-
-        case RD_OUTSIDE_OF_PERMITTED_PA:
-            args->rd = g_outside_of_permitted_pa_prep_sequence();
-            args->base = c_args.base_valid;
-            args->top = c_args.top_valid;
-            break;
 
         case RD_STATE_UNDELEGATED:
             args->rd = g_undelegated_prep_sequence();
@@ -246,7 +253,7 @@ static uint64_t intent_to_seq(struct stimulus *test_data, struct arguments *args
             break;
 
         case RD_STATE_RTT:
-            args->rd = realm_test[ACTIVE_REALM].rtt_l0_addr;
+            args->rd = realm_test[VALID_REALM].rtt_l0_addr;
             args->base = c_args.base_valid;
             args->top = c_args.top_valid;
             break;
@@ -301,30 +308,28 @@ static uint64_t intent_to_seq(struct stimulus *test_data, struct arguments *args
             args->top = args->base + L2_SIZE;
             break;
 
-        case RTTE_STATE_ASSIGNED:
-            args->rd = c_args.rd_valid;
-            args->base = ipa_protected_assigned_ram_prep_sequence(c_args.rd_valid);
-            if (args->base == VAL_TEST_PREP_SEQ_FAILED)
-                return VAL_ERROR;
-            args->top = args->base + L3_SIZE;
-            break;
-
         case TOP_GRAN_UNALIGNED:
             args->rd = c_args.rd_valid;
             args->base = c_args.base_valid;
             args->top = L3_SIZE / 2;
             break;
 
-        case TOP_LEVEL_UNALIGNED:
+        case NO_PROGRESS_SHORT_RANGE:
             args->rd = c_args.rd_valid;
             args->base = ipa_protected_unmapped_prep_sequence();
             args->top = args->base + L3_SIZE;
+            if (((args->top % PAGE_SIZE) != 0U) ||
+                no_progress_walk_prep_sequence(args->base, args->top))
+                return VAL_TEST_PREP_SEQ_FAILED;
             break;
 
-        case TOP_GRAN_UNALIGNED_TOP_LEVEL_UNALIGNED:
+        case TOP_GRAN_UNALIGNED_NO_PROGRESS:
             args->rd = c_args.rd_valid;
             args->base = ipa_protected_unmapped_prep_sequence();
             args->top = args->base + (L3_SIZE / 2);
+            if (((args->top % PAGE_SIZE) == 0U) ||
+                no_progress_walk_prep_sequence(args->base, args->top))
+                return VAL_TEST_PREP_SEQ_FAILED;
             break;
 
         default:
@@ -343,6 +348,8 @@ void cmd_rtt_init_ripas_host(void)
     val_host_rtt_entry_ts rtte;
     uint64_t i;
     uint64_t out_top;
+    uint64_t data_ipa;
+    uint64_t next_ipa;
 
     if (valid_input_args_prep_sequence() == VAL_TEST_PREP_SEQ_FAILED) {
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(1)));
@@ -360,7 +367,7 @@ void cmd_rtt_init_ripas_host(void)
             goto exit;
         }
 
-        ret = val_host_rmi_rtt_init_ripas(args.rd, args.base, args.top, &out_top);
+        ret = val_host_rmi_rtt_init_ripas_smc(args.rd, args.base, args.top, &out_top).x0;
 
         if (ret != PACK_CODE(test_data[i].status, test_data[i].index)) {
             LOG(ERROR, "Test Failure!The ABI call returned: %xExpected: %x\n",
@@ -371,33 +378,71 @@ void cmd_rtt_init_ripas_host(void)
     }
 
     LOG(TEST, "Check %2d : Positive Observability\n", ++i);
-    ret = val_host_rmi_rtt_init_ripas(c_args.rd_valid, c_args.base_valid,
-                                c_args.top_valid, &out_top);
-    /* Valid call should give success if footprints have not changed */
-    if (ret != 0) {
-        LOG(ERROR, " Positive Observability Failed\n");
-        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(4)));
-        goto exit;
+    next_ipa = c_args.base_valid;
+    while (next_ipa < c_args.top_valid)
+    {
+        ret = val_host_rmi_rtt_init_ripas(c_args.rd_valid, next_ipa,
+                                           c_args.top_valid, &out_top);
+        if (ret != RMI_SUCCESS)
+        {
+            LOG(ERROR, "VOID range RIPAS initialization failed, ret=0x%lx\n", ret);
+            val_set_status(RESULT_FAIL(VAL_ERROR_POINT(4)));
+            goto exit;
+        }
+
+        if ((out_top <= next_ipa) || (out_top > c_args.top_valid))
+        {
+            LOG(ERROR, "Invalid out_top received: 0x%lx\n", out_top);
+            val_set_status(RESULT_FAIL(VAL_ERROR_POINT(5)));
+            goto exit;
+        }
+
+        next_ipa = out_top;
     }
 
-    if (out_top != c_args.top_valid) {
-        LOG(ERROR, " Unexpected out_top received. out_top = 0x%lx \n", out_top);
-        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(5)));
-        goto exit;
+    for (i = c_args.base_valid; i < c_args.top_valid; i += L3_SIZE)
+    {
+        ret = val_host_rmi_rtt_read_entry(c_args.rd_valid, i, MAP_LEVEL, &rtte);
+        if (ret || (rtte.walk_level != MAP_LEVEL) ||
+            (rtte.state != RMI_RTTE_VOID) || (rtte.ripas != RMI_RIPAS_RAM))
+        {
+            LOG(ERROR, "VOID entry at IPA 0x%lx was not initialized to RAM\n", i);
+            val_set_status(RESULT_FAIL(VAL_ERROR_POINT(6)));
+            goto exit;
+        }
     }
 
-    ret = val_host_rmi_rtt_read_entry(c_args.rd_valid,
-                                      c_args.base_valid, MAP_LEVEL, &rtte);
-    if (ret) {
-        LOG(ERROR, "READ_ENTRY failed with ret value: %d\n", ret);
-        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(6)));
-        goto exit;
-    }
-
-    if (rtte.walk_level == MAP_LEVEL && rtte.ripas != RMI_RAM) {
-        LOG(ERROR, " Unexpected RTT entry. walk level = %d, RIPAS = %d\n",
-                                                 rtte.walk_level, rtte.ripas);
+    data_ipa = ipa_protected_assigned_empty_prep_sequence(c_args.rd_valid);
+    if (data_ipa == VAL_TEST_PREP_SEQ_FAILED)
+    {
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(7)));
+        goto exit;
+    }
+
+    ret = val_host_rmi_rtt_read_entry(c_args.rd_valid, data_ipa, MAP_LEVEL, &rtte);
+    if (ret || (rtte.walk_level != MAP_LEVEL) ||
+        (rtte.state != RMI_RTTE_DATA) || (rtte.ripas != RMI_RIPAS_EMPTY))
+    {
+        LOG(ERROR, "DATA entry was not prepared with RIPAS_EMPTY\n");
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(8)));
+        goto exit;
+    }
+
+    ret = val_host_rmi_rtt_init_ripas(c_args.rd_valid, data_ipa,
+                                       data_ipa + L3_SIZE, &out_top);
+    if ((ret != RMI_SUCCESS) || (out_top != data_ipa + L3_SIZE))
+    {
+        LOG(ERROR, "DATA entry RIPAS initialization failed, ret=0x%lx\n", ret);
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(9)));
+        goto exit;
+    }
+
+    ret = val_host_rmi_rtt_read_entry(c_args.rd_valid, data_ipa, MAP_LEVEL, &rtte);
+    if (ret || (rtte.walk_level != MAP_LEVEL) ||
+        (rtte.state != RMI_RTTE_DATA) || (rtte.ripas != RMI_RIPAS_RAM))
+    {
+        LOG(ERROR, "DATA entry was not initialized to RAM\n");
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(10)));
         goto exit;
     }
 

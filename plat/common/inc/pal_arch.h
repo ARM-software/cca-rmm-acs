@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023-2026, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -99,14 +99,45 @@
 #define ICC_IAR1_EL1        S3_0_c12_c12_0
 #define ICC_EOIR0_EL1        S3_0_c12_c8_1
 #define ICC_EOIR1_EL1        S3_0_c12_c12_1
+#define ICC_ASGI1R_EL1        S3_0_C12_C11_6
 #define ICC_SGI0R_EL1        S3_0_c12_c11_7
 
 #define ICV_CTRL_EL1        S3_0_C12_C12_4
 #define ICV_IAR1_EL1        S3_0_C12_C12_0
 #define ICV_IGRPEN1_EL1     S3_0_C12_C12_7
 #define ICV_EOIR1_EL1       S3_0_C12_C12_1
+#define ICV_DIR_EL1         S3_0_C12_C11_1
 #define ICV_PMR_EL1     S3_0_C4_C6_0
 #define ICV_BPR0_EL1        S3_0_C12_C8_3
+
+#define ICH_AP0R0_EL2       S3_4_C12_C8_0
+#define ICH_AP0R1_EL2       S3_4_C12_C8_1
+#define ICH_AP0R2_EL2       S3_4_C12_C8_2
+#define ICH_AP0R3_EL2       S3_4_C12_C8_3
+#define ICH_AP1R0_EL2       S3_4_C12_C9_0
+#define ICH_AP1R1_EL2       S3_4_C12_C9_1
+#define ICH_AP1R2_EL2       S3_4_C12_C9_2
+#define ICH_AP1R3_EL2       S3_4_C12_C9_3
+#define ICH_HCR_EL2         S3_4_C12_C11_0
+#define ICH_VTR_EL2         S3_4_C12_C11_1
+#define ICH_MISR_EL2        S3_4_C12_C11_2
+#define ICH_VMCR_EL2        S3_4_C12_C11_7
+#define ICH_LR0_EL2         S3_4_C12_C12_0
+#define ICH_LR1_EL2         S3_4_C12_C12_1
+#define ICH_LR2_EL2         S3_4_C12_C12_2
+#define ICH_LR3_EL2         S3_4_C12_C12_3
+#define ICH_LR4_EL2         S3_4_C12_C12_4
+#define ICH_LR5_EL2         S3_4_C12_C12_5
+#define ICH_LR6_EL2         S3_4_C12_C12_6
+#define ICH_LR7_EL2         S3_4_C12_C12_7
+#define ICH_LR8_EL2         S3_4_C12_C13_0
+#define ICH_LR9_EL2         S3_4_C12_C13_1
+#define ICH_LR10_EL2        S3_4_C12_C13_2
+#define ICH_LR11_EL2        S3_4_C12_C13_3
+#define ICH_LR12_EL2        S3_4_C12_C13_4
+#define ICH_LR13_EL2        S3_4_C12_C13_5
+#define ICH_LR14_EL2        S3_4_C12_C13_6
+#define ICH_LR15_EL2        S3_4_C12_C13_7
 
 /*******************************************************************************
  * Generic timer memory mapped registers & offsets

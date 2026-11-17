@@ -212,7 +212,8 @@ static uint64_t valid_input_args_prep_sequence(void)
     val_host_set_pdev_flags(&pdev_flags);
     val_memcpy(&pdev_dev.pdev_flags, &pdev_flags, sizeof(pdev_flags));
 
-    c_args.vdev_ptr_valid = g_vdev_new_prep_sequence(&pdev_dev, &vdev_dev, &realm);
+    c_args.vdev_ptr_valid = g_vdev_state_prep_sequence(&pdev_dev, &vdev_dev,
+                                                       &realm, RMI_VDEV_UNLOCKED);
     if (vdev_dev.vdev == VAL_TEST_PREP_SEQ_FAILED)
         return VAL_TEST_PREP_SEQ_FAILED;
 
@@ -237,17 +238,6 @@ static uint64_t intent_to_seq(struct stimulus *test_data, struct arguments *args
             args->vdev_ptr = c_args.vdev_ptr_valid;
             break;
 
-        case RD_OUTSIDE_OF_PERMITTED_PA:
-            args->rd = g_outside_of_permitted_pa_prep_sequence();
-            args->pdev_ptr = c_args.pdev_ptr_valid;
-            args->vdev_ptr = c_args.vdev_ptr_valid;
-            break;
-
-        case RD_DEV_MEM_MMIO:
-            args->rd = g_dev_mem_prep_sequence();
-            args->pdev_ptr = c_args.pdev_ptr_valid;
-            args->vdev_ptr = c_args.vdev_ptr_valid;
-            break;
 
         case RD_GRAN_STATE_UNDELEGATED:
             args->rd = g_undelegated_prep_sequence();
@@ -261,17 +251,6 @@ static uint64_t intent_to_seq(struct stimulus *test_data, struct arguments *args
             args->vdev_ptr = c_args.vdev_ptr_valid;
             break;
 
-        case PDEV_OUTSIDE_OF_PERMITTED_PA:
-            args->rd = c_args.rd_valid;
-            args->pdev_ptr = g_outside_of_permitted_pa_prep_sequence();
-            args->vdev_ptr = c_args.vdev_ptr_valid;
-            break;
-
-        case PDEV_DEV_MEM_MMIO:
-            args->rd = c_args.rd_valid;
-            args->pdev_ptr = g_dev_mem_prep_sequence();
-            args->vdev_ptr = c_args.vdev_ptr_valid;
-            break;
 
         case PDEV_GRAN_STATE_UNDELEGATED:
             args->rd = c_args.rd_valid;
@@ -283,18 +262,6 @@ static uint64_t intent_to_seq(struct stimulus *test_data, struct arguments *args
             args->rd = c_args.rd_valid;
             args->pdev_ptr = c_args.pdev_ptr_valid;
             args->vdev_ptr = g_unaligned_prep_sequence(c_args.vdev_ptr_valid);
-            break;
-
-        case VDEV_OUTSIDE_OF_PERMITTED_PA:
-            args->rd = c_args.rd_valid;
-            args->pdev_ptr = c_args.pdev_ptr_valid;
-            args->vdev_ptr = g_outside_of_permitted_pa_prep_sequence();
-            break;
-
-        case VDEV_DEV_MEM_MMIO:
-            args->rd = c_args.rd_valid;
-            args->pdev_ptr = c_args.pdev_ptr_valid;
-            args->vdev_ptr = g_dev_mem_prep_sequence();
             break;
 
         case VDEV_GRAN_STATE_UNDELEGATED:
@@ -327,6 +294,12 @@ static uint64_t intent_to_seq(struct stimulus *test_data, struct arguments *args
                 return VAL_TEST_PREP_SEQ_FAILED;
             break;
 
+        case PDEV_GRAN_STATE_UNDELEGATED_INVALID_PDEV:
+            args->rd = c_args.rd_valid;
+            args->pdev_ptr = g_undelegated_prep_sequence();
+            args->vdev_ptr = c_args.vdev_ptr_valid;
+            break;
+
         default:
             LOG(ERROR, "Unknown intent label encountered\n");
             return VAL_ERROR;
@@ -338,6 +311,7 @@ static uint64_t intent_to_seq(struct stimulus *test_data, struct arguments *args
 void cmd_vdev_destroy_host(void)
 {
     uint64_t i;
+    uint64_t ret;
     val_smc_param_ts cmd_ret;
     struct arguments args;
 
@@ -365,7 +339,8 @@ void cmd_vdev_destroy_host(void)
             goto destroy_device;
         }
 
-        cmd_ret = val_host_rmi_vdev_destroy(args.rd, args.pdev_ptr, args.vdev_ptr);
+        cmd_ret = val_host_rmi_vdev_destroy_smc(args.rd, args.pdev_ptr,
+                                                args.vdev_ptr);
         if (cmd_ret.x0 != PACK_CODE(test_data[i].status, test_data[i].index)) {
             LOG(ERROR, "\tTest Failure!\n\tThe ABI call returned: %x\n\tExpected: %x\n",
                 cmd_ret.x0, PACK_CODE(test_data[i].status, test_data[i].index));
@@ -375,23 +350,34 @@ void cmd_vdev_destroy_host(void)
     }
 
     LOG(TEST, "\n\tPositive Observability Check\n");
-    cmd_ret = val_host_rmi_vdev_destroy(c_args.rd_valid, c_args.pdev_ptr_valid,
-                                                        c_args.vdev_ptr_valid);
-    if (cmd_ret.x0 != 0)
+    ret = val_host_rmi_vdev_destroy(c_args.rd_valid, c_args.pdev_ptr_valid,
+                                    c_args.vdev_ptr_valid);
+    if (ret != RMI_SUCCESS)
     {
-        LOG(ERROR, "Command failed. %x\n", cmd_ret.x0);
+        LOG(ERROR, "RMI_VDEV_DESTROY failed, ret=0x%x\n", ret);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(4)));
         goto destroy_device;
     }
+
+    c_args.vdev_dev_valid.vdev = 0;
 
     val_set_status(RESULT_PASS(VAL_SUCCESS));
 
 destroy_device:
     if (c_args.pdev_ptr_valid &&
+        val_host_vdev_teardown(&c_args.realm_valid, &c_args.pdev_dev_valid,
+                               &c_args.vdev_dev_valid))
+    {
+        LOG(ERROR, "VDEV teardown failed.\n");
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(5)));
+        goto exit;
+    }
+
+    if (c_args.pdev_ptr_valid &&
         val_host_pdev_teardown(&c_args.pdev_dev_valid, c_args.pdev_ptr_valid))
     {
         LOG(ERROR, "PDEV teardown failed.\n");
-        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(5)));
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(6)));
         goto exit;
     }
 
@@ -400,7 +386,7 @@ destroy_device:
                                &c_args_invalid.vdev_dev_invalid))
     {
         LOG(ERROR, "VDEV teardown failed.\n");
-        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(6)));
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(7)));
         goto exit;
     }
 
@@ -408,7 +394,7 @@ destroy_device:
         val_host_pdev_teardown(&c_args_invalid.pdev_dev_invalid, c_args_invalid.pdev))
     {
         LOG(ERROR, "PDEV teardown failed.\n");
-        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(7)));
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(8)));
         goto exit;
     }
 

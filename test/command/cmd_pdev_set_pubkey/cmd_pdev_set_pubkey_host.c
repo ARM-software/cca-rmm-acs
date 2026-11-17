@@ -23,15 +23,17 @@
 
 static uint32_t num_bdf;
 
+#define PDEV_P256_KEY_LEN 65U
+#define PDEV_P384_KEY_LEN 97U
+
 static struct argument_store {
     uint64_t pdev_ptr_valid;
     uint64_t params_ptr_valid;
     val_host_pdev_ts pdev_dev_valid;
-    uint8_t key[1024];
-    uint8_t metadata[1024];
+    uint64_t key_addr;
+    uint64_t metadata_addr;
     uint64_t key_len;
     uint64_t metadata_len;
-    uint8_t algo;
 } c_args;
 
 static struct argument {
@@ -57,11 +59,38 @@ static uint64_t invalid_key_len_prep_sequence(void)
 
     val_memset(pubkey_params, 0, PAGE_SIZE_4K);
 
-    val_memcpy(pubkey_params->key, &(c_args.key), c_args.key_len);
+    pubkey_params->key_addr = c_args.key_addr;
+    pubkey_params->metadata_addr = c_args.metadata_addr;
     pubkey_params->key_len = MAX_PUB_KEY_LEN + 1;
     pubkey_params->metadata_len = c_args.metadata_len;
-    pubkey_params->algo = c_args.algo;
-    val_memcpy(pubkey_params->metadata, &c_args.metadata, c_args.metadata_len);
+
+    return (uint64_t)pubkey_params;
+}
+
+static uint64_t key_len_wrong_algo_prep_sequence(void)
+{
+    val_host_public_key_params_ts *pubkey_params;
+    uint8_t *key;
+
+    key = val_host_mem_alloc(PAGE_SIZE, PAGE_SIZE);
+    pubkey_params = val_host_mem_alloc(PAGE_SIZE, PAGE_SIZE);
+    if (!key || !pubkey_params)
+    {
+        LOG(ERROR, "\tFailed to allocate public-key test buffers\n");
+        return VAL_TEST_PREP_SEQ_FAILED;
+    }
+
+    /* Keep the device key, but report a different supported key length. */
+    val_memset(key, 0, PAGE_SIZE);
+    val_memcpy(key, (void *)c_args.key_addr, c_args.key_len);
+    val_memcpy(pubkey_params, (void *)c_args.params_ptr_valid,
+               sizeof(*pubkey_params));
+    pubkey_params->key_addr = (uint64_t)key;
+    if (c_args.pdev_dev_valid.public_key_sig_algo == RMI_SIG_ECDSA_P256)
+        pubkey_params->key_len = PDEV_P384_KEY_LEN;
+    else
+        pubkey_params->key_len = PDEV_P256_KEY_LEN;
+
 
     return (uint64_t)pubkey_params;
 }
@@ -79,55 +108,84 @@ static uint64_t invalid_metadata_len_prep_sequence(void)
 
     val_memset(pubkey_params, 0, PAGE_SIZE_4K);
 
-    val_memcpy(pubkey_params->key, &(c_args.key), c_args.key_len);
+    pubkey_params->key_addr = c_args.key_addr;
+    pubkey_params->metadata_addr = c_args.metadata_addr;
     pubkey_params->key_len = c_args.key_len;
     pubkey_params->metadata_len = MAX_METADATA_LEN + 1;
-    pubkey_params->algo = c_args.algo;
-    val_memcpy(pubkey_params->metadata, &c_args.metadata, c_args.metadata_len);
+
+    return (uint64_t)pubkey_params;
+}
+
+static uint64_t metadata_len_wrong_algo_prep_sequence(void)
+{
+    val_host_public_key_params_ts *pubkey_params;
+
+    pubkey_params = val_host_mem_alloc(PAGE_SIZE, PAGE_SIZE);
+    if (!pubkey_params)
+    {
+        LOG(ERROR, "\tFailed to allocate public-key parameters\n");
+        return VAL_TEST_PREP_SEQ_FAILED;
+    }
+
+    val_memcpy(pubkey_params, (void *)c_args.params_ptr_valid,
+               sizeof(*pubkey_params));
+    if (c_args.pdev_dev_valid.public_key_sig_algo == RMI_SIG_RSASSA_3072)
+        pubkey_params->metadata_len = 0U;
+    else
+        pubkey_params->metadata_len = 1U;
 
     return (uint64_t)pubkey_params;
 }
 
 static uint64_t invalid_key_prep_sequence(void)
 {
+    uint8_t *key;
     val_host_public_key_params_ts *pubkey_params;
 
+    key = val_host_mem_alloc(PAGE_SIZE, PAGE_SIZE);
     pubkey_params = val_host_mem_alloc(PAGE_SIZE, PAGE_SIZE);
-    if (!pubkey_params)
+    if (!key || !pubkey_params)
     {
-        LOG(ERROR, "\tFailed to allocate memory for pub_key\n");
+        LOG(ERROR, "\tFailed to allocate public-key test buffers\n");
         return VAL_TEST_PREP_SEQ_FAILED;
     }
 
     val_memset(pubkey_params, 0, PAGE_SIZE_4K);
+    val_memcpy(key, (void *)c_args.key_addr, c_args.key_len);
+    key[0] = 0U;
 
-    val_memcpy(pubkey_params->key, &(c_args.key), c_args.key_len);
-    pubkey_params->key_len = c_args.key_len + 5;
+    pubkey_params->key_addr = (uint64_t)key;
+    pubkey_params->metadata_addr = c_args.metadata_addr;
+    pubkey_params->key_len = c_args.key_len;
     pubkey_params->metadata_len = c_args.metadata_len;
-    pubkey_params->algo = c_args.algo;
-    val_memcpy(pubkey_params->metadata, &c_args.metadata, c_args.metadata_len);
 
     return (uint64_t)pubkey_params;
 }
 
 static uint64_t invalid_metadata_prep_sequence(void)
 {
+    uint8_t *metadata;
     val_host_public_key_params_ts *pubkey_params;
 
+    if (c_args.pdev_dev_valid.public_key_sig_algo != RMI_SIG_RSASSA_3072)
+        return VAL_SKIP_CHECK;
+
+    metadata = val_host_mem_alloc(PAGE_SIZE, PAGE_SIZE);
     pubkey_params = val_host_mem_alloc(PAGE_SIZE, PAGE_SIZE);
-    if (!pubkey_params)
+    if (!metadata || !pubkey_params)
     {
-        LOG(ERROR, "\tFailed to allocate memory for pub_key\n");
+        LOG(ERROR, "\tFailed to allocate public-key metadata test buffers\n");
         return VAL_TEST_PREP_SEQ_FAILED;
     }
 
     val_memset(pubkey_params, 0, PAGE_SIZE_4K);
+    val_memcpy(pubkey_params, (void *)c_args.params_ptr_valid,
+               sizeof(*pubkey_params));
 
-    val_memcpy(pubkey_params->key, &(c_args.key), c_args.key_len);
-    pubkey_params->key_len = c_args.key_len;
-    pubkey_params->metadata_len = c_args.metadata_len + 5;
-    pubkey_params->algo = c_args.algo;
-    val_memcpy(pubkey_params->metadata, &c_args.metadata, c_args.metadata_len);
+    /* Keep the RSA exponent length valid, but make its value invalid. */
+    val_memset(metadata, 0, c_args.metadata_len);
+
+    pubkey_params->metadata_addr = (uint64_t)metadata;
 
     return (uint64_t)pubkey_params;
 }
@@ -155,7 +213,7 @@ static uint64_t pdev_new_prep_sequence(void)
     val_memcpy(&pdev_dev.pdev_flags, &pdev_flags, sizeof(pdev_flags));
 
     pdev_dev.pdev = g_pdev_new_prep_sequence(&pdev_dev);
-    if (c_args.pdev_ptr_valid == VAL_TEST_PREP_SEQ_FAILED)
+    if (pdev_dev.pdev == VAL_TEST_PREP_SEQ_FAILED)
         return VAL_TEST_PREP_SEQ_FAILED;
 
     c_args_invalid.pdev_new_invalid = pdev_dev.pdev;
@@ -245,7 +303,7 @@ static uint64_t valid_input_args_prep_sequence(void)
     pdev_dev.pdev = pdev;
     pdev_dev.dev_comm_data = val_host_mem_alloc(PAGE_SIZE, PAGE_SIZE);
     pdev_dev.dev_comm_data->enter.req_addr = req_addr;
-    pdev_dev.dev_comm_data->enter.resp_addr = resp_addr;
+    pdev_dev.dev_comm_data->enter.rsp_addr = resp_addr;
 
     if (val_host_dev_communicate(NULL, &pdev_dev, NULL, RMI_PDEV_NEEDS_KEY))
     {
@@ -290,19 +348,15 @@ static uint64_t valid_input_args_prep_sequence(void)
     }
 
     val_memset(pubkey_params, 0, PAGE_SIZE_4K);
-    val_memcpy(pubkey_params->key, pdev_dev.public_key, pdev_dev.public_key_len);
-    val_memcpy(pubkey_params->metadata, pdev_dev.public_key_metadata,
-                                pdev_dev.public_key_metadata_len);
+    pubkey_params->key_addr = (uint64_t)pdev_dev.public_key;
+    pubkey_params->metadata_addr = (uint64_t)pdev_dev.public_key_metadata;
     pubkey_params->key_len = pdev_dev.public_key_len;
     pubkey_params->metadata_len = pdev_dev.public_key_metadata_len;
-    pubkey_params->algo = pdev_dev.public_key_sig_algo;
 
+    c_args.key_addr = pubkey_params->key_addr;
+    c_args.metadata_addr = pubkey_params->metadata_addr;
     c_args.key_len = pubkey_params->key_len;
     c_args.metadata_len = pubkey_params->metadata_len;
-    c_args.algo = pubkey_params->algo;
-
-    val_memcpy(&c_args.metadata, pubkey_params->metadata, c_args.metadata_len);
-    val_memcpy(c_args.key, pubkey_params->key, pubkey_params->key_len);
 
     c_args.params_ptr_valid = (uint64_t)pubkey_params;
     c_args.pdev_ptr_valid = pdev_dev.pdev;
@@ -324,15 +378,6 @@ static uint64_t intent_to_seq(struct stimulus *test_data, struct arguments *args
             args->params_ptr = c_args.params_ptr_valid;
             break;
 
-        case PDEV_OUTSIDE_OF_PERMITTED_PA:
-            args->pdev_ptr = g_outside_of_permitted_pa_prep_sequence();
-            args->params_ptr = c_args.params_ptr_valid;
-            break;
-
-        case PDEV_DEV_MEM_MMIO:
-            args->pdev_ptr = g_dev_mem_prep_sequence();
-            args->params_ptr = c_args.params_ptr_valid;
-            break;
 
         case PDEV_GRAN_STATE_UNDELEGATED:
             args->pdev_ptr = g_undelegated_prep_sequence();
@@ -363,9 +408,23 @@ static uint64_t intent_to_seq(struct stimulus *test_data, struct arguments *args
                 return VAL_ERROR;
             break;
 
+        case KEY_LEN_WRONG_ALGO:
+            args->pdev_ptr = c_args.pdev_ptr_valid;
+            args->params_ptr = key_len_wrong_algo_prep_sequence();
+            if (args->params_ptr == VAL_TEST_PREP_SEQ_FAILED)
+                return VAL_ERROR;
+            break;
+
         case INVALID_METADATA_LEN:
             args->pdev_ptr = c_args.pdev_ptr_valid;
             args->params_ptr = invalid_metadata_len_prep_sequence();
+            if (args->params_ptr == VAL_TEST_PREP_SEQ_FAILED)
+                return VAL_ERROR;
+            break;
+
+        case METADATA_LEN_WRONG_ALGO:
+            args->pdev_ptr = c_args.pdev_ptr_valid;
+            args->params_ptr = metadata_len_wrong_algo_prep_sequence();
             if (args->params_ptr == VAL_TEST_PREP_SEQ_FAILED)
                 return VAL_ERROR;
             break;
@@ -380,6 +439,8 @@ static uint64_t intent_to_seq(struct stimulus *test_data, struct arguments *args
         case INVALID_METADATA:
             args->pdev_ptr = c_args.pdev_ptr_valid;
             args->params_ptr = invalid_metadata_prep_sequence();
+            if (args->params_ptr == VAL_SKIP_CHECK)
+                return VAL_SKIP_CHECK;
             if (args->params_ptr == VAL_TEST_PREP_SEQ_FAILED)
                 return VAL_ERROR;
             break;
@@ -401,7 +462,7 @@ static uint64_t intent_to_seq(struct stimulus *test_data, struct arguments *args
 
 void cmd_pdev_set_pubkey_host(void)
 {
-    uint64_t i;
+    uint64_t i, prep_ret;
     val_smc_param_ts cmd_ret;
     struct arguments args;
 
@@ -424,7 +485,14 @@ void cmd_pdev_set_pubkey_host(void)
         LOG(TEST, test_data[i].msg);
         LOG(TEST, "; intent id : 0x%x \n", test_data[i].label);
 
-        if (intent_to_seq(&test_data[i], &args)) {
+        prep_ret = intent_to_seq(&test_data[i], &args);
+        if (prep_ret == VAL_SKIP_CHECK)
+        {
+            LOG(TEST, "\tCheck not applicable: ECDSA uses empty metadata\n");
+            continue;
+        }
+
+        if (prep_ret) {
             val_set_status(RESULT_FAIL(VAL_ERROR_POINT(2)));
             goto destroy_device;
         }
@@ -438,12 +506,20 @@ void cmd_pdev_set_pubkey_host(void)
         }
     }
 
+    if (val_host_check_pdev_state(c_args.pdev_ptr_valid,
+                                  RMI_PDEV_NEEDS_KEY))
+    {
+        LOG(ERROR, "Failed commands changed the valid PDEV state.\n");
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(4)));
+        goto destroy_device;
+    }
+
     LOG(TEST, "\n\tPositive Observability Check\n");
     cmd_ret = val_host_rmi_pdev_set_pubkey(c_args.pdev_ptr_valid, c_args.params_ptr_valid);
     if (cmd_ret.x0 != 0)
     {
         LOG(ERROR, "Command failed. %x\n", cmd_ret.x0);
-        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(4)));
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(5)));
         goto destroy_device;
     }
 
@@ -451,24 +527,35 @@ void cmd_pdev_set_pubkey_host(void)
     if (val_host_check_pdev_state(c_args.pdev_ptr_valid, RMI_PDEV_HAS_KEY))
     {
         LOG(ERROR, "PDEV state check failed.\n");
-        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(5)));
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(6)));
+        goto destroy_device;
+    }
+
+    if (val_host_dev_communicate(NULL, &c_args.pdev_dev_valid, NULL,
+                                 RMI_PDEV_READY))
+    {
+        LOG(ERROR, "PDEV communication did not enter the pending state.\n");
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(7)));
         goto destroy_device;
     }
 
     val_set_status(RESULT_PASS(VAL_SUCCESS));
 
 destroy_device:
-    if (val_host_pdev_teardown(&c_args.pdev_dev_valid, c_args.pdev_ptr_valid))
+    if (c_args.pdev_ptr_valid &&
+        val_host_pdev_teardown(&c_args.pdev_dev_valid, c_args.pdev_ptr_valid))
     {
         LOG(ERROR, "PDEV teardown failed.\n");
-        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(6)));
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(8)));
         goto exit;
     }
 
-    if (val_host_pdev_teardown(&c_args_invalid.pdev_dev_invalid, c_args_invalid.pdev_new_invalid))
+    if (c_args_invalid.pdev_new_invalid &&
+        val_host_pdev_teardown(&c_args_invalid.pdev_dev_invalid,
+                               c_args_invalid.pdev_new_invalid))
     {
         LOG(ERROR, "PDEV teardown failed.\n");
-        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(7)));
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(9)));
         goto exit;
     }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2025, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2025-2026, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -15,7 +15,8 @@ void measurement_immutable_rim_host(void)
 {
     val_host_realm_ts realm;
     uint64_t ret;
-    val_host_data_destroy_ts data_destroy;
+    val_host_rmi_rtt_unmap_flags_ts data_unmap_flags;
+    uint64_t unmap_flags;
 
     val_memset(&realm, 0, sizeof(realm));
 
@@ -41,7 +42,7 @@ void measurement_immutable_rim_host(void)
     uint64_t src = val_host_undelegate_granule();
     uint64_t flags = RMI_NO_MEASURE_CONTENT;
 
-    if (val_host_rmi_data_create(realm.rd, data, IPA_ADDR_UNASSIGNED, src, flags))
+    if (val_host_rmi_rtt_data_map_init(realm.rd, data, IPA_ADDR_UNASSIGNED, src, flags))
     {
         LOG(ERROR, "Couldn't complete the assigned protected mapping\n");
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(3)));
@@ -67,7 +68,14 @@ void measurement_immutable_rim_host(void)
     }
 
     /* Remove the granule */
-    ret = val_host_rmi_data_destroy(realm.rd, IPA_ADDR_UNASSIGNED, &data_destroy);
+    unmap_flags = 0;
+    val_memset(&data_unmap_flags, 0x0, sizeof(data_unmap_flags));
+    data_unmap_flags.oaddr_type = RMI_ADDR_TYPE_SINGLE;
+    val_memcpy(&unmap_flags, &data_unmap_flags, sizeof(data_unmap_flags));
+
+    ret = val_host_rmi_rtt_data_unmap(realm.rd, IPA_ADDR_UNASSIGNED,
+                                      IPA_ADDR_UNASSIGNED + PAGE_SIZE,
+                                      unmap_flags, 0);
     if (ret)
     {
         LOG(ERROR, "Data destroy failed, ret=%x\n", ret);
@@ -84,7 +92,21 @@ void measurement_immutable_rim_host(void)
     }
 
     uint64_t data_unknown = val_host_delegate_granule();
-    if (val_host_rmi_data_create_unknown(realm.rd, data_unknown, IPA_ADDR_UNASSIGNED1))
+    uint64_t data_desc;
+    val_host_rmi_rtt_prot_map_flags_ts data_map_flags;
+
+    flags = 0;
+    val_memset(&data_map_flags, 0x0, sizeof(data_map_flags));
+    data_map_flags.oaddr_type = RMI_ADDR_TYPE_SINGLE;
+    val_memcpy(&flags, &data_map_flags, sizeof(data_map_flags));
+
+    data_desc = RMI_PAGE_L3 | (1UL << 2) |
+                ADDR_ALIGN_DOWN(data_unknown, PAGE_SIZE) |
+                ((uint64_t)RMI_OP_MEM_DELEGATED << 62);
+
+    if (val_host_rmi_rtt_data_map(realm.rd, IPA_ADDR_UNASSIGNED1,
+                                  IPA_ADDR_UNASSIGNED1 + PAGE_SIZE,
+                                  flags, data_desc))
     {
         LOG(ERROR, "Couldn't complete the assigned protected mapping\n");
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(8)));
@@ -96,6 +118,16 @@ void measurement_immutable_rim_host(void)
     {
         LOG(ERROR, "Rec enter failed, ret=%x\n", ret);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(9)));
+        goto destroy_realm;
+    }
+
+    ret = val_host_rmi_rtt_data_unmap(realm.rd, IPA_ADDR_UNASSIGNED1,
+                                      IPA_ADDR_UNASSIGNED1 + PAGE_SIZE,
+                                      unmap_flags, 0);
+    if (ret)
+    {
+        LOG(ERROR, "Data destroy failed, ret=%x\n", ret);
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(10)));
         goto destroy_realm;
     }
 

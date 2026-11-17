@@ -9,10 +9,7 @@
 
 enum test_intent {
     PDEV_UNALIGNED = 0X0,
-    PDEV_OUTSIDE_OF_PERMITTED_PA = 0X1,
-    PDEV_DEV_MEM_MMIO = 0X2,
-    PDEV_GRAN_STATE_UNDELEGATED = 0X3,
-    PDEV_STATE_PDEV_READY = 0X4,
+    PDEV_GRAN_STATE_UNDELEGATED = 0X1,
 };
 
 struct stimulus {
@@ -29,24 +26,9 @@ static struct stimulus test_data[] = {
     .label = PDEV_UNALIGNED,
     .status = RMI_ERROR_INPUT,
     .index = 0},
-    {.msg = "pdev_bound",
-    .abi = RMI_PDEV_ABORT,
-    .label = PDEV_OUTSIDE_OF_PERMITTED_PA,
-    .status = RMI_ERROR_INPUT,
-    .index = 0},
-    {.msg = "pdev_bound",
-    .abi = RMI_PDEV_ABORT,
-    .label = PDEV_DEV_MEM_MMIO,
-    .status = RMI_ERROR_INPUT,
-    .index = 0},
     {.msg = "pdev_gran_state",
     .abi = RMI_PDEV_ABORT,
     .label = PDEV_GRAN_STATE_UNDELEGATED,
     .status = RMI_ERROR_INPUT,
-    .index = 0},
-    {.msg = "pdev_state",
-    .abi = RMI_PDEV_ABORT,
-    .label = PDEV_STATE_PDEV_READY,
-    .status = RMI_ERROR_DEVICE,
     .index = 0}
 };

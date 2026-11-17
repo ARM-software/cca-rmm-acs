@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2025, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2025-2026, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -12,7 +12,7 @@
 
 void attestation_realm_measurement_type_realm(void)
 {
-    val_smc_param_ts args = {0,};
+    val_smc_param_ts args = {0,}, rim_read;
     uint64_t token_size = 0, ret, size, max_size, len;
     __attribute__((aligned (PAGE_SIZE))) uint64_t token[MAX_REALM_CCA_TOKEN_SIZE/8] = {0,};
     uint64_t *granule = token;
@@ -25,6 +25,14 @@ void attestation_realm_measurement_type_realm(void)
                              0xb75961661d52e8ce,
                              0xc7f17650fe9fca60};
     attestation_token_ts attestation_token;
+
+    rim_read = val_realm_rsi_measurement_read(0);
+    if (rim_read.x0)
+    {
+        LOG(ERROR, "RIM read failed, ret=%x\n", rim_read.x0);
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(5)));
+        goto exit;
+    }
 
     args = val_realm_rsi_attestation_token_init(challenge[0], challenge[1],
                                                   challenge[2], challenge[3], challenge[4],
@@ -77,6 +85,15 @@ void attestation_realm_measurement_type_realm(void)
     {
         LOG(ERROR, "Realm initial measurement is not in given size format.\n");
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(4)));
+        goto exit;
+    }
+
+    if (val_memcmp(&rim_read.x1,
+                   (void *)attestation_token.realm_initial_measurement.ptr,
+                   attestation_token.realm_initial_measurement.len))
+    {
+        LOG(ERROR, "Token RIM does not match RSI measurement read.\n");
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(6)));
         goto exit;
     }
 

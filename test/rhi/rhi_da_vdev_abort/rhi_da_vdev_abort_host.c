@@ -92,6 +92,13 @@ void rhi_da_vdev_abort_host(void)
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(10)));
         goto destroy_realm;
     }
+
+    if (IS_TEST_FAIL(val_get_status()))
+        goto destroy_device;
+
+    val_set_status(RESULT_PASS(VAL_SUCCESS));
+
+destroy_device:
     if (val_host_vdev_teardown(&realm, &pdev_obj, vdev_obj))
     {
         LOG(ERROR, "VDEV teardown failed\n");
@@ -105,8 +112,6 @@ void rhi_da_vdev_abort_host(void)
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(12)));
         goto destroy_realm;
     }
-
-    val_set_status(RESULT_PASS(VAL_SUCCESS));
 
     /* Free test resources */
 destroy_realm:

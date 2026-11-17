@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023-2025, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023-2026, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -14,6 +14,16 @@
 #include "val_common_status.h"
 #include "val_common_framework.h"
 #include "val_common_peripherals.h"
+
+/*
+ * Defines member of structure and reserves space
+ * for the next member with specified offset.
+ */
+#define SET_MEMBER(member, start, end)  \
+    union {             \
+        member;         \
+        unsigned char reserved##end[end - start]; \
+    }
 
 typedef struct _val_print_rsi_host_call {
     SET_MEMBER(struct {

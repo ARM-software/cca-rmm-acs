@@ -41,27 +41,23 @@ static uint64_t validate_digests(val_realm_rsi_vdev_info_ts *rsi_device_info)
     pubkey_buff_size = gv_realm_host_call->gprs[3];
     report_buff_size = gv_realm_host_call->gprs[4];
     measurement_buff_size = gv_realm_host_call->gprs[5];
-    /*Uncomment once pubkey cache is set by TF-RMM */
-    (void)pubkey_buff_size;
-    (void)shared_pubkey_buff;
 
     val_realm_verify_digests_ts verify_digests[] = {
         {
             shared_vca_buff,
             vca_buff_size,
-            (void *)rsi_device_info->vca_digest
+            (void *)rsi_device_info->protocol_data_digest
         },
         {
             shared_cert_buff,
             cert_buff_size,
-            (void *)rsi_device_info->cert_digest
+            (void *)rsi_device_info->identity_digest
         },
-        /* TODO: Uncomment once TF-RMM fix the issue */
-        // {
-        //     shared_pubkey_buff,
-        //     pubkey_buff_size,
-        //     (void *)rsi_device_info->pubkey_digest
-        // },
+        {
+            shared_pubkey_buff,
+            pubkey_buff_size,
+            (void *)rsi_device_info->pubkey_digest
+        },
         {
             shared_report_buff,
             report_buff_size,
@@ -97,7 +93,7 @@ static uint64_t validate_digests(val_realm_rsi_vdev_info_ts *rsi_device_info)
         return VAL_ERROR;
     }
 
-    for (i = 0; i < 4 ; i++)
+    for (i = 0; i < (sizeof(verify_digests) / sizeof(verify_digests[0])); i++)
     {
         /* Compute and compare digest */
         ret = (uint64_t)mbedtls_md(md_info, verify_digests[i].digest_report,
@@ -126,9 +122,12 @@ void da_offchip_pcie_realm(void)
     PAGE_SIZE_ALIGNED val_realm_rsi_vdev_info_ts vdev_info = {0};
     uint64_t ret, i;
     uint8_t *shared_report_buff = (val_get_shared_region_base() + TEST_USE_OFFSET4);
+    uint64_t *shared_addr_ranges = (uint64_t *)(val_get_shared_region_base() +
+                                                TEST_USE_OFFSET6);
     PAGE_SIZE_ALIGNED val_host_pci_tdisp_device_interface_report_struct_t interface_report = {0};
     pci_tdisp_mmio_range_t mmio_range_struct[MAX_MMIO_RANGE_COUNT];
-    uint64_t ipa_base = 0, ipa_top = 0;
+    uint64_t ipa_base = 0, ipa_top = 0, pa_base, pa_top;
+    uint64_t addr_offset = 0;
     val_memory_region_descriptor_ts mem_desc;
     uint64_t non_ats_plane;
     uint64_t map_size;
@@ -158,15 +157,15 @@ void da_offchip_pcie_realm(void)
 
     LOG(TEST, "RSI_VDEV_GET_INFO:\n");
     LOG(TEST, "\tflags: 0x%lx\n", vdev_info.flags);
-    LOG(TEST, "\tcert_id: 0x%lx\n", vdev_info.cert_id);
+    LOG(TEST, "\tid_index: 0x%lx\n", vdev_info.id_index);
     LOG(TEST, "\thash_algo: 0x%lx\n", vdev_info.hash_algo);
-    LOG(TEST, "\tlock_nonce: 0x%lx\n", vdev_info.lock_nonce);
-    LOG(TEST, "\tmeas_nonce: 0x%lx\n", vdev_info.meas_nonce);
-    LOG(TEST, "\treport_nonce: 0x%lx\n", vdev_info.report_nonce);
-    LOG(TEST, "\ttdisp_version: 0x%lx\n", vdev_info.tdisp_version);
+    LOG(TEST, "\tlock_seq: 0x%lx\n", vdev_info.lock_seq);
+    LOG(TEST, "\tmeas_seq: 0x%lx\n", vdev_info.meas_seq);
+    LOG(TEST, "\treport_seq: 0x%lx\n", vdev_info.report_seq);
+    LOG(TEST, "\ttdisp_version: 0x%lx\n", vdev_info.format_version);
     LOG(TEST, "\tstate: 0x%lx\n", vdev_info.state);
 
-    /* Validate digests for certificate, interface rpeport and measurements */
+    /* Validate the device attestation evidence digests. */
     ret = validate_digests(&vdev_info);
     if (ret)
     {
@@ -186,6 +185,14 @@ void da_offchip_pcie_realm(void)
         goto exit;
     }
 
+    if ((interface_report.mmio_range_count == 0) ||
+        (interface_report.mmio_range_count > shared_addr_ranges[0]))
+    {
+        LOG(ERROR, "Invalid Host MMIO range count\n");
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(3)));
+        goto exit;
+    }
+
         /* Populate params */
     val_memset(&dev_mem_flags, 0, sizeof(dev_mem_flags));
     dev_mem_flags.coh = RSI_DEV_MEM_NON_COHERENT;
@@ -197,14 +204,29 @@ void da_offchip_pcie_realm(void)
     {
         ipa_base = mmio_range_struct[i].first_page;
         ipa_top = ipa_base + (PAGE_SIZE_4K * mmio_range_struct[i].number_of_pages);
+        pa_base = shared_addr_ranges[1 + (2 * i)];
+        pa_top = shared_addr_ranges[2 + (2 * i)];
+
+        if ((pa_top <= pa_base) || (pa_base < ipa_base) ||
+            ((pa_top - pa_base) < (ipa_top - ipa_base)) ||
+            ((i != 0) && ((pa_base - ipa_base) != addr_offset)))
+        {
+            LOG(ERROR, "Host and TDISP MMIO ranges do not match\n");
+            val_set_status(RESULT_FAIL(VAL_ERROR_POINT(3)));
+            goto exit;
+        }
+
+        if (i == 0)
+            addr_offset = pa_base - ipa_base;
+
         args = val_realm_rsi_vdev_validate_mapping(vdev_id,
                                                 ipa_base,
                                                 ipa_top,
-                                                ipa_base,
+                                                pa_base,
                                                 flags,
-                                                vdev_info.lock_nonce,
-                                                vdev_info.meas_nonce,
-                                                vdev_info.report_nonce);
+                                                vdev_info.lock_seq,
+                                                vdev_info.meas_seq,
+                                                vdev_info.report_seq);
 
         if ((args.x0 != RSI_SUCCESS) || (args.x2 != RSI_ACCEPT))
         {
@@ -282,9 +304,9 @@ void da_offchip_pcie_realm(void)
     }
 
     args = val_realm_rsi_vdev_dma_enable(vdev_id, 0, non_ats_plane,
-                    vdev_info.lock_nonce,
-                    vdev_info.meas_nonce,
-                    vdev_info.report_nonce);
+                    vdev_info.lock_seq,
+                    vdev_info.meas_seq,
+                    vdev_info.report_seq);
     if (args.x0 != RSI_SUCCESS) {
         LOG(ERROR, "RSI_VDEV_DMA_ENABLE failed, ret %x\n", args.x0);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(9)));
@@ -318,7 +340,10 @@ void da_offchip_pcie_realm(void)
         goto exit;
     }
 
-    args = val_realm_rsi_vdev_dma_disable(vdev_id);
+    do {
+        args = val_realm_rsi_vdev_dma_disable(vdev_id);
+    } while (args.x0 == RSI_INCOMPLETE);
+
     if (args.x0 != RSI_SUCCESS) {
         LOG(ERROR, "RSI_VDEV_DMA_DISABLE failed, %x\n", args.x0);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(11)));
@@ -326,6 +351,25 @@ void da_offchip_pcie_realm(void)
     }
 
     LOG(DBG, "RSI_VDEV_DMA_DISABLE success\n");
+
+    /* Release the device IPA ranges before the Host removes their mappings. */
+    for (i = 0; i < interface_report.mmio_range_count; i++) {
+        uint64_t base = mmio_range_struct[i].first_page;
+        uint64_t top = base + (PAGE_SIZE_4K * mmio_range_struct[i].number_of_pages);
+
+        while (base < top) {
+            args = val_realm_rsi_ipa_state_set(base, top, RSI_EMPTY,
+                                                RSI_NO_CHANGE_DESTROYED);
+            if ((args.x0 != RSI_SUCCESS) || (args.x2 != RSI_ACCEPT) ||
+                (args.x1 <= base) || (args.x1 > top)) {
+                LOG(ERROR, "Device IPA state change failed, ret=0x%lx\n", args.x0);
+                val_set_status(RESULT_FAIL(VAL_ERROR_POINT(12)));
+                goto exit;
+            }
+
+            base = args.x1;
+        }
+    }
 
 exit:
     val_realm_return_to_host();

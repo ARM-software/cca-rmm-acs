@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2025, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2025-2026, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -37,12 +37,14 @@ void cmd_system_off_host(void)
         goto destroy_realm;
     }
 
-    /* Calling PSCI_SYSTEM_OFF from realm should cause REC exit due to PSCI and exit.gprs
-     * contains parameters from PSCI call */
+    /* Calling PSCI_SYSTEM_OFF from Realm should cause a REC exit due to PSCI. */
     if (
             ((rec_exit->exit_reason) != RMI_EXIT_PSCI) ||
-            /* gprs[0] holds the function is of psci call*/
-            ((rec_exit->gprs[0]) != PSCI_SYSTEM_OFF)
+            /* gprs[0] holds the PSCI FID; unused argument registers are zero. */
+            ((rec_exit->gprs[0]) != PSCI_SYSTEM_OFF) ||
+            ((rec_exit->gprs[1]) != 0U) ||
+            ((rec_exit->gprs[2]) != 0U) ||
+            ((rec_exit->gprs[3]) != 0U)
        )
     {
         LOG(ERROR, "Rec Exit not due to  PSCI_SYSTEM_OFF\n");
@@ -54,7 +56,7 @@ void cmd_system_off_host(void)
 
     /* REC enter should fail as the realm state is SYSTEM OFF */
     ret = val_host_rmi_rec_enter(realm.rec[0], realm.run[0]);
-    if (ret != PACK_CODE(RMI_ERROR_REALM, 1))
+    if (ret != PACK_CODE(RMI_ERROR_REALM, 0))
     {
         LOG(ERROR, " Positive observability failed, ret=%x\n", ret);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(4)));

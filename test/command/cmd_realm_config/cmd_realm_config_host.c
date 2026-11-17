@@ -1,12 +1,11 @@
 /*
- * Copyright (c) 2023, 2025, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2025-2026, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
  */
 #include "test_database.h"
 #include "val_host_rmi.h"
-
 
 void cmd_realm_config_host(void)
 {
@@ -34,7 +33,8 @@ void cmd_realm_config_host(void)
         goto destroy_realm;
     }
 
-    val_set_status(RESULT_PASS(VAL_SUCCESS));
+    if (!IS_TEST_PASS(val_get_status()))
+        goto destroy_realm;
 
     /* Free test resources */
 destroy_realm:

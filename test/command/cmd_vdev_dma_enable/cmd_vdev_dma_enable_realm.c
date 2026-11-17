@@ -17,22 +17,29 @@ static struct argument_store {
     uint64_t vdev_id_valid;
     uint64_t flags_valid;
     uint64_t non_ats_plane_valid;
-    uint64_t lock_nonce_valid;
-    uint64_t meas_nonce_valid;
-    uint64_t report_nonce_valid;
+    uint64_t lock_seq_valid;
+    uint64_t meas_seq_valid;
+    uint64_t report_seq_valid;
 } c_args;
 
 static struct invalid_argument_store {
     uint64_t non_ats_plane_invalid;
 } c_args_invalid;
 
+static struct new_vdev_arguments {
+    uint64_t vdev_id;
+    uint64_t lock_seq;
+    uint64_t meas_seq;
+    uint64_t report_seq;
+} new_vdev_args;
+
 struct arguments {
     uint64_t vdev_id;
     uint64_t flags;
     uint64_t non_ats_plane;
-    uint64_t lock_nonce;
-    uint64_t meas_nonce;
-    uint64_t report_nonce;
+    uint64_t lock_seq;
+    uint64_t meas_seq;
+    uint64_t report_seq;
 };
 
 static uint64_t valid_input_args_prep_sequence(void)
@@ -42,10 +49,12 @@ static uint64_t valid_input_args_prep_sequence(void)
     uint64_t non_ats_plane;
     val_realm_rsi_host_call_t *gv_realm_host_call;
     PAGE_SIZE_ALIGNED val_realm_rsi_vdev_info_ts vdev_info = {0};
+    PAGE_SIZE_ALIGNED val_realm_rsi_vdev_info_ts new_vdev_info = {0};
     PAGE_SIZE_ALIGNED val_realm_rsi_realm_config_ts realm_config = {0};
 
     gv_realm_host_call = val_realm_rsi_host_call_ripas(VAL_SWITCH_TO_HOST);
     vdev_id = gv_realm_host_call->gprs[1];
+    new_vdev_args.vdev_id = gv_realm_host_call->gprs[2];
 
     args = val_realm_rsi_vdev_get_info(vdev_id, (uint64_t)&vdev_info);
     if (args.x0)
@@ -54,7 +63,15 @@ static uint64_t valid_input_args_prep_sequence(void)
         goto exit;
     }
 
-    if (val_realm_rsi_realm_config((uint64_t)(&realm_config)) != RSI_SUCCESS)
+    args = val_realm_rsi_vdev_get_info(new_vdev_args.vdev_id,
+                                       (uint64_t)&new_vdev_info);
+    if (args.x0)
+    {
+        LOG(ERROR, "New VDEV_GET_INFO failed, ret %x\n", args.x0);
+        goto exit;
+    }
+
+    if (val_realm_rsi_realm_config((uint64_t)&realm_config) != RSI_SUCCESS)
     {
         LOG(ERROR, "RSI_REALM_CONFIG failed\n");
         goto exit;
@@ -68,10 +85,12 @@ static uint64_t valid_input_args_prep_sequence(void)
     c_args.vdev_id_valid = vdev_id;
     c_args.flags_valid = 0;
     c_args.non_ats_plane_valid = non_ats_plane;
-    c_args.lock_nonce_valid = vdev_info.lock_nonce;
-    c_args.meas_nonce_valid = vdev_info.meas_nonce;
-    c_args.report_nonce_valid = vdev_info.report_nonce;
-
+    c_args.lock_seq_valid = vdev_info.lock_seq;
+    c_args.meas_seq_valid = vdev_info.meas_seq;
+    c_args.report_seq_valid = vdev_info.report_seq;
+    new_vdev_args.lock_seq = new_vdev_info.lock_seq;
+    new_vdev_args.meas_seq = new_vdev_info.meas_seq;
+    new_vdev_args.report_seq = new_vdev_info.report_seq;
     c_args_invalid.non_ats_plane_invalid = realm_config.num_aux_planes + 1UL;
 
     return VAL_SUCCESS;
@@ -90,27 +109,36 @@ static uint64_t intent_to_seq(struct stimulus *test_data, struct arguments *args
             args->vdev_id = INVALID_VDEV_ID;
             args->flags = c_args.flags_valid;
             args->non_ats_plane = c_args.non_ats_plane_valid;
-            args->lock_nonce = c_args.lock_nonce_valid;
-            args->meas_nonce = c_args.meas_nonce_valid;
-            args->report_nonce = c_args.report_nonce_valid;
+            args->lock_seq = c_args.lock_seq_valid;
+            args->meas_seq = c_args.meas_seq_valid;
+            args->report_seq = c_args.report_seq_valid;
             break;
 
         case NON_ATS_PLANE_INVALID:
             args->vdev_id = c_args.vdev_id_valid;
             args->flags = c_args.flags_valid;
             args->non_ats_plane = c_args_invalid.non_ats_plane_invalid;
-            args->lock_nonce = c_args.lock_nonce_valid;
-            args->meas_nonce = c_args.meas_nonce_valid;
-            args->report_nonce = c_args.report_nonce_valid;
+            args->lock_seq = c_args.lock_seq_valid;
+            args->meas_seq = c_args.meas_seq_valid;
+            args->report_seq = c_args.report_seq_valid;
             break;
 
-        case ATTEST_INFO_MISMATCH:
+        case FRESHNESS_MISMATCH:
             args->vdev_id = c_args.vdev_id_valid;
             args->flags = c_args.flags_valid;
             args->non_ats_plane = c_args.non_ats_plane_valid;
-            args->lock_nonce = c_args.lock_nonce_valid + 1U;
-            args->meas_nonce = c_args.meas_nonce_valid;
-            args->report_nonce = c_args.report_nonce_valid;
+            args->lock_seq = c_args.lock_seq_valid + 1U;
+            args->meas_seq = c_args.meas_seq_valid;
+            args->report_seq = c_args.report_seq_valid;
+            break;
+
+        case VDEV_STATE_NOT_STARTED:
+            args->vdev_id = new_vdev_args.vdev_id;
+            args->flags = c_args.flags_valid;
+            args->non_ats_plane = c_args.non_ats_plane_valid;
+            args->lock_seq = new_vdev_args.lock_seq;
+            args->meas_seq = new_vdev_args.meas_seq;
+            args->report_seq = new_vdev_args.report_seq;
             break;
 
         default:
@@ -146,8 +174,8 @@ void cmd_vdev_dma_enable_realm(void)
         }
 
         cmd_ret = val_realm_rsi_vdev_dma_enable(args.vdev_id, args.flags,
-                        args.non_ats_plane, args.lock_nonce,
-                        args.meas_nonce, args.report_nonce);
+                        args.non_ats_plane, args.lock_seq,
+                        args.meas_seq, args.report_seq);
 
         if (cmd_ret.x0 != PACK_CODE(test_data1[i].status, test_data1[i].index)) {
             LOG(ERROR, "\tTest Failure!\n\tThe ABI call returned: %x\n\tExpected: %x\n",
@@ -160,10 +188,14 @@ void cmd_vdev_dma_enable_realm(void)
     val_realm_return_to_host();
 
     LOG(TEST, "\n\tPositive Observability Check\n");
-    cmd_ret = val_realm_rsi_vdev_dma_enable(c_args.vdev_id_valid, c_args.flags_valid,
-                        c_args.non_ats_plane_valid, c_args.lock_nonce_valid,
-                        c_args.meas_nonce_valid, c_args.report_nonce_valid);
-    if (cmd_ret.x0 != 0)
+    do {
+        cmd_ret = val_realm_rsi_vdev_dma_enable(c_args.vdev_id_valid,
+                            c_args.flags_valid, c_args.non_ats_plane_valid,
+                            c_args.lock_seq_valid, c_args.meas_seq_valid,
+                            c_args.report_seq_valid);
+    } while (cmd_ret.x0 == RSI_INCOMPLETE);
+
+    if (cmd_ret.x0 != RSI_SUCCESS)
     {
         LOG(ERROR, "Command failed. %x\n", cmd_ret.x0);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(4)));

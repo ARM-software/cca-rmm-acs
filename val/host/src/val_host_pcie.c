@@ -2207,7 +2207,7 @@ uint64_t val_pcie_find_doe_capability(uint32_t *num_bdf, uint32_t *bdf, uint32_t
         return VAL_SUCCESS;
     }
 
-    LOG(ERROR, " No PCIe DOE capability supported device found");
+    LOG(DBG, " No PCIe DOE capability supported device found");
     return VAL_ERROR;
 }
 

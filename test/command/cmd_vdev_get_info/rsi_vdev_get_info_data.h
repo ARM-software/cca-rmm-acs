@@ -6,6 +6,7 @@
  */
 
 #include "val_rmm.h"
+#include "val_realm_rsi_types.h"
 
 enum test_intent {
     VDEV_IDS_INVALID_VDEV_ID = 0X0,
@@ -23,12 +24,11 @@ struct stimulus {
 };
 
 static struct stimulus test_data1[] = {
-    /* TODO: Uncomment once TF-RMM fix the issue */
-//    {.msg = "vdev_id",
-//    .abi = RSI_VDEV_GET_INFO,
-//    .label = VDEV_IDS_INVALID_VDEV_ID,
-//    .status = RSI_ERROR_INPUT,
-//    .index = 0},
+    {.msg = "vdev_id",
+    .abi = RSI_VDEV_GET_INFO,
+    .label = VDEV_IDS_INVALID_VDEV_ID,
+    .status = RSI_ERROR_INPUT,
+    .index = 0},
     {.msg = "addr_align",
     .abi = RSI_VDEV_GET_INFO,
     .label = ADDR_UNALIGNED,
@@ -39,9 +39,9 @@ static struct stimulus test_data1[] = {
     .label = ADDR_UNPROTECTED,
     .status = RSI_ERROR_INPUT,
     .index = 0},
-//    {.msg = "addr_empty",
-//    .abi = RSI_VDEV_GET_INFO,
-//    .label = ADDR_RIPAS_EMPTY,
-//    .status = RSI_ERROR_INPUT,
-//    .index = 0}
+    {.msg = "addr_empty",
+    .abi = RSI_VDEV_GET_INFO,
+    .label = ADDR_RIPAS_EMPTY,
+    .status = RSI_ERROR_INPUT,
+    .index = 0}
 };

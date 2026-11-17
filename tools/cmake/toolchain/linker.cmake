@@ -48,6 +48,10 @@ endif()
 function (create_executable EXE_NAME OUTPUT_DIR TEST)
     set(SCATTER_INPUT_FILE "${ROOT_DIR}/tools/cmake/${EXE_NAME}/image.ld.S")
     set(SCATTER_OUTPUT_FILE "${OUTPUT_DIR}/${EXE_NAME}_image.ld")
+    set(SUPPORT_LIB_FILES)
+    foreach(SUPPORT_LIB ${ARGN})
+        list(APPEND SUPPORT_LIB_FILES "$<TARGET_FILE:${SUPPORT_LIB}>")
+    endforeach()
 
     # Preprocess the scatter file for image layout symbols
     add_custom_command(OUTPUT CPP-LD--${EXE_NAME}${TEST}
@@ -72,13 +76,13 @@ function (create_executable EXE_NAME OUTPUT_DIR TEST)
                     COMMAND ${GNUARM_LINKER} ${CMAKE_LINKER_FLAGS} ${GNUARM_LINKER_FLAGS}
                     -T ${SCATTER_OUTPUT_FILE}
                     -o ${OUTPUT_DIR}/${EXE_NAME}.elf
-                    ${VAL_LIB}.a ${COMMON_VAL_LIB}.a ${PAL_LIB}.a ${TEST_LIB}.a ${VAL_LIB}.a ${PAL_LIB}.a ${PAL_OBJ_LIST} ${XLAT_BUILD_DIR}/${XLAT-LIB}.a
+                    ${VAL_LIB}.a ${COMMON_VAL_LIB}.a ${PAL_LIB}.a ${TEST_LIB}.a ${SUPPORT_LIB_FILES} ${VAL_LIB}.a ${PAL_LIB}.a ${PAL_OBJ_LIST} ${XLAT_BUILD_DIR}/${XLAT-LIB}.a
                     ${BUILD}/external/mbedtls/build/library/mbedx509.a
                     ${BUILD}/external/mbedtls/build/library/mbedcrypto.a
                     ${BUILD}/external/mbedtls/build/library/mbedtls.a
                     ${BUILD}/external/mbedtls/build/library/mbedx509.a
                     ${BUILD}/external/mbedtls/build/library/mbedcrypto.a
-                    DEPENDS CPP-LD-${EXE_NAME}${TEST})
+                    DEPENDS CPP-LD-${EXE_NAME}${TEST} ${ARGN})
     add_custom_target(${EXE_NAME}${TEST}_elf ALL DEPENDS ${EXE_NAME}${TEST}.elf)
 
     # Create the dump info

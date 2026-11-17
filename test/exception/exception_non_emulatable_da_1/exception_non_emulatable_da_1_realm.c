@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2025, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2025-2026, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -16,7 +16,7 @@ void exception_non_emulatable_da_1_realm(void)
     val_memory_region_descriptor_ts mem_desc;
     uint64_t ipa_base;
     uint64_t *addr;
-    uint32_t val = 0x333;
+    uint64_t val = 0x333;
 
     /* Below code is executed for REC[0] only */
     LOG(DBG, "In realm_create_realm REC[0], mpdir=%x\n", val_read_mpidr());
@@ -35,7 +35,12 @@ void exception_non_emulatable_da_1_realm(void)
     }
 
     addr = (uint64_t *)ipa_base;
-    asm volatile("ldxr %0, %1" : "=r" (val) : "Qo" (*(volatile uint32_t *)addr));
+
+    /*
+     * Use a store-pair instruction so that the write produces a
+     * non-emulatable Data Abort with ESR_EL2.ISS.ISV set to zero.
+     */
+    asm volatile("stp %0, %0, [%1]" : : "r" (val), "r" (addr) : "memory");
 
 exit:
     val_realm_return_to_host();

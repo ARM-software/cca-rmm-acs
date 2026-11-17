@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2025, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2025-2026, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -22,8 +22,9 @@ void cmd_psci_version_realm(void)
     version_minor = VAL_EXTRACT_BITS(version, 0, 15);
     version_major = VAL_EXTRACT_BITS(version, 16, 30);
 
-    if (version_major < PSCI_INTERFACE_VERSION_MAJOR ||
-                    version_minor < PSCI_INTERFACE_VERSION_MINOR) {
+    if ((version_major < PSCI_INTERFACE_VERSION_MAJOR) ||
+        ((version_major == PSCI_INTERFACE_VERSION_MAJOR) &&
+         (version_minor < PSCI_INTERFACE_VERSION_MINOR))) {
         LOG(ERROR, "Major Version : 0x%x. Minor Version : 0x%x \n", version_major, version_minor);
         LOG(TEST, "Expected atleast - Major : 0x%x, Minor : 0x%x \n",
                     PSCI_INTERFACE_VERSION_MAJOR, PSCI_INTERFACE_VERSION_MINOR);
@@ -35,10 +36,11 @@ void cmd_psci_version_realm(void)
     if (VAL_EXTRACT_BITS(version, 31, 63) != 0) {
         LOG(ERROR, "Received non zero value for reserved field\n");
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(2)));
+        goto exit;
     }
+
+    val_set_status(RESULT_PASS(VAL_SUCCESS));
 
 exit:
     val_realm_return_to_host();
 }
-
-

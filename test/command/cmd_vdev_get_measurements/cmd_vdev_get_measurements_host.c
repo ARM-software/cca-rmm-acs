@@ -156,7 +156,7 @@ static uint64_t valid_input_args_prep_sequence(void)
         return VAL_TEST_PREP_SEQ_FAILED;
     val_memset(vdev_measure_params, 0, PAGE_SIZE);
 
-    vdev_measure_params->indices[31] = (unsigned char)1U << 6U;
+    vdev_measure_params->nonce[31] = (unsigned char)1U << 6U;
 
     c_args.params_ptr_valid = (uint64_t)vdev_measure_params;
     c_args.pdev_ptr_valid = pdev_dev.pdev;
@@ -179,6 +179,21 @@ static uint64_t valid_input_args_prep_sequence(void)
         goto exit;
     }
 
+    /* Complete VDEV initialization so communication is idle. */
+    if (val_host_dev_communicate(&c_args.realm_valid, &c_args.pdev_dev_valid,
+                                 &c_args.vdev_dev_valid, RMI_VDEV_UNLOCKED))
+    {
+        LOG(ERROR, "VDEV initialization failed\n");
+        goto exit;
+    }
+
+    args = val_host_rmi_vdev_get_state(c_args.vdev_ptr_valid);
+    if ((args.x0 != RMI_SUCCESS) || (args.x1 != RMI_VDEV_UNLOCKED))
+    {
+        LOG(ERROR, "VDEV did not reach RMI_VDEV_UNLOCKED\n");
+        goto exit;
+    }
+
     return VAL_SUCCESS;
 
 exit:
@@ -198,21 +213,8 @@ static uint64_t intent_to_seq(struct stimulus *test_data, struct arguments *args
             args->params_ptr = c_args.params_ptr_valid;
             break;
 
-        case RD_OUTSIDE_OF_PERMITTED_PA:
-            args->rd = g_outside_of_permitted_pa_prep_sequence();
-            args->pdev_ptr = c_args.pdev_ptr_valid;
-            args->vdev_ptr = c_args.vdev_ptr_valid;
-            args->params_ptr = c_args.params_ptr_valid;
-            break;
 
-        case RD_DEV_MEM_MMIO:
-            args->rd = g_dev_mem_prep_sequence();
-            args->pdev_ptr = c_args.pdev_ptr_valid;
-            args->vdev_ptr = c_args.vdev_ptr_valid;
-            args->params_ptr = c_args.params_ptr_valid;
-            break;
-
-        case RD_GRAN_STATE_UNDELEGATED:
+        case RD_STATE_UNDELEGATED:
             args->rd = g_undelegated_prep_sequence();
             args->pdev_ptr = c_args.pdev_ptr_valid;
             args->vdev_ptr = c_args.vdev_ptr_valid;
@@ -226,19 +228,6 @@ static uint64_t intent_to_seq(struct stimulus *test_data, struct arguments *args
             args->params_ptr = c_args.params_ptr_valid;
             break;
 
-        case PDEV_OUTSIDE_OF_PERMITTED_PA:
-            args->rd = c_args.rd_valid;
-            args->pdev_ptr = g_outside_of_permitted_pa_prep_sequence();
-            args->vdev_ptr = c_args.vdev_ptr_valid;
-            args->params_ptr = c_args.params_ptr_valid;
-            break;
-
-        case PDEV_DEV_MEM_MMIO:
-            args->rd = c_args.rd_valid;
-            args->pdev_ptr = g_dev_mem_prep_sequence();
-            args->vdev_ptr = c_args.vdev_ptr_valid;
-            args->params_ptr = c_args.params_ptr_valid;
-            break;
 
         case PDEV_GRAN_STATE_UNDELEGATED:
             args->rd = c_args.rd_valid;
@@ -254,19 +243,6 @@ static uint64_t intent_to_seq(struct stimulus *test_data, struct arguments *args
             args->params_ptr = c_args.params_ptr_valid;
             break;
 
-        case VDEV_OUTSIDE_OF_PERMITTED_PA:
-            args->rd = c_args.rd_valid;
-            args->pdev_ptr = c_args.pdev_ptr_valid;
-            args->vdev_ptr = g_outside_of_permitted_pa_prep_sequence();
-            args->params_ptr = c_args.params_ptr_valid;
-            break;
-
-        case VDEV_DEV_MEM_MMIO:
-            args->rd = c_args.rd_valid;
-            args->pdev_ptr = c_args.pdev_ptr_valid;
-            args->vdev_ptr = g_dev_mem_prep_sequence();
-            args->params_ptr = c_args.params_ptr_valid;
-            break;
 
         case VDEV_GRAN_STATE_UNDELEGATED:
             args->rd = c_args.rd_valid;
@@ -387,7 +363,7 @@ void cmd_vdev_get_measurements_host(void)
     }
 
     if (val_host_dev_communicate(&c_args.realm_valid, &c_args.pdev_dev_valid,
-                                 &c_args.vdev_dev_valid, RMI_VDEV_NEW))
+                                 &c_args.vdev_dev_valid, RMI_VDEV_UNLOCKED))
     {
         LOG(ERROR, "VDEV communicate failed\n");
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(5)));
@@ -402,9 +378,9 @@ void cmd_vdev_get_measurements_host(void)
         goto destroy_device;
     }
 
-    if (cmd_ret.x1 != RMI_VDEV_NEW)
+    if (cmd_ret.x1 != RMI_VDEV_UNLOCKED)
     {
-        LOG(ERROR, "VDEV state should be RMI_VDEV_NEW, ret %lx\n", cmd_ret.x1);
+        LOG(ERROR, "VDEV state should be RMI_VDEV_UNLOCKED, ret %lx\n", cmd_ret.x1);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(7)));
         goto destroy_device;
     }

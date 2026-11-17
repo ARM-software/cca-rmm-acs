@@ -15,6 +15,8 @@
 #define ADDR_ALIGN(a, b)              __ADDR_ALIGN_MASK(a, (typeof(a))(b) - 1)
 
 void val_host_mem_alloc_init(void);
+void val_host_tracking_alloc_init(void);
+void *val_host_tracking_alloc(size_t alignment, size_t size);
 void *val_host_mem_alloc(size_t alignment, size_t size);
 void val_host_mem_free(void *ptr);
 void *mem_alloc(size_t alignment, size_t size);

@@ -1,11 +1,12 @@
 /*
- * Copyright (c) 2024, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2024, 2026, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
  */
 
 #include "val_rmm.h"
+#include "val_realm_rsi_types.h"
 
 enum test_intent {
     BASE_UNALIGNED = 0X0,
