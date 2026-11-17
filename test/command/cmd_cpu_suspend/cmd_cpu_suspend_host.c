@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2025, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2025-2026, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -7,6 +7,9 @@
 #include "test_database.h"
 #include "val_host_rmi.h"
 
+#define CPU_SUSPEND_POWER_STATE    0x12345678UL
+#define CPU_SUSPEND_ENTRY_POINT    0x12345000UL
+#define CPU_SUSPEND_CONTEXT_ID     0x123456789ABCDEF0UL
 
 void cmd_cpu_suspend_host(void)
 {
@@ -40,13 +43,14 @@ void cmd_cpu_suspend_host(void)
     /* Calling PSCI_CPU_SUSPEND from realm should cause REC exit due to PSCI and exit.gprs
      * contains parameters from PSCI call */
 
-    if (
-            ((rec_exit->exit_reason) != RMI_EXIT_PSCI) ||
-            /* gprs[0] holds the function is of psci call*/
-            ((rec_exit->gprs[0]) != PSCI_CPU_SUSPEND_AARCH64)
-       )
+    if (((rec_exit->exit_reason) != RMI_EXIT_PSCI) ||
+        /* gprs[0] holds the function ID of the PSCI call. */
+        ((rec_exit->gprs[0]) != PSCI_CPU_SUSPEND_AARCH64) ||
+        ((rec_exit->gprs[1]) != CPU_SUSPEND_POWER_STATE) ||
+        ((rec_exit->gprs[2]) != CPU_SUSPEND_ENTRY_POINT) ||
+        ((rec_exit->gprs[3]) != CPU_SUSPEND_CONTEXT_ID))
     {
-        LOG(ERROR, "Rec Exit not due to  PSCI_CPU_SUSPEND\n");
+        LOG(ERROR, "Invalid REC exit for PSCI_CPU_SUSPEND\n");
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(3)));
         goto destroy_realm;
     }

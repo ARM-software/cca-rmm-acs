@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2026, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -250,6 +250,12 @@ void gicv3_set_icpendr(unsigned int interrupt_id);
  * at either Distributor or Re-distributor depending on the interrupt.
  */
 unsigned int gicv3_get_ispendr(unsigned int interrupt_id);
+
+/*
+ * Set the bit corresponding to `interrupt_id` in the ISPENDR register
+ * at Distributor. Only valid for SPIs.
+ */
+void gicv3_set_ispendr(unsigned int interrupt_id);
 
 /*
  * Set the bit corresponding to `interrupt_id` in the ICENABLER register

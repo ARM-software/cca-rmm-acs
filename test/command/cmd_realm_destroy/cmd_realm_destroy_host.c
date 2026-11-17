@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023-2025, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023-2026, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -7,6 +7,7 @@
 
 #include "test_database.h"
 #include "val_host_rmi.h"
+#include "val_host_rmi_sro.h"
 #include "rmi_realm_destroy_data.h"
 #include "command_common_host.h"
 
@@ -16,10 +17,11 @@
 #define L1_SIZE (512 * L2_SIZE)
 #define L0_SIZE (512UL * L1_SIZE)
 
-#define NUM_REALMS 3
 #define VALID_REALM 0
 #define LIVE_REALM 1
 #define NULL_REALM 2
+#define STATE_REALM 3
+#define NUM_REALMS 4
 
 #define MAP_LEVEL 3
 #define RTT_STARTING_LEVEL 0
@@ -36,7 +38,6 @@ static struct argument_store {
 struct arguments {
     uint64_t rd;
 };
-
 
 static uint64_t g_rec_ready_prep_sequence(void)
 {
@@ -67,6 +68,20 @@ static uint64_t g_rec_ready_prep_sequence(void)
     return realm[LIVE_REALM].rec[0];
 }
 
+static uint64_t g_rd_not_zombie_prep_sequence(void)
+{
+    val_memset(&realm[STATE_REALM], 0, sizeof(realm[STATE_REALM]));
+    realm[STATE_REALM].s2sz = 40;
+    realm[STATE_REALM].hash_algo = RMI_HASH_SHA_256;
+    realm[STATE_REALM].s2_starting_level = 0;
+    realm[STATE_REALM].num_s2_sl_rtts = 1;
+    realm[STATE_REALM].vmid = STATE_REALM;
+
+    if (val_host_realm_create_common(&realm[STATE_REALM]) != 0)
+        return VAL_TEST_PREP_SEQ_FAILED;
+    return realm[STATE_REALM].rd;
+}
+
 static uint64_t g_rd_null_prep_sequence(void)
 {
     val_memset(&realm[NULL_REALM], 0, sizeof(realm[NULL_REALM]));
@@ -81,6 +96,12 @@ static uint64_t g_rd_null_prep_sequence(void)
     if (val_host_realm_create_common(&realm[NULL_REALM]))
     {
         LOG(ERROR, "Realm create failed\n");
+        return VAL_TEST_PREP_SEQ_FAILED;
+    }
+
+    if (val_host_rmi_realm_terminate(realm[NULL_REALM].rd))
+    {
+        LOG(ERROR, "Couldn't terminate the Realm\n");
         return VAL_TEST_PREP_SEQ_FAILED;
     }
 
@@ -146,6 +167,12 @@ static uint64_t rd_valid_prep_sequence(void)
         return VAL_TEST_PREP_SEQ_FAILED;
     }
 
+    if (val_host_rmi_realm_terminate(realm[VALID_REALM].rd))
+    {
+        LOG(ERROR, "Couldn't terminate the Realm\n");
+        return VAL_TEST_PREP_SEQ_FAILED;
+    }
+
     return realm[VALID_REALM].rd;
 }
 
@@ -168,13 +195,6 @@ static uint64_t intent_to_seq(struct stimulus *test_data, struct arguments *args
             args->rd = g_unaligned_prep_sequence(c_args.rd_valid);
             break;
 
-        case RD_OUTSIDE_OF_PERMITTED_PA:
-            args->rd = g_outside_of_permitted_pa_prep_sequence();
-            break;
-
-        case RD_DEV_MEM:
-            args->rd = g_dev_mem_prep_sequence();
-            break;
 
         case RD_STATE_UNDELEGATED:
             args->rd = g_undelegated_prep_sequence();
@@ -205,7 +225,18 @@ static uint64_t intent_to_seq(struct stimulus *test_data, struct arguments *args
             break;
 
         case REALM_LIVE:
+            if (val_host_rmi_realm_terminate(realm[LIVE_REALM].rd))
+            {
+                LOG(ERROR, "Couldn't terminate the live Realm\n");
+                return VAL_ERROR;
+            }
             args->rd = realm[LIVE_REALM].rd;
+            break;
+
+        case REALM_NOT_ZOMBIE:
+            args->rd = g_rd_not_zombie_prep_sequence();
+            if (args->rd == VAL_TEST_PREP_SEQ_FAILED)
+                return VAL_ERROR;
             break;
 
         default:
@@ -237,11 +268,11 @@ void cmd_realm_destroy_host(void)
             goto exit;
         }
 
-        ret = val_host_rmi_realm_destroy(args.rd);
+        ret = val_host_rmi_realm_destroy_smc(args.rd).x0;
         if (ret != PACK_CODE(test_data[i].status, test_data[i].index)) {
             LOG(ERROR, "Test Failure!The ABI call returned: %xExpected: %x\n",
                 ret, PACK_CODE(test_data[i].status, test_data[i].index));
-            val_set_status(RESULT_FAIL(VAL_ERROR_POINT(3)));
+            val_set_status(RESULT_FAIL(VAL_ERROR_POINT(4)));
             goto exit;
         }
     }
@@ -251,7 +282,7 @@ void cmd_realm_destroy_host(void)
     if (ret != 0)
     {
         LOG(ERROR, "REALM_DESTROY failed with ret value: %d\n", ret);
-        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(4)));
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(5)));
         goto exit;
     }
 
@@ -263,7 +294,7 @@ void cmd_realm_destroy_host(void)
     if (params == NULL)
     {
         LOG(ERROR, "Failed to allocate memory for params\n");
-        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(5)));
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(6)));
         goto exit;
     }
 
@@ -272,20 +303,15 @@ void cmd_realm_destroy_host(void)
     params->rtt_base = realm[VALID_REALM].rtt_l0_addr;
     params->hash_algo = realm[VALID_REALM].hash_algo;
     params->s2sz = realm[VALID_REALM].s2sz;
-    params->rtt_level_start = realm[VALID_REALM].s2_starting_level;
+    params->rtt_level_start = (int64_t)realm[VALID_REALM].s2_starting_level;
     params->rtt_num_start = realm[VALID_REALM].num_s2_sl_rtts;
-    params->vmid = realm[VALID_REALM].vmid;
     params->num_bps = 1;
     params->num_wps = 1;
-
-#ifdef RMM_V_1_1
-    params->flags1 |= VAL_REALM_FLAG_RTT_TREE_PP;
-#endif
 
     if (val_host_rmi_realm_create(c_args.rd_valid, (uint64_t)params))
     {
         LOG(ERROR, "Positive observability failed\n");
-        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(6)));
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(7)));
         goto exit;
     }
 

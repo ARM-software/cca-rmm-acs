@@ -11,6 +11,12 @@
 /* Defines the number of iterations WFX will be executed in loop for WFX tests */
 #define WFX_ITERATIONS  10
 
+/*
+ * Set this to dmtf_spec_measurement_value in the measurements.json used by the
+ * selected FVP PCI endpoint. Update it when that JSON value changes.
+ */
+#define PLATFORM_SPDM_MEASUREMENT_REFERENCE "10000000100000003000000020000000"
+
 /* Total number of CPUs(PEs) in system. ACS requires minimum of 2 CPUs.
  * Example:
  * 2 clusters, [2:2] cores in [1st:2nd] cluster : PLATFORM_CPU_COUNT => 4
@@ -39,6 +45,21 @@
 /*
  * Device Info in physical addresses.
  */
+
+/* Base address of physical SMMU assigned */
+#define PSMMU_FVP_BASE_ADDR   (0x2b400000UL)
+
+/* Physical Granule size for the platform GPT. */
+#define PHYSICAL_GRANULE_SIZE PAGE_SIZE_4K
+
+/*
+ * Set these only after reserving an NS-PAS, non-DRAM donation range and
+ * identifying an L0 GPT Block entry that permits unfolding. Zero means
+ * the RMI_GPT_L1_CREATE gran condition cannot be exercised on this platform.
+ */
+#define PLATFORM_GPT_L1_UNFOLDABLE_ADDR          0ULL
+#define PLATFORM_GPT_L1_INVALID_DONATION_BASE   0ULL
+#define PLATFORM_GPT_L1_INVALID_DONATION_SIZE   0ULL
 
 /* Non-secure UART - PL011_UART2_BASE */
 #ifdef UART_NS_OVERRIDE
@@ -86,40 +107,63 @@
  * |    Image     |      | Realm Image |
  * | (4MB Size)   |      |    (2MB)    |
  * +--------------+      +-------------+
- * |  Memory Pool |      |Shared Region|
- * |    (50MB)    |      |    (1MB)    |
- * |              | ==>  +-------------+
- * |              |      |             |
- * |              |      |    Heap     |
- * |              |      |   Memory    |
- * |              |      |    (49MB)   |
+ * |  Memory Pool |      |Tracking Pool|
+ * |    (50MB)    |      |    (10MB)   |
+ * |              |      +-------------+
+ * |              | ==>  |Shared Region|
+ * |              |      |    (1MB)    |
+ * |              |      +-------------+
+ * |              |      | Test Heap   |
+ * |              |      |   (39MB)    |
  * +--------------+      +-------------+
  *
  * 4MB for Image loading and 50MB as Free NS Space.
  */
 
-#define PLATFORM_NORMAL_WORLD_IMAGE_SIZE  0x400000
-#define PLATFORM_HOST_IMAGE_SIZE          (PLATFORM_NORMAL_WORLD_IMAGE_SIZE / 2)
-#define PLATFORM_REALM_IMAGE_SIZE         (PLATFORM_NORMAL_WORLD_IMAGE_SIZE / 2)
-#define PLATFORM_MEMORY_POOL_SIZE         (50 * 0x100000)
-#define PLATFORM_SHARED_REGION_SIZE       0x100000
-#define PLATFORM_HEAP_REGION_SIZE         (PLATFORM_MEMORY_POOL_SIZE \
-                                             - PLATFORM_SHARED_REGION_SIZE)
+#define PLATFORM_NORMAL_WORLD_IMAGE_SIZE            0x400000
+#define PLATFORM_HOST_IMAGE_SIZE                    (PLATFORM_NORMAL_WORLD_IMAGE_SIZE / 2)
+#define PLATFORM_REALM_IMAGE_SIZE                   (PLATFORM_NORMAL_WORLD_IMAGE_SIZE / 2)
+#define PLATFORM_MEMORY_POOL_SIZE                   (50 * 0x100000)
+#define PLATFORM_RMM_TRACKING_SETUP_POOL_SIZE       (10 * 0x100000)
+#define PLATFORM_SHARED_REGION_SIZE                 0x100000
+#define PLATFORM_HEAP_REGION_SIZE                   (PLATFORM_MEMORY_POOL_SIZE \
+                                                    - PLATFORM_SHARED_REGION_SIZE \
+                                                    - PLATFORM_RMM_TRACKING_SETUP_POOL_SIZE)
 
 /*
  * Run-time address of the ACS Non-secure image. It has to match
  * the location where the DUT software loads the ACS NS Image.
  */
-#define PLATFORM_NORMAL_WORLD_IMAGE_BASE     0x88000000
-#define PLATFORM_HOST_IMAGE_BASE             PLATFORM_NORMAL_WORLD_IMAGE_BASE
-#define PLATFORM_REALM_IMAGE_BASE            (PLATFORM_NORMAL_WORLD_IMAGE_BASE \
+#define PLATFORM_NORMAL_WORLD_IMAGE_BASE        0x88000000
+#define PLATFORM_HOST_IMAGE_BASE                PLATFORM_NORMAL_WORLD_IMAGE_BASE
+#define PLATFORM_REALM_IMAGE_BASE               (PLATFORM_NORMAL_WORLD_IMAGE_BASE \
                                                  + PLATFORM_HOST_IMAGE_SIZE)
-#define PLATFORM_MEMORY_POOL_BASE           (PLATFORM_NORMAL_WORLD_IMAGE_BASE \
+#define PLATFORM_MEMORY_POOL_BASE               (PLATFORM_NORMAL_WORLD_IMAGE_BASE \
                                                  + PLATFORM_NORMAL_WORLD_IMAGE_SIZE)
+#define PLATFORM_RMM_TRACKING_SETUP_POOL_BASE   PLATFORM_MEMORY_POOL_BASE
+#define PLATFORM_SHARED_REGION_BASE             (PLATFORM_MEMORY_POOL_BASE + \
+                                                PLATFORM_RMM_TRACKING_SETUP_POOL_SIZE)
+#define PLATFORM_HEAP_REGION_BASE               (PLATFORM_SHARED_REGION_BASE + \
+                                                PLATFORM_SHARED_REGION_SIZE)
 
-#define PLATFORM_SHARED_REGION_BASE         PLATFORM_MEMORY_POOL_BASE
-#define PLATFORM_HEAP_REGION_BASE           (PLATFORM_SHARED_REGION_BASE + \
-                                            PLATFORM_SHARED_REGION_SIZE)
+/* RMM tracking: 4 KB RMI granules, with 2 MB regions by default. */
+#define PLATFORM_RMM_RMI_GRANULE_SIZE       0U
+#define PLATFORM_RMM_TRACKING_REGION_SIZE   1U
+
+/* First tracking region containing the ACS image and memory pool. */
+#if PLATFORM_RMM_TRACKING_REGION_SIZE == 0U
+#define PLATFORM_RMM_TRACKING_REGION_BASE   0x80000000ULL
+#else
+#define PLATFORM_RMM_TRACKING_REGION_BASE   PLATFORM_NORMAL_WORLD_IMAGE_BASE
+#endif
+
+/* Separate DRAM2 region reserved for tracking failure-condition tests. */
+#define PLATFORM_TRACKING_TEST_REGION_BASE    0x880000000ULL
+
+/* FVP non-coherent device ranges used by ACS; each top is exclusive. */
+#define PLATFORM_RMM_DEVICE_TRACKING_RANGES \
+    { 0x50000000ULL, 0x60000000ULL, RMI_MEM_CATEGORY_DEV_NCOH }, \
+    { 0x4000000000ULL, 0x4040000000ULL, RMI_MEM_CATEGORY_DEV_NCOH }
 
 /* ACS Secure code is designed such way that it can run at EL2S or EL1S
  *  This is configured through command line argument.
@@ -139,6 +183,9 @@
 #endif
 
 #define PLATFORM_SECURE_IMAGE_SIZE         0x100000
+
+/* Platform DRAM address assigned to Secure PAS. */
+#define PLATFORM_SECURE_PAS_BASE           0xFC000000ULL
 
 /*
  * Invalidate the instr cache and data cache for image regions.

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2026, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -48,6 +48,17 @@ uint64_t val_psci_cpu_on(uint64_t target_cpu,
 uint64_t val_psci_cpu_off(void)
 {
     return (val_smc_call(PSCI_CPU_OFF,
+                       0, 0, 0, 0, 0, 0, 0, 0, 0, 0)).x0;
+}
+
+/**
+ *   @brief    Power off a Host PE through the standard PSCI interface
+ *   @param    void
+ *   @return   Returns the smc arg0
+**/
+uint64_t val_psci_cpu_off_host(void)
+{
+    return (val_smc_call(PSCI_CPU_OFF_HOST,
                        0, 0, 0, 0, 0, 0, 0, 0, 0, 0)).x0;
 }
 

@@ -8,7 +8,9 @@
 #include "val_host_realm.h"
 #include "val_host_alloc.h"
 #include "val_host_helpers.h"
+#include "val_host_sro.h"
 #include "val_host_doe.h"
+#include "val_smc.h"
 #include "val_timer.h"
 
 int current_realm = 1;
@@ -29,6 +31,8 @@ val_host_memory_track_ts mem_track[VAL_HOST_MAX_REALMS] = {
     {.rd = 0x00000000FFFFFFFF}
 };
 
+static uint32_t g_rmm_activated;
+
 uint64_t aux_ipa_base[VAL_MAX_AUX_PLANES] = {
     VAL_PLANE1_IMAGE_BASE_IPA,
     VAL_PLANE2_IMAGE_BASE_IPA,
@@ -41,6 +45,13 @@ uint64_t val_host_rtt_level_mapsize(uint64_t rtt_level)
         return PAGE_SIZE;
 
     return (1UL << VAL_RTT_LEVEL_SHIFT(rtt_level));
+}
+
+static uint64_t val_host_rtt_single_addr_desc(uint64_t addr,
+                                               uint64_t size,
+                                               uint64_t state)
+{
+    return val_host_rmi_addr_range_desc(addr, 1, size, state);
 }
 
 /**
@@ -70,7 +81,9 @@ uint32_t val_host_create_rtt_levels(val_host_realm_ts *realm,
         {
             LOG(ERROR, "Failed to allocate memory for rtt\n");
             return VAL_ERROR;
-        } else if (val_host_rmi_granule_delegate(rtt))
+        }
+
+        if (val_host_rmi_granule_range_delegate(rtt, rtt + PAGE_SIZE))
         {
             LOG(ERROR, "Rtt delegation failed, rtt=0x%x\n", rtt);
             return VAL_ERROR;
@@ -80,7 +93,7 @@ uint32_t val_host_create_rtt_levels(val_host_realm_ts *realm,
         if (val_host_rmi_rtt_create(realm->rd, rtt, rtt_ipa, rtt_level))
         {
             LOG(ERROR, "Rtt create failed, rtt=0x%x\n", rtt);
-            val_host_rmi_granule_undelegate(rtt);
+            val_host_rmi_granule_range_undelegate(rtt, rtt + PAGE_SIZE);
             val_host_mem_free((void *)rtt);
             return VAL_ERROR;
         }
@@ -160,7 +173,8 @@ uint32_t val_host_map_protected_data(val_host_realm_ts *realm,
     uint64_t phys = target_pa;
     uint64_t flags = RMI_NO_MEASURE_CONTENT;
     val_host_rtt_entry_ts  rtte;
-    val_host_data_destroy_ts data_destroy;
+    val_host_rmi_rtt_unmap_flags_ts data_unmap_flags;
+    uint64_t unmap_flags = 0;
 
     if (!ADDR_IS_ALIGNED(ipa, rtt_map_size))
         return VAL_ERROR;
@@ -177,13 +191,13 @@ uint32_t val_host_map_protected_data(val_host_realm_ts *realm,
 
     while (size < rtt_map_size)
     {
-        if (val_host_rmi_granule_delegate(phys))
+        if (val_host_rmi_granule_range_delegate(phys, phys + PAGE_SIZE))
         {
             LOG(ERROR, "Granule delegation failed, PA=0x%x\n", phys);
             return VAL_ERROR;
         }
 
-        ret = val_host_rmi_data_create(rd, phys, ipa, src_pa, flags);
+        ret = val_host_rmi_rtt_data_map_init(rd, phys, ipa, src_pa, flags);
 
         if (RMI_STATUS(ret) == RMI_ERROR_RTT)
         {
@@ -207,7 +221,7 @@ uint32_t val_host_map_protected_data(val_host_realm_ts *realm,
                     goto error;
                 }
 
-                ret = val_host_rmi_data_create(rd, phys, ipa, src_pa, flags);
+                ret = val_host_rmi_rtt_data_map_init(rd, phys, ipa, src_pa, flags);
             }
         }
 
@@ -228,18 +242,23 @@ uint32_t val_host_map_protected_data(val_host_realm_ts *realm,
 error:
     for (; size > 0;)
     {
-        ret = val_host_rmi_data_destroy(rd, ipa, &data_destroy);
-        if (ret)
-            LOG(ERROR, "val_rmi_rtt_mapprotected failed, ret=0x%x\n", ret);
-
-        ret = val_host_rmi_granule_undelegate(phys);
-        if (ret)
-        {
-            LOG(ERROR, "val_rmi_granule_undelegate failed\n");
-        }
         phys -= PAGE_SIZE;
         size -= PAGE_SIZE;
         ipa -= PAGE_SIZE;
+
+        val_memset(&data_unmap_flags, 0x0, sizeof(data_unmap_flags));
+        data_unmap_flags.oaddr_type = RMI_ADDR_TYPE_SINGLE;
+        val_memcpy(&unmap_flags, &data_unmap_flags, sizeof(data_unmap_flags));
+
+        ret = val_host_rmi_rtt_data_unmap(rd, ipa, ipa + PAGE_SIZE, unmap_flags, 0);
+        if (ret)
+            LOG(ERROR, "val_rmi_rtt_mapprotected failed, ret=0x%x\n", ret);
+
+        ret = val_host_rmi_granule_range_undelegate(phys, phys + PAGE_SIZE);
+        if (ret)
+        {
+            LOG(ERROR, "val_rmi_granule_range_undelegate failed\n");
+        }
     }
 
     return VAL_ERROR;
@@ -265,9 +284,16 @@ uint32_t val_host_map_protected_data_unknown(val_host_realm_ts *realm,
     uint64_t phys = target_pa;
     val_host_rtt_entry_ts rtte;
     val_host_data_destroy_ts data_destroy;
+    val_host_rmi_rtt_prot_map_flags_ts data_map_flags;
+    uint64_t flags = 0;
 
     if (!ADDR_IS_ALIGNED(ipa, rtt_map_size))
         return VAL_ERROR;
+
+
+    val_memset(&data_map_flags, 0x0, sizeof(data_map_flags));
+    data_map_flags.oaddr_type = RMI_ADDR_TYPE_SINGLE;
+    val_memcpy(&flags, &data_map_flags, sizeof(data_map_flags));
 
     if (rtt_map_size == PAGE_SIZE)
         map_level = 3;
@@ -281,13 +307,16 @@ uint32_t val_host_map_protected_data_unknown(val_host_realm_ts *realm,
 
     while (size < rtt_map_size)
     {
-        if (val_host_rmi_granule_delegate(phys))
+        if (val_host_rmi_granule_range_delegate(phys, phys + PAGE_SIZE))
         {
             LOG(ERROR, "Granule delegation failed, PA=0x%x\n", phys);
             return VAL_ERROR;
         }
 
-        ret = val_host_rmi_data_create_unknown(rd, phys, ipa);
+        ret = val_host_rmi_rtt_data_map(
+                    rd, ipa, ipa + PAGE_SIZE, flags,
+                    val_host_rtt_single_addr_desc(phys, RMI_PAGE_L3,
+                                                  RMI_OP_MEM_DELEGATED));
 
         if (RMI_STATUS(ret) == RMI_ERROR_RTT)
         {
@@ -311,13 +340,16 @@ uint32_t val_host_map_protected_data_unknown(val_host_realm_ts *realm,
                     goto error;
                 }
 
-                ret = val_host_rmi_data_create_unknown(rd, phys, ipa);
+                ret = val_host_rmi_rtt_data_map(
+                            rd, ipa, ipa + PAGE_SIZE, flags,
+                            val_host_rtt_single_addr_desc(phys, RMI_PAGE_L3,
+                                                  RMI_OP_MEM_DELEGATED));
             }
         }
 
         if (ret)
         {
-            LOG(ERROR, "val_rmi_data_create_unknown failed, ret=0x%x\n", ret);
+            LOG(ERROR, "val_rmi_rtt_data_map failed, ret=0x%x\n", ret);
             goto error;
         }
 
@@ -331,18 +363,19 @@ uint32_t val_host_map_protected_data_unknown(val_host_realm_ts *realm,
 error:
     for (; size > 0;)
     {
-        val_host_rmi_data_destroy(rd, ipa, &data_destroy);
+        phys -= PAGE_SIZE;
+        size -= PAGE_SIZE;
+        ipa -= PAGE_SIZE;
+
+        ret = val_host_rmi_data_destroy(rd, ipa, &data_destroy);
         if (ret)
             LOG(ERROR, "val_rmi_rtt_mapprotected failed, ret=0x%x\n", ret);
 
-        ret = val_host_rmi_granule_undelegate(phys);
+        ret = val_host_rmi_granule_range_undelegate(phys, phys + PAGE_SIZE);
         if (ret)
         {
             LOG(ERROR, "val_rmi_granule_undelegate failed\n");
         }
-        phys -= PAGE_SIZE;
-        size -= PAGE_SIZE;
-        ipa -= PAGE_SIZE;
     }
     return VAL_ERROR;
 
@@ -431,6 +464,9 @@ uint32_t val_host_map_unprotected(val_host_realm_ts *realm,
     uint64_t mem_desc;
     uint64_t rtt_tree_pp;
     val_host_rtt_entry_ts rtte;
+    val_host_rmi_rtt_unprot_map_flags_ts map_flags = {0};
+    uint64_t flags = 0;
+    uint64_t oaddr;
 
     mem_desc = ns_pa | ATTR_NORMAL_WB;
 
@@ -441,9 +477,22 @@ uint32_t val_host_map_unprotected(val_host_realm_ts *realm,
     /* If RMM supports shared RTT tree configuration and realm is configured
      * to use shared RTT, use S2AP base index, else set S2AP[0:1] = RW */
     if (!rtt_tree_pp && val_host_rmm_supports_rtt_tree_single() && realm->num_aux_planes > 0)
+    {
         mem_desc |= val_pi_index_to_desc(RMI_UNPROTECTED_S2AP_RW);
+        map_flags.s2ap = RMI_UNPROTECTED_S2AP_RW;
+    }
     else
+    {
         mem_desc |= ATTR_STAGE2_AP_RW;
+        /* Convert the descriptor AP encoding to the RMI v2.0 direct
+         * S2AP encoding: descriptor AP[0] is read and AP[1] is write,
+         * while RmiRttUnprotMapFlags uses read at bit 1 and write at bit 0. */
+        map_flags.s2ap =
+            (VAL_EXTRACT_BITS(mem_desc, ATTR_STAGE2_AP_SHIFT,
+                              ATTR_STAGE2_AP_SHIFT) << 1) |
+            VAL_EXTRACT_BITS(mem_desc, (ATTR_STAGE2_AP_SHIFT + 1),
+                             (ATTR_STAGE2_AP_SHIFT + 1));
+    }
 
     if (!ADDR_IS_ALIGNED(ipa, rtt_map_size))
         return VAL_ERROR;
@@ -458,7 +507,18 @@ uint32_t val_host_map_unprotected(val_host_realm_ts *realm,
             return VAL_ERROR;
         }
 
-    ret = val_host_rmi_rtt_map_unprotected(rd, ipa, map_level, mem_desc);
+    map_flags.oaddr_type = RMI_ADDR_TYPE_SINGLE;
+    map_flags.memattr = VAL_EXTRACT_BITS(mem_desc,
+                                         ATTR_STAGE2_MEMATTR_SHIFT,
+                                         ATTR_STAGE2_MEMATTR_SHIFT + 2);
+    val_memcpy(&flags, &map_flags, sizeof(map_flags));
+
+    oaddr = val_host_rtt_single_addr_desc(ns_pa,
+                    (map_level == 2) ? RMI_BLOCK_L2 : RMI_PAGE_L3,
+                    RMI_OP_MEM_UNDELEGATED);
+
+    ret = val_host_rmi_rtt_unprot_map(rd, ipa, ipa + rtt_map_size,
+                                      flags, oaddr);
 
     if (RMI_STATUS(ret) == RMI_ERROR_RTT)
         {
@@ -483,7 +543,8 @@ uint32_t val_host_map_unprotected(val_host_realm_ts *realm,
                     return VAL_ERROR;
                 }
 
-                ret = val_host_rmi_rtt_map_unprotected(rd, ipa, map_level, mem_desc);
+                ret = val_host_rmi_rtt_unprot_map(rd, ipa, ipa + rtt_map_size,
+                                                  flags, oaddr);
             }
     }
 
@@ -574,7 +635,10 @@ uint32_t val_host_map_unprotected_attr(val_host_realm_ts *realm,
     uint64_t map_level, rtt_level;
     uint64_t ret = 0;
     uint64_t mem_desc = 0;
+    uint64_t flags = 0;
+    uint64_t oaddr;
     val_host_rtt_entry_ts rtte;
+    val_host_rmi_rtt_unprot_map_flags_ts map_flags = {0};
 
     mem_desc = ns_pa | mem_attr;
 
@@ -591,7 +655,42 @@ uint32_t val_host_map_unprotected_attr(val_host_realm_ts *realm,
             return VAL_ERROR;
         }
 
-    ret = val_host_rmi_rtt_map_unprotected(rd, ipa, map_level, mem_desc);
+    map_flags.oaddr_type = RMI_ADDR_TYPE_SINGLE;
+    map_flags.memattr = VAL_EXTRACT_BITS(mem_desc,
+                                         ATTR_STAGE2_MEMATTR_SHIFT,
+                                         ATTR_STAGE2_MEMATTR_SHIFT + 2);
+    if ((realm->num_aux_planes > 0) &&
+        !VAL_EXTRACT_BITS(realm->flags1, 0, 0))
+    {
+        /* Decode PIIndex[3:0] from its descriptor bit positions. */
+        map_flags.s2ap =
+            VAL_EXTRACT_BITS(mem_desc, ATTR_PI_INDEX_0_SHIFT,
+                             ATTR_PI_INDEX_0_SHIFT) |
+            (VAL_EXTRACT_BITS(mem_desc, ATTR_PI_INDEX_1_SHIFT,
+                              ATTR_PI_INDEX_1_SHIFT) << 1) |
+            (VAL_EXTRACT_BITS(mem_desc, ATTR_PI_INDEX_2_SHIFT,
+                              ATTR_PI_INDEX_2_SHIFT) << 2) |
+            (VAL_EXTRACT_BITS(mem_desc, ATTR_PI_INDEX_3_SHIFT,
+                              ATTR_PI_INDEX_3_SHIFT) << 3);
+    }
+    else
+    {
+        /* Convert descriptor AP[1:0] to the RMI v2.0 direct S2AP
+         * read/write bit encoding. */
+        map_flags.s2ap =
+            (VAL_EXTRACT_BITS(mem_desc, ATTR_STAGE2_AP_SHIFT,
+                              ATTR_STAGE2_AP_SHIFT) << 1) |
+            VAL_EXTRACT_BITS(mem_desc, (ATTR_STAGE2_AP_SHIFT + 1),
+                             (ATTR_STAGE2_AP_SHIFT + 1));
+    }
+    val_memcpy(&flags, &map_flags, sizeof(map_flags));
+
+    oaddr = val_host_rtt_single_addr_desc(ns_pa,
+                    (map_level == 2) ? RMI_BLOCK_L2 : RMI_PAGE_L3,
+                    RMI_OP_MEM_UNDELEGATED);
+
+    ret = val_host_rmi_rtt_unprot_map(rd, ipa, ipa + rtt_map_size,
+                                      flags, oaddr);
 
     if (RMI_STATUS(ret) == RMI_ERROR_RTT)
         {
@@ -614,7 +713,9 @@ uint32_t val_host_map_unprotected_attr(val_host_realm_ts *realm,
                 return VAL_ERROR;
                 }
 
-                ret = val_host_rmi_rtt_map_unprotected(rd, ipa, map_level, mem_desc);
+                ret = val_host_rmi_rtt_unprot_map(rd, ipa,
+                                                  ipa + rtt_map_size,
+                                                  flags, oaddr);
             }
     }
 
@@ -631,14 +732,60 @@ uint32_t val_host_map_unprotected_attr(val_host_realm_ts *realm,
  *   @param    realm            - Realm strucrure
  *   @return   SUCCESS/FAILURE
 **/
+static uint32_t validate_realm_da_vdev_capacity(const val_host_realm_ts *realm)
+{
+    val_host_realm_flags_ts flags;
+    uint64_t feature_reg, order, maximum;
+
+    val_memcpy(&flags, &realm->flags, sizeof(flags));
+    if (flags.da != RMI_FEATURE_TRUE)
+        return VAL_SUCCESS;
+
+    if (val_host_rmi_features(RMI_FEATURE_REGISTER_2_INDEX, &feature_reg)
+        != RMI_SUCCESS)
+    {
+        LOG(ERROR, "RMI_FEATURES(2) failed\n");
+        return VAL_ERROR;
+    }
+
+    if (VAL_EXTRACT_BITS(feature_reg, RMI_FEATURE_REGISTER_2_DA,
+                         RMI_FEATURE_REGISTER_2_DA) != RMI_FEATURE_TRUE)
+    {
+        LOG(ERROR, "Device assignment is not supported\n");
+        return VAL_ERROR;
+    }
+
+    order = VAL_EXTRACT_BITS(
+        feature_reg,
+        RMI_FEATURE_REGISTER_2_REALM_MAX_VDEVS_ORDER_START,
+        RMI_FEATURE_REGISTER_2_REALM_MAX_VDEVS_ORDER_END);
+    if (order == 0U)
+    {
+        LOG(ERROR, "Invalid advertised Realm VDEV capacity order\n");
+        return VAL_ERROR;
+    }
+
+    maximum = 1ULL << order;
+    if (realm->max_num_vdevs > maximum)
+    {
+        LOG(ERROR, "Requested Realm VDEV count exceeds advertised maximum\n");
+        return VAL_ERROR;
+    }
+
+    return VAL_SUCCESS;
+}
+
 uint32_t val_host_realm_create(val_host_realm_ts *realm)
 {
     val_host_realm_params_ts *params;
-    uint64_t ret, i, j;
+    uint64_t ret, i;
 
     realm->image_pa_size = PLATFORM_REALM_IMAGE_SIZE;
 
     realm->state = REALM_STATE_NULL;
+
+    if (validate_realm_da_vdev_capacity(realm) != VAL_SUCCESS)
+        return VAL_ERROR;
 
     /* Allocate memory for P0 image. Granule delegation
      * for it will be performed during rtt creation.  */
@@ -670,15 +817,11 @@ uint32_t val_host_realm_create(val_host_realm_ts *realm)
         LOG(ERROR, "Failed to allocate memory for rtt_addr\n");
         goto undelegate_rd;
     } else {
-        for (i = 0; i < realm->num_s2_sl_rtts; i++)
+        if (val_host_rmi_granule_range_delegate(realm->rtt_l0_addr,
+            realm->rtt_l0_addr + (realm->num_s2_sl_rtts * PAGE_SIZE)))
         {
-            ret = val_host_rmi_granule_delegate(realm->rtt_l0_addr + (i * PAGE_SIZE));
-            if (ret)
-            {
-                LOG(ERROR, "rtt delegation failed, rtt_addr=0x%x, ret=0x%x\n",
-                    realm->rtt_l0_addr, ret);
-                goto free_rtt;
-            }
+            LOG(ERROR, "rtt delegation failed, rtt_addr=0x%x\n", realm->rtt_l0_addr);
+            goto free_rtt;
         }
     }
 
@@ -695,16 +838,13 @@ uint32_t val_host_realm_create(val_host_realm_ts *realm)
                 LOG(ERROR, "Failed to allocate memory for rtt_addr\n");
                 goto undelegate_rd;
             } else {
-                for (j = 0; j < realm->num_s2_sl_rtts; j++)
+                if (val_host_rmi_granule_range_delegate(realm->rtt_aux_l0_addr[i],
+                                                realm->rtt_aux_l0_addr[i] +
+                                                (realm->num_s2_sl_rtts * PAGE_SIZE)))
                 {
-                    ret = val_host_rmi_granule_delegate(realm->rtt_aux_l0_addr[i]
-                                                                     + (j * PAGE_SIZE));
-                    if (ret)
-                    {
-                        LOG(ERROR, "rtt delegation failed, rtt_addr=0x%x, ret=0x%x\n",
-                        realm->rtt_aux_l0_addr[i], ret);
-                        goto free_rtt;
-                    }
+                    LOG(ERROR, "rtt delegation failed, rtt_addr=0x%x\n",
+                        realm->rtt_aux_l0_addr[i]);
+                    goto free_rtt;
                 }
             }
         }
@@ -717,10 +857,9 @@ uint32_t val_host_realm_create(val_host_realm_ts *realm)
         LOG(ERROR, "Failed to allocate memory for rd\n");
         goto free_par;
     } else {
-        ret = val_host_rmi_granule_delegate(realm->rd);
-        if (ret)
+        if (val_host_rmi_granule_range_delegate(realm->rd, realm->rd + PAGE_SIZE))
         {
-            LOG(ERROR, "rd delegation failed, rd=0x%x, ret=0x%x\n", realm->rd, ret);
+            LOG(ERROR, "rd delegation failed, rd=0x%x\n", realm->rd);
             goto free_rd;
         }
     }
@@ -736,24 +875,21 @@ uint32_t val_host_realm_create(val_host_realm_ts *realm)
     val_memset(params, 0, PAGE_SIZE_4K);
 
     /* Populate params */
-    params->flags = realm->flags;
+    params->flags0 = realm->flags;
     params->flags1 = realm->flags1;
+    params->max_num_vdevs = realm->max_num_vdevs;
     params->pmu_num_ctrs = realm->pmu_num_ctrs;
     params->s2sz = realm->s2sz;
     params->rtt_base = realm->rtt_l0_addr;
     params->hash_algo = realm->hash_algo;
-    params->rtt_level_start = realm->s2_starting_level;
+    params->rtt_level_start = (int64_t)realm->s2_starting_level;
     params->rtt_num_start = realm->num_s2_sl_rtts;
-    params->vmid = realm->vmid;
-    for (i = 0; i < realm->num_aux_planes; i++)
-        params->aux_vmid[i] = (uint16_t)(realm->vmid + i + 1);
     params->num_aux_planes = realm->num_aux_planes;
     for (i = 0; i < realm->num_aux_planes; i++)
         params->aux_rtt_base[i] = realm->rtt_aux_l0_addr[i];
     /* RealmParams strucurue takes the number of breakpoints, minus one */
     params->num_bps = realm->num_bps + 1;
     params->num_wps = realm->num_wps + 1;
-    params->mecid = realm->mecid;
 
     val_memcpy(&params->rpv, &realm->rpv, sizeof(realm->rpv));
 
@@ -779,7 +915,8 @@ free_params:
     val_host_mem_free(params);
 
 undelegate_rtt:
-    ret = val_host_rmi_granule_undelegate(realm->rtt_l0_addr);
+    ret = val_host_rmi_granule_range_undelegate(realm->rtt_l0_addr,
+        realm->rtt_l0_addr + (realm->num_s2_sl_rtts * PAGE_SIZE));
     if (ret)
     {
         LOG(WARN, "rtt undelegation failed, rtt_addr=0x%x, ret=0x%x\n", realm->rtt_l0_addr, ret);
@@ -789,7 +926,8 @@ undelegate_rtt:
     {
         for (i = 0; i < realm->num_aux_planes; i++)
         {
-            ret = val_host_rmi_granule_undelegate(realm->rtt_aux_l0_addr[i]);
+            ret = val_host_rmi_granule_range_undelegate(realm->rtt_aux_l0_addr[i],
+                realm->rtt_aux_l0_addr[i] + (realm->num_s2_sl_rtts * PAGE_SIZE));
             if (ret)
             {
                 LOG(WARN, " Aux RTT undelegation failed, rtt_addr=0x%x, ret=0x%x\n",
@@ -808,7 +946,7 @@ free_rtt:
     }
 
 undelegate_rd:
-    ret = val_host_rmi_granule_undelegate(realm->rd);
+    ret = val_host_rmi_granule_range_undelegate(realm->rd, realm->rd + PAGE_SIZE);
     if (ret)
     {
         LOG(WARN, "rd undelegation failed, rd=0x%x, ret=0x%x\n", realm->rd, ret);
@@ -925,6 +1063,12 @@ static uint32_t val_host_image_map(val_host_realm_ts *realm, uint64_t ipa_base, 
 
         i++;
     }
+    if (realm->granules_mapped_count >= VAL_MAX_GRANULES_MAP)
+    {
+        LOG(ERROR, "Exceeded max tracked granule mappings\n");
+        return VAL_ERROR;
+    }
+
     realm->granules[realm->granules_mapped_count].ipa = ipa_base;
     realm->granules[realm->granules_mapped_count].size = realm->image_pa_size;
     realm->granules[realm->granules_mapped_count].level = VAL_RTT_MAX_LEVEL;
@@ -984,6 +1128,12 @@ uint32_t val_host_map_protected_data_to_realm(val_host_realm_ts *realm,
         i++;
     }
 
+    if (realm->granules_mapped_count >= VAL_MAX_GRANULES_MAP)
+    {
+        LOG(ERROR, "Exceeded max tracked granule mappings\n");
+        return VAL_ERROR;
+    }
+
     realm->granules[realm->granules_mapped_count].ipa = data_create->ipa;
     realm->granules[realm->granules_mapped_count].size = data_create->size;
     realm->granules[realm->granules_mapped_count].level = VAL_RTT_MAX_LEVEL;
@@ -1034,6 +1184,12 @@ static uint32_t val_host_map_shared_region(val_host_realm_ts *realm)
 
         i++;
     }
+    if (realm->granules_mapped_count >= VAL_MAX_GRANULES_MAP)
+    {
+        LOG(ERROR, "Exceeded max tracked granule mappings\n");
+        return VAL_ERROR;
+    }
+
     realm->granules[realm->granules_mapped_count].ipa = ns_shared_base_ipa;
     realm->granules[realm->granules_mapped_count].size = PLATFORM_SHARED_REGION_SIZE;
     realm->granules[realm->granules_mapped_count].level = VAL_RTT_MAX_LEVEL;
@@ -1079,6 +1235,12 @@ uint32_t val_host_map_ns_shared_region(val_host_realm_ts *realm, uint64_t size, 
         }
         i++;
     }
+    if (realm->granules_mapped_count >= VAL_MAX_GRANULES_MAP)
+    {
+        LOG(ERROR, "Exceeded max tracked granule mappings\n");
+        return 0;
+    }
+
     realm->granules[realm->granules_mapped_count].ipa = ns_shared_base_ipa;
     realm->granules[realm->granules_mapped_count].size = size;
     realm->granules[realm->granules_mapped_count].level = VAL_RTT_MAX_LEVEL;
@@ -1096,8 +1258,7 @@ uint32_t val_host_rec_create(val_host_realm_ts *realm)
 {
     val_host_rec_params_ts   *rec_params;
     val_host_rec_create_flags_ts rec_create_flags;
-
-    uint64_t ret, i, mpidr = 0x0, aux_count, j;
+    uint64_t ret, i, mpidr = 0x0;
 
     if (realm->rec_count > VAL_MAX_REC_COUNT)
     {
@@ -1105,20 +1266,6 @@ uint32_t val_host_rec_create(val_host_realm_ts *realm)
         return VAL_ERROR;
     }
 
-    /* Get aux granules count */
-    ret = val_host_rmi_rec_aux_count(realm->rd, &aux_count);
-    if (ret)
-    {
-        LOG(ERROR, "REC AUX count failed, ret=0x%x\n", ret);
-        return VAL_ERROR;
-    } else {
-        if (aux_count > VAL_MAX_REC_AUX_GRANULES)
-        {
-            LOG(ERROR, "max supported aux granules are VAL_MAX_REC_AUX_GRANULES\n");
-            return VAL_ERROR;
-        }
-
-    }
 
     /* Allocate memory for rec_params */
     rec_params = val_host_mem_alloc(PAGE_SIZE, PAGE_SIZE);
@@ -1129,16 +1276,6 @@ uint32_t val_host_rec_create(val_host_realm_ts *realm)
     }
     val_memset(rec_params, 0x0, PAGE_SIZE);
     val_memset(&rec_create_flags, 0, sizeof(rec_create_flags));
-
-    /* Populate rec_params */
-    rec_params->num_aux = aux_count;
-    realm->aux_count = aux_count;
-
-    for (i = 0; i < (sizeof(rec_params->gprs)/sizeof(rec_params->gprs[0])); i++)
-    {
-        rec_params->gprs[i] = 0x0;
-    }
-
     rec_params->pc = VAL_PLANE0_IMAGE_BASE_IPA;
     rec_create_flags.runnable = RMI_RUNNABLE;
 
@@ -1166,34 +1303,13 @@ uint32_t val_host_rec_create(val_host_realm_ts *realm)
         {
             LOG(ERROR, "Failed to allocate memory for REC\n");
             goto free_rec_params;
-        } else {
-            ret = val_host_rmi_granule_delegate(realm->rec[i]);
-            if (ret)
-            {
-                LOG(ERROR, "rec delegation failed, rec=0x%x, ret=0x%x\n", realm->rec[i], ret);
-                goto free_rec_params;
-            }
         }
 
-        for (j = 0; j < aux_count; j++)
+        if (val_host_rmi_granule_range_delegate(realm->rec[i], realm->rec[i] + PAGE_SIZE))
         {
-            rec_params->aux[j] = (uint64_t)val_host_mem_alloc(PAGE_SIZE, PAGE_SIZE);
-            if (!rec_params->aux[j])
-            {
-                LOG(ERROR, "Failed to allocate memory for aux rec\n");
-                goto free_rec_params;
-            } else {
-                ret = val_host_rmi_granule_delegate(rec_params->aux[j]);
-                if (ret)
-                {
-                    LOG(ERROR, "rec delegation failed, rec=0x%x, ret=0x%x\n",
-                                         rec_params->aux[j], ret);
-                    goto free_rec_params;
-                }
-            }
-            realm->rec_aux_granules[j + (i * aux_count)] = rec_params->aux[j];
+            LOG(ERROR, "rec delegation failed, rec=0x%x\n", realm->rec[i]);
+            goto free_rec_params;
         }
-
         /* Create REC  */
         ret = val_host_rmi_rec_create(realm->rd, realm->rec[i], (uint64_t)rec_params);
         if (ret)
@@ -1210,7 +1326,7 @@ uint32_t val_host_rec_create(val_host_realm_ts *realm)
 free_rec_params:
     while (i > 0)
     {
-        ret = val_host_rmi_granule_undelegate(realm->rec[i]);
+        ret = val_host_rmi_granule_range_undelegate(realm->rec[i], realm->rec[i] + PAGE_SIZE);
         if (ret)
         {
             LOG(WARN, "rec undelegation failed, rec=0x%x, ret=0x%x\n", realm->rec[i], ret);
@@ -1218,17 +1334,6 @@ free_rec_params:
 
         val_host_mem_free((void *)realm->rec[i]);
         val_host_mem_free((void *)realm->run[i]);
-
-        for (j = 0; j < aux_count; j++)
-        {
-            ret = val_host_rmi_granule_undelegate(realm->rec_aux_granules[j + (i * aux_count)]);
-            if (ret)
-            {
-                LOG(WARN, "granule undelegation failed, PA=0x%x, ret=0x%x\n",
-                realm->rec_aux_granules[j + (i * aux_count)], ret);
-            }
-            val_host_mem_free((void *)realm->rec_aux_granules[j + (i * aux_count)]);
-        }
         i--;
         if (i == 0)
         {
@@ -1263,11 +1368,32 @@ uint32_t val_host_realm_activate(val_host_realm_ts *realm)
 }
 
 /**
- *   @brief    Setting up realm
- *   @param    realm      - Realm strucrure
- *   @param    activate   - Boolean value for actiate realm
+ *   @brief    Activates RMM
+ *   @param    none
  *   @return   SUCCESS/FAILURE
 **/
+uint32_t val_host_rmm_activate(void)
+{
+    uint64_t ret;
+
+    if (g_rmm_activated != 0)
+    {
+        LOG(TEST, "RMM already active\n");
+        return VAL_SUCCESS;
+    }
+
+    ret = val_host_rmi_rmm_activate();
+    if (ret)
+    {
+        LOG(ERROR, "RMM activate failed, ret=0x%x\n", ret);
+        return VAL_ERROR;
+    }
+
+    g_rmm_activated = 1;
+    LOG(TEST, "RMM activated by ACS\n");
+    return VAL_SUCCESS;
+}
+
 uint32_t val_host_realm_setup(val_host_realm_ts *realm, bool activate)
 {
     uint64_t i;
@@ -1438,8 +1564,20 @@ uint32_t val_host_map_protected_dev_mem(val_host_realm_ts *realm, uint64_t vdev,
     uint64_t size = 0;
     uint64_t phys = target_pa;
     val_host_rtt_entry_ts  rtte;
+    val_host_rmi_rtt_prot_map_flags_ts map_flags;
+    val_host_rmi_rtt_unmap_flags_ts unmap_flags;
     val_smc_param_ts args;
+    uint64_t flags = 0;
+    uint64_t unmap = 0;
+    uint64_t oaddr;
 
+    val_memset(&map_flags, 0, sizeof(map_flags));
+    map_flags.oaddr_type = RMI_ADDR_TYPE_SINGLE;
+    val_memcpy(&flags, &map_flags, sizeof(map_flags));
+
+    val_memset(&unmap_flags, 0, sizeof(unmap_flags));
+    unmap_flags.oaddr_type = RMI_ADDR_TYPE_SINGLE;
+    val_memcpy(&unmap, &unmap_flags, sizeof(unmap_flags));
 
     if (!ADDR_IS_ALIGNED(ipa, rtt_map_size))
         return VAL_ERROR;
@@ -1456,14 +1594,17 @@ uint32_t val_host_map_protected_dev_mem(val_host_realm_ts *realm, uint64_t vdev,
 
     while (size < rtt_map_size)
     {
-        args.x0 = val_host_rmi_granule_delegate(phys);
+        args.x0 = val_host_rmi_granule_range_delegate(phys, phys + PAGE_SIZE);
         if (args.x0)
         {
             LOG(ERROR, "\tGranule delegation failed, PA=0x%x\n", phys);
             return VAL_ERROR;
         }
 
-        args = val_host_rmi_vdev_map(rd, vdev, ipa, map_level, phys);
+        oaddr = val_host_rtt_single_addr_desc(phys, RMI_PAGE_L3,
+                                               RMI_OP_MEM_DELEGATED);
+        args.x0 = val_host_rmi_rtt_dev_map(rd, vdev, ipa,
+                                           ipa + PAGE_SIZE, flags, oaddr);
 
         if (RMI_STATUS(args.x0) == RMI_ERROR_RTT)
         {
@@ -1487,13 +1628,16 @@ uint32_t val_host_map_protected_dev_mem(val_host_realm_ts *realm, uint64_t vdev,
                     goto error;
                 }
 
-                args = val_host_rmi_vdev_map(rd, vdev, ipa, map_level, phys);
+                args.x0 = val_host_rmi_rtt_dev_map(rd, vdev, ipa,
+                                                   ipa + PAGE_SIZE,
+                                                   flags, oaddr);
             }
         }
 
         if (args.x0)
         {
-            LOG(ERROR, "\tval_host_rmi_vdev_map failed, ret=0x%lx\n", ret);
+            LOG(ERROR, "\tval_host_rmi_rtt_dev_map failed, ret=0x%lx\n",
+                args.x0);
             goto error;
         }
 
@@ -1507,11 +1651,13 @@ uint32_t val_host_map_protected_dev_mem(val_host_realm_ts *realm, uint64_t vdev,
 error:
     for (; size > 0;)
     {
-        args = val_host_rmi_vdev_unmap(rd, ipa, map_level);
+        args.x0 = val_host_rmi_rtt_dev_unmap(rd, ipa,
+                                             ipa + PAGE_SIZE, unmap, 0);
         if (args.x0)
-            LOG(ERROR, "\tval_host_rmi_vdev_unmap failed, ret=0x%lx\n", ret);
+            LOG(ERROR, "\tval_host_rmi_rtt_dev_unmap failed, ret=0x%lx\n",
+                args.x0);
 
-        args.x0 = val_host_rmi_granule_undelegate(phys);
+        args.x0 = val_host_rmi_granule_range_undelegate(phys, phys + PAGE_SIZE);
         if (args.x0)
         {
             LOG(ERROR, "\tval_rmi_granule_undelegate failed\n");
@@ -1977,8 +2123,11 @@ void val_host_update_destroy_granule_state(uint64_t rd, uint64_t PA,
 
         case GRANULE_DATA:
             node = val_host_remove_data_granule(&mem_track[current_realm].gran_type.data, ipa);
-            node->state = state;
-            val_host_add_granule(state, node->PA, node);
+            if (node != NULL)
+            {
+                node->state = state;
+                val_host_add_granule(state, node->PA, node);
+            }
             break;
 
         case GRANULE_REC:
@@ -2216,7 +2365,8 @@ uint64_t val_host_destroy_rtt_levels(uint64_t rtt_level, int current_realm)
                 LOG(ERROR, "realm_rtt_destroy failed, rtt=0x%x, ret=0x%x\n", curr_gran->ipa, ret);
                 return VAL_ERROR;
             }
-            ret = val_host_rmi_granule_undelegate(curr_gran->PA);
+            ret = val_host_rmi_granule_range_undelegate(curr_gran->PA,
+                                                       curr_gran->PA + PAGE_SIZE);
             if (ret)
             {
                 LOG(ERROR, "val_rmi_granule_undelegate failed, rtt=0x%x, ret=0x%x\n",
@@ -2307,7 +2457,8 @@ uint64_t val_host_postamble(void)
         if (curr_gran->state == GRANULE_DELEGATED)
         {
             next_gran = curr_gran->next;
-            ret = val_host_rmi_granule_undelegate(curr_gran->PA);
+            ret = val_host_rmi_granule_range_undelegate(curr_gran->PA,
+                                                        curr_gran->PA + PAGE_SIZE);
             if (ret)
             {
                 LOG(ERROR, "granule undelegation failed, pa=0x%x, ret=0x%x\n",
@@ -2357,10 +2508,17 @@ uint32_t val_host_realm_destroy(uint64_t rd)
     uint64_t ret;
     val_smc_param_ts cmd_ret;
     val_host_granule_ts *curr_gran = NULL, *next_gran = NULL;
-    val_host_data_destroy_ts data_destroy;
+    val_host_rmi_rtt_unmap_flags_ts data_unmap_flags;
+    uint64_t unmap_flags;
     current_realm = val_host_get_curr_realm(rd);
-    uint64_t top;
     uint64_t i;
+
+    ret = val_host_rmi_realm_terminate(rd);
+    if ((ret != RMI_SUCCESS) && (ret != VAL_SMC_NOT_SUPPORTED))
+    {
+        LOG(ERROR, "Realm terminate failed, rd=0x%x, ret=0x%x\n", rd, ret);
+        return VAL_ERROR;
+    }
 
     /* For each REC - Destroy, undelegate */
     curr_gran = mem_track[current_realm].gran_type.rec;
@@ -2374,7 +2532,8 @@ uint32_t val_host_realm_destroy(uint64_t rd)
             return VAL_ERROR;
         }
 
-        ret = val_host_rmi_granule_undelegate(curr_gran->PA);
+        ret = val_host_rmi_granule_range_undelegate(curr_gran->PA,
+                                                    curr_gran->PA + PAGE_SIZE);
         if (ret)
         {
             LOG(ERROR, "rec undelegation failed, rec=0x%x, ret=0x%x\n", curr_gran->PA, ret);
@@ -2406,14 +2565,22 @@ uint32_t val_host_realm_destroy(uint64_t rd)
                 }
             }
 
-            ret = val_host_rmi_data_destroy(curr_gran->rd, curr_gran->ipa, &data_destroy);
+            val_memset(&data_unmap_flags, 0x0, sizeof(data_unmap_flags));
+            data_unmap_flags.oaddr_type = RMI_ADDR_TYPE_SINGLE;
+            val_memcpy(&unmap_flags, &data_unmap_flags, sizeof(data_unmap_flags));
+
+            ret = val_host_rmi_rtt_data_unmap(curr_gran->rd, curr_gran->ipa,
+                                              curr_gran->ipa + PAGE_SIZE,
+                                              unmap_flags, 0);
             if (ret)
             {
-                LOG(ERROR, "Data destroy failed, data=0x%x, ret=0x%x\n", curr_gran->PA, ret);
+                LOG(ERROR, "RTT data unmap failed, data=0x%x, ret=0x%x\n",
+                                                       curr_gran->PA, ret);
                 return VAL_ERROR;
             }
 
-            ret = val_host_rmi_granule_undelegate(curr_gran->PA);
+            ret = val_host_rmi_granule_range_undelegate(curr_gran->PA,
+                                                        curr_gran->PA + PAGE_SIZE);
             if (ret)
             {
                 LOG(ERROR, "data undelegation failed, pa=0x%x, ret=0x%x\n", curr_gran->PA, ret);
@@ -2445,14 +2612,22 @@ uint32_t val_host_realm_destroy(uint64_t rd)
                 }
             }
 
-            ret = val_host_rmi_data_destroy(curr_gran->rd, curr_gran->ipa, &data_destroy);
+            val_memset(&data_unmap_flags, 0x0, sizeof(data_unmap_flags));
+            data_unmap_flags.oaddr_type = RMI_ADDR_TYPE_SINGLE;
+            val_memcpy(&unmap_flags, &data_unmap_flags, sizeof(data_unmap_flags));
+
+            ret = val_host_rmi_rtt_data_unmap(curr_gran->rd, curr_gran->ipa,
+                                              curr_gran->ipa + PAGE_SIZE,
+                                              unmap_flags, 0);
             if (ret)
             {
-                LOG(ERROR, "Data destroy failed, data=0x%x, ret=0x%x\n", curr_gran->PA, ret);
+                LOG(ERROR, "RTT data unmap failed, data=0x%x, ret=0x%x\n",
+                                                       curr_gran->PA, ret);
                 return VAL_ERROR;
             }
 
-            ret = val_host_rmi_granule_undelegate(curr_gran->PA);
+            ret = val_host_rmi_granule_range_undelegate(curr_gran->PA,
+                                                        curr_gran->PA + PAGE_SIZE);
             if (ret)
             {
                 LOG(ERROR, "data undelegation failed, pa=0x%x, ret=0x%x\n", curr_gran->PA, ret);
@@ -2486,8 +2661,14 @@ uint32_t val_host_realm_destroy(uint64_t rd)
             }
         }
 
-        ret = val_host_rmi_rtt_unmap_unprotected(curr_gran->rd, curr_gran->ipa,
-                                                       curr_gran->level, &top);
+        val_memset(&data_unmap_flags, 0x0, sizeof(data_unmap_flags));
+        data_unmap_flags.oaddr_type = RMI_ADDR_TYPE_SINGLE;
+        val_memcpy(&unmap_flags, &data_unmap_flags, sizeof(data_unmap_flags));
+
+        ret = val_host_rmi_rtt_unprot_unmap(curr_gran->rd, curr_gran->ipa,
+                                            curr_gran->ipa +
+                                            val_host_rtt_level_mapsize(curr_gran->level),
+                                            unmap_flags, 0);
         if (ret)
         {
             LOG(ERROR, "val_rmi_rtt_unmap_unprotected failed, ipa=0x%x, ret=0x%x\n",
@@ -2541,6 +2722,9 @@ void val_host_reset_mem_tack(void)
 {
 
     uint32_t i = 0;
+    head = NULL;
+    tail = NULL;
+    current = NULL;
 
     while (i < VAL_HOST_MAX_REALMS)
     {
@@ -2678,12 +2862,13 @@ bool val_host_rmm_supports_rtt_tree_per_plane(void)
 **/
 bool val_host_rmm_supports_da(void)
 {
-    uint64_t featreg0, da;
+    uint64_t featreg2, da;
 
-    val_host_rmi_features(0, &featreg0);
+    val_host_rmi_features(RMI_FEATURE_REGISTER_2_INDEX, &featreg2);
 
-    da =  VAL_EXTRACT_BITS(featreg0, 42, 42);
-    if (da == 1)
+    da = VAL_EXTRACT_BITS(featreg2, RMI_FEATURE_REGISTER_2_DA,
+                          RMI_FEATURE_REGISTER_2_DA);
+    if (da == RMI_FEATURE_TRUE)
         return true;
 
     return false;

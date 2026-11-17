@@ -18,7 +18,7 @@ The RMM exposes the following interfaces, which are accessed via SMC instruction
 - The Realm Services Interface (RSI), which provides services used to manage resources allocated to the Realm, and to request an attestation report.
 - The Power State Coordination Interface (PSCI), which provides services used to control power states of VPEs within a Realm.
 
-For more information on RMM refer [RMM Specification]( https://developer.arm.com/-/cdn-downloads/permalink/Architectures/Armv9/DEN0137_1.1-alp17.zip)
+For more information on RMM refer to the [RMM Specification](https://support.arm.com/documentation/den0137/2-0bet1/?lang=en).
 
 ## Architecture Compliance Suite
 
@@ -30,11 +30,11 @@ This suite is not a substitute for design verification.
 For more information on Architecture Compliance Suite see [Validation Methodology](./docs/Arm_CCA_RMM_Architecture_Compliance_Suite_Validation_Methodology.pdf) document.
 
 ## Release details
-- Release Version - v1.1 ACS PLANES BETA, v1.1 ACS MEC_LFA BETA, v1.1 ACS DA Foundation ALPHA, v1.0 ACS RHI BETA
+- Release Version - v1.1 ACS PLANES BETA, v1.1 ACS MEC_LFA BETA, v2.0 ACS DA BETA, v1.0 ACS RHI BETA
 - Code Quality: BETA
 - The Planes tests are written for Arm RMM 1.1-ALP8 specification version.
 - The MEC and LFA tests are written for Arm RMM 1.1-ALP12 specification version.
-- The DA Foundation tests are written for Arm RMM 1.1-ALP17 specification version.
+- The DA tests are written for Arm RMM 2.0-bet1 specification version.
 - The RHI tests are written for Arm RHI 1.0-Bet01 specification version.
 - For information about the test coverage scenarios that are implemented in ACS, see [scenario docs](./docs/scenario_doc.md).
 - For information about the test failures in ACS, see [Test failure analysis doc](./docs/testcase_failure_analysis.md).
@@ -97,9 +97,9 @@ make
 - -DSUITE_TEST_RANGE="<test_start_name>;<test_end_name>" is to select range of tests for build. All tests under -DSUITE are considered by default if not specified.
 - -RMM_ACS_TARGET_QCBOR=<path_for_pre_fetched_cbor_folder> overrides the default QCBOR submodule path (`external/qcbor`) when a different local source checkout is required.
 - -DSECURE_TEST_ENABLE=<value_to_enable_secure_test> Enable secure test macro definition and it will run secure test in regression. Valid value is 1. By default this macro will not define and secure test will not run in regression.
-- -DRMM_SPEC_VER=<value_to_select_specification_version> Select the Specification version to test against. Current supported values are RMM_V_1_0, RMM_V_1_1 and ALL. If this flag is not set during compilation, ALL is selected by default.
+- -DRMM_SPEC_VER=<value_to_select_specification_version> Select the Specification version to test against. Current supported values are RMM_V_2_0 and ALL. If this flag is not set during compilation, ALL is selected by default.
 - -DUART_NS_OVERRIDE=<value_of_uart_base_address> To override the default NS UART base address defined in the plat/targets/*
-- -DSUITE_COVERAGE=<value_to_select_suite_coverage> To add feature related command ABIs with specified -DSUITE. Supported values are all(feature scenario tests + feature command ABIs), command(feature command ABIs only) and none(feature scenario tests only). The default value is -DSUITE_COVERGAE=none. Currently supported for -DSUITE=planes;mec;device_assignment feature.
+- -DSUITE_COVERAGE=<value_to_select_suite_coverage> To add feature related command ABIs with specified -DSUITE. Supported values are all(feature scenario tests + feature command ABIs), command(feature command ABIs only) and none(feature scenario tests only). The default value is -DSUITE_COVERAGE=none. Currently supported for -DSUITE=planes;mec;device_assignment;psmmu feature.
 
 *To compile tests for tgt_tfa_fvp platform*:<br />
 ```

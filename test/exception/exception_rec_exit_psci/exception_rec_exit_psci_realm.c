@@ -40,11 +40,20 @@
     "str x29, [" base_reg ", #232]\n\t"                                       \
     "str x30, [" base_reg ", #240]\n\t"
 
-static uint64_t exception_capture_psci_affinity_info(uint64_t affinity,
-                                                     uint64_t *gGPRS,
-                                                     uint64_t *lGPRS)
+static uint64_t exception_capture_psci_cpu_on(uint64_t target,
+                                               uint64_t entry,
+                                               uint64_t context_id,
+                                               uint64_t *gGPRS,
+                                               uint64_t *lGPRS)
 {
-    uint64_t ret;
+    register uint64_t x0 asm("x0") = PSCI_CPU_ON_AARCH64;
+    register uint64_t x1 asm("x1") = target;
+    register uint64_t x2 asm("x2") = entry;
+    register uint64_t x3 asm("x3") = context_id;
+    register uint64_t x4 asm("x4") = 0U;
+    register uint64_t x5 asm("x5") = 0U;
+    register uint64_t x6 asm("x6") = (uint64_t)gGPRS;
+    register uint64_t x7 asm("x7") = (uint64_t)lGPRS;
 
     /*
      * Capture x0-x30 immediately before the PSCI exit and immediately after
@@ -52,22 +61,15 @@ static uint64_t exception_capture_psci_affinity_info(uint64_t affinity,
      * the SMC and the second snapshot.
      */
     __asm__ volatile(
-        EXCEPTION_STORE_ALL_GPRS("%x[before]")
-        "mov x0, %x[fid]\n\t"
-        "mov x1, %x[target_affinity]\n\t"
-        "mov x2, xzr\n\t"
-        "mov x3, xzr\n\t"
+        EXCEPTION_STORE_ALL_GPRS("x6")
         "smc #0\n\t"
-        EXCEPTION_STORE_ALL_GPRS("%x[after]")
-        "mov %x[result], x0\n\t"
-        : [result] "=&r" (ret)
-        : [before] "r" (gGPRS),
-          [after] "r" (lGPRS),
-          [fid] "r" ((uint64_t)PSCI_AFFINITY_INFO_AARCH64),
-          [target_affinity] "r" (affinity)
+        EXCEPTION_STORE_ALL_GPRS("x7")
+        : "+r" (x0), "+r" (x1), "+r" (x2), "+r" (x3),
+          "+r" (x4), "+r" (x5), "+r" (x6), "+r" (x7)
+        :
         : "memory", "cc");
 
-    return ret;
+    return x0;
 }
 
 void exception_rec_exit_psci_realm(void)
@@ -85,14 +87,9 @@ void exception_rec_exit_psci_realm(void)
     LOG(TEST, "Affinity info: mpidr : 0x%x, affinity : %d  \n", \
               mpidr, affinity);
 
-    ret = exception_capture_psci_affinity_info(affinity, gGPRS, lGPRS);
-
-    /*
-     * PSCI_AFFINITY_INFO returns the target CPU state, not PSCI_E_SUCCESS.
-     * This probe is used here to force a PSCI REC exit and validate that
-     * x7-x30 are restored correctly on resume.
-     */
-    LOG(TEST, "PSCI_AFFINITY_INFO return value : 0x%x \n", ret);
+    ret = exception_capture_psci_cpu_on(affinity,
+                                        val_realm_get_secondary_cpu_entry(),
+                                        CONTEXT_ID, gGPRS, lGPRS);
 
     for (index = EXCEPTION_TEST_PSCI_GPRS_COMPARE_START;
          index < EXCEPTION_TEST_MAX_GPRS; index++)
@@ -105,8 +102,7 @@ void exception_rec_exit_psci_realm(void)
             goto test_exit;
         }
     }
-    /* Check for host rejecting PSCI request */
-    ret = val_psci_cpu_on(affinity, val_realm_get_secondary_cpu_entry(), CONTEXT_ID);
+    /* Check the status supplied by the Host when completing PSCI_CPU_ON. */
     if (ret != PSCI_E_DENIED)
     {
         LOG(ERROR, "Invalid PSCI return code : ret = 0x%x \n", ret);

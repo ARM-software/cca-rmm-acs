@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2025, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2025-2026, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -16,14 +16,13 @@
 
 #define CONTEXT_ID 0x5555
 
-#define IPA_WIDTH 40
-#define IPA_ADDR_UNPROTECTED (1UL << (IPA_WIDTH - 1))
-
 static struct argument_store {
     uint64_t target_cpu_valid;
     uint64_t entry_point_address_valid;
     uint32_t context_id_valid;
 } c_args;
+
+static volatile uint8_t target_rec_entered;
 
 struct arguments {
     uint64_t target_cpu;
@@ -60,7 +59,7 @@ static uint64_t intent_to_seq(struct stimulus *test_data, struct arguments *args
     {
         case ENTRY_ADDR_UNPROTECTED:
             args->target_cpu = c_args.target_cpu_valid;
-            args->entry_point_address =  IPA_ADDR_UNPROTECTED;
+            args->entry_point_address = 1UL << (val_realm_get_ipa_width() - 1U);
             args->context_id = c_args.context_id_valid;
             break;
 
@@ -91,6 +90,13 @@ void cmd_cpu_on_realm(void)
     uint64_t ret;
     struct arguments args;
     uint64_t i;
+
+    if (val_get_primary_mpidr() != val_read_mpidr())
+    {
+        target_rec_entered = 1U;
+        val_realm_return_to_host();
+        return;
+    }
 
     /* Prepare Valid arguments */
     valid_argument_prep_sequence();
@@ -129,17 +135,25 @@ void cmd_cpu_on_realm(void)
         goto exit;
     }
 
+    if (target_rec_entered != 1U)
+    {
+        LOG(ERROR, "Target REC did not execute from the requested entry point\n");
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(4)));
+        goto exit;
+    }
+
     /* Subsequent execution of CPU_ON should fail with PSCI_ALREADY_ON */
     ret = val_psci_cpu_on(c_args.target_cpu_valid, c_args.entry_point_address_valid,
                                                             c_args.context_id_valid);
     if (ret != PSCI_E_ALREADY_ON)
     {
         LOG(ERROR, "Unexpected Command Return Status ret status : 0x%x \n", ret);
-        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(4)));
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(5)));
         goto exit;
     }
+
+    val_set_status(RESULT_PASS(VAL_SUCCESS));
 
 exit:
     val_realm_return_to_host();
 }
-

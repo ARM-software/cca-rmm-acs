@@ -7,20 +7,15 @@
 
 #include "test_database.h"
 #include "val_host_rmi.h"
+#include "val_host_sro.h"
+#include "val_host_rmi_sro.h"
 #include "rmi_realm_create_data.h"
 #include "command_common_host.h"
 
 #define IPA_WIDTH 40
-#define MAX_VMID 65535 // 16-bit VMID
-#define MAX_GRANULES 256
-
-#define MECID_PRIVATE 0x1
-#define MECID_VALID   0x2
-
-#define NUM_REALMS 3
+#define NUM_REALMS 2
 #define REALM_VALID 0
 #define REALM_NEW 1
-#define REALM_MEC 2
 
 #define IPA_ADDR_DATA 0
 
@@ -29,12 +24,23 @@ static val_host_realm_ts realm[NUM_REALMS];
 static struct argument_store {
     uint64_t rd_valid;
     uint64_t params_valid;
+    val_host_tracking_test_region_ts track_region;
 } c_args;
 
 struct arguments {
     uint64_t rd;
     uint64_t params_ptr;
 };
+
+static uint64_t rd_track_prep_sequence(void)
+{
+    return val_host_tracking_coarse_prep_sequence(&c_args.track_region);
+}
+
+static uint32_t rd_track_cleanup(void)
+{
+    return val_host_tracking_coarse_cleanup(&c_args.track_region);
+}
 
 typedef enum {
     PARAMS_HASH_INVALID = 0x0,
@@ -45,18 +51,14 @@ typedef enum {
     PARAMS_BPS_UNSUPPORTED,
     PARAMS_WPS_UNSUPPORTED,
     PARAMS_RTT_UNALIGNED,
-    PARAMS_INVALID_S2SZ,
-    PARAMS_INVALID_RTT_START,
+    PARAMS_S2SZ_UNSUPPORTED,
+    PARAMS_INVALID_RTT_CONFIG,
     PARAMS_RTT_UNDELEGATED,
-    PARAMS_VMID_INVALID,
-    PARAMS_VMID_USED,
-    PARAMS_PLANES_UNSUPPORTED,
-    PARAMS_AUX_RTT_UNALIGNED,
-    PARAMS_AUX_RTT_UNDELEGATED,
-    PARAMS_AUX_VMID_INVALID,
-    PARAMS_AUX_VMID_USED,
-    PARAMS_MECID_BOUND,
-    PARAMS_MECID_STATE
+    PARAMS_BPS_ZERO,
+    PARAMS_WPS_ZERO,
+    PARAMS_DA_UNSUPPORTED,
+    PARAMS_ATS_UNSUPPORTED,
+    PARAMS_ATS_PLANE_INVALID
 } params_prep_seq_type;
 
 static uint64_t rd_valid_prep_sequence(void)
@@ -71,44 +73,29 @@ static uint64_t rd_valid_prep_sequence(void)
     return rd;
 }
 
-static uint64_t g_mec_state_private_assigned_prep_sequence(uint16_t vmid)
-{
-    val_host_realm_ts realm_init;
-
-    val_memset(&realm_init, 0, sizeof(realm_init));
-
-    realm_init.s2sz = 40;
-    realm_init.hash_algo = RMI_HASH_SHA_256;
-    realm_init.s2_starting_level = 0;
-    realm_init.num_s2_sl_rtts = 1;
-    realm_init.vmid = vmid;
-    realm_init.mecid = MECID_PRIVATE;
-
-    if (val_host_realm_create_common(&realm_init))
-    {
-        LOG(ERROR, "\tRealm create failed\n");
-        return VAL_TEST_PREP_SEQ_FAILED;
-    }
-
-    return MECID_PRIVATE;
-}
-
 static uint64_t g_params_prep_sequence(params_prep_seq_type type)
 {
     /*  Allocate a granule for RealmParams */
     val_host_realm_params_ts *params = val_host_mem_alloc(PAGE_SIZE, PAGE_SIZE);
+
+    if (params == NULL) {
+        LOG(ERROR, "Failed to allocate RealmParams\n");
+        return VAL_TEST_PREP_SEQ_FAILED;
+    }
+
+    val_memset(params, 0, PAGE_SIZE);
+
     /* Allocate and delegate a granule for the L0 RTT */
     uint64_t rtt_base = realm[REALM_VALID].rtt_l0_addr;
 
     uint64_t featreg0;
     uint64_t featreg1;
-    uint8_t s2sz, supported_hashalgo, vmidbits;
+    uint64_t featreg2;
 
     params->hash_algo = RMI_SHA256;
     params->s2sz = IPA_WIDTH;
-    params->rtt_level_start = 1;
-    params->rtt_num_start = 0;
-    params->vmid = 0;
+    params->rtt_level_start = 0;
+    params->rtt_num_start = 1;
     params->rtt_base = rtt_base;
     params->num_bps = 1;
     params->num_wps = 1;
@@ -116,20 +103,20 @@ static uint64_t g_params_prep_sequence(params_prep_seq_type type)
     switch (type) {
     /* Generate a Invalid encoding for Hash algorithm */
     case PARAMS_HASH_INVALID:
-        params->hash_algo = 2;
+        params->hash_algo = 3;
         break;
 
     /* Select a hash algorithm not supported by the implementation */
     case PARAMS_HASH_UNSUPPORTED:
 
-        val_host_rmi_features(0, &featreg0);
+        val_host_rmi_features(1, &featreg1);
 
-        supported_hashalgo = VAL_EXTRACT_BITS(featreg0, 28, 29);
-
-        if (supported_hashalgo == 0x1)
-            params->hash_algo = 1;
-        else if (supported_hashalgo == 0x2)
-            params->hash_algo = 0;
+        if (!VAL_EXTRACT_BITS(featreg1, 3, 3))
+            params->hash_algo = RMI_HASH_SHA_256;
+        else if (!VAL_EXTRACT_BITS(featreg1, 5, 5))
+            params->hash_algo = RMI_HASH_SHA_512;
+        else if (!VAL_EXTRACT_BITS(featreg1, 4, 4))
+            params->hash_algo = RMI_HASH_SHA_384;
         else {
             LOG(TEST, "No Invalid combitation\n");
             return VAL_SKIP_CHECK;
@@ -140,15 +127,10 @@ static uint64_t g_params_prep_sequence(params_prep_seq_type type)
 
         val_host_rmi_features(0, &featreg0);
 
-        if (VAL_EXTRACT_BITS(featreg0, 22, 22)) {
-            if (VAL_EXTRACT_BITS(featreg0, 23, 27) == 0xF) {
-                LOG(TEST, "No Invalid combitation\n");
-                return VAL_SKIP_CHECK;
-            }
-            params->pmu_num_ctrs |= (uint8_t)(VAL_EXTRACT_BITS(featreg0, 23, 27) + 1);
-        }
-        else
-            params->flags |= 0x8;
+        params->flags0 = REALM_FLAG_PMU_ENABLE;
+        if (VAL_EXTRACT_BITS(featreg0, 26, 26) != 0)
+            params->pmu_num_ctrs =
+                (uint8_t)(VAL_EXTRACT_BITS(featreg0, 27, 31) + 1);
 
         break;
 
@@ -164,7 +146,7 @@ static uint64_t g_params_prep_sequence(params_prep_seq_type type)
             params->sve_vl |= (uint8_t)(VAL_EXTRACT_BITS(featreg0, 10, 13) + 1);
         }
         else
-            params->flags |= 0x2;
+            params->flags0 |= 0x2;
 
         break;
 
@@ -174,7 +156,7 @@ static uint64_t g_params_prep_sequence(params_prep_seq_type type)
 
         if (!VAL_EXTRACT_BITS(featreg0, 8, 8))
         {
-            params->flags = 0x1;
+            params->flags0 = 0x1;
             params->s2sz = 52;
         }
         else {
@@ -199,11 +181,31 @@ static uint64_t g_params_prep_sequence(params_prep_seq_type type)
 
         val_host_rmi_features(0, &featreg0);
 
-        if (VAL_EXTRACT_BITS(featreg0, 20, 25) == 0xF) {
-            LOG(TEST, "No Invalid combitation\n");
+        params->num_wps = (uint8_t)(VAL_EXTRACT_BITS(featreg0, 20, 25) + 1);
+        break;
+
+    case PARAMS_BPS_ZERO:
+        params->num_bps = 0;
+        break;
+
+    case PARAMS_WPS_ZERO:
+        params->num_wps = 0;
+        break;
+
+    case PARAMS_DA_UNSUPPORTED:
+        val_host_rmi_features(RMI_FEATURE_REGISTER_2_INDEX, &featreg2);
+        if (VAL_EXTRACT_BITS(featreg2, RMI_FEATURE_REGISTER_2_DA,
+                             RMI_FEATURE_REGISTER_2_DA))
             return VAL_SKIP_CHECK;
-        }
-        params->num_wps |= (uint8_t)(VAL_EXTRACT_BITS(featreg0, 18, 21) + 1);
+        params->flags0 = 1UL << 3;
+        break;
+
+    case PARAMS_ATS_UNSUPPORTED:
+        val_host_rmi_features(RMI_FEATURE_REGISTER_2_INDEX, &featreg2);
+        if (VAL_EXTRACT_BITS(featreg2, RMI_FEATURE_REGISTER_2_ATS,
+                             RMI_FEATURE_REGISTER_2_ATS))
+            return VAL_SKIP_CHECK;
+        params->flags1 = 1UL << 2;
         break;
 
     /* Select a unalligned address for rtt */
@@ -211,34 +213,17 @@ static uint64_t g_params_prep_sequence(params_prep_seq_type type)
         params->rtt_base = g_unaligned_prep_sequence(rtt_base);
         break;
 
-    /* Select a invalid S2SZ value */
-    case PARAMS_INVALID_S2SZ:
-        params->s2sz = 38;
+    /* Select an IPA width above the advertised maximum. */
+    case PARAMS_S2SZ_UNSUPPORTED:
+        val_host_rmi_features(0, &featreg0);
+        if (VAL_EXTRACT_BITS(featreg0, 0, 7) == UINT8_MAX)
+            return VAL_SKIP_CHECK;
+        params->s2sz = (uint8_t)(VAL_EXTRACT_BITS(featreg0, 0, 7) + 1U);
         break;
 
-    /* Select invalid starting rtt level based on implemented IPA width */
-    case PARAMS_INVALID_RTT_START:
-
-        val_host_rmi_features(0, &featreg0);
-
-        s2sz = VAL_EXTRACT_BITS(featreg0, 0, 7);
-
-        if (s2sz > 48 && s2sz <= 52) {
-            params->s2sz = 1U << 8 | s2sz;
-            params->rtt_level_start = 1;
-        }
-        else if (s2sz > 39 && s2sz <= 48) {
-            params->s2sz = s2sz;
-            params->rtt_level_start = 2;
-        }
-        else if (s2sz > 30 && s2sz <= 39) {
-            params->s2sz = s2sz;
-            params->rtt_level_start = 3;
-        }
-        else {
-            params->s2sz = s2sz;
-            params->rtt_level_start = 2;
-        }
+    /* Select an invalid RTT starting level. */
+    case PARAMS_INVALID_RTT_CONFIG:
+        params->rtt_num_start++;
         break;
 
     /* Select a undelegated granule for rtt */
@@ -248,74 +233,8 @@ static uint64_t g_params_prep_sequence(params_prep_seq_type type)
             return VAL_TEST_PREP_SEQ_FAILED;
         break;
 
-    /* Select invalid VMID based on FEAT_VMID16 implementation*/
-    case PARAMS_VMID_INVALID:
-        vmidbits = VAL_EXTRACT_BITS(val_id_aa64mmfr1_el1_read(), 4, 7);
-
-        if (vmidbits == 0x1)
-            params->vmid = 0xFF00;
-        else {
-            LOG(TEST, "Couldn't create VMID Invalid sequence\n");
-            return VAL_SKIP_CHECK;
-        }
-        break;
-
-    /* Select a already used VMID to create a realm */
-    case PARAMS_VMID_USED:
-        params->vmid = 1;
-        break;
-
-    case PARAMS_PLANES_UNSUPPORTED:
-
-        val_host_rmi_features(0, &featreg0);
-
-        params->num_aux_planes |= (uint8_t)(VAL_EXTRACT_BITS(featreg0, 45, 48) + 1);
-        break;
-
-    /* Select a unalligned address for rtt */
-    case PARAMS_AUX_RTT_UNALIGNED:
-        params->num_aux_planes = 1;
-        params->aux_rtt_base[0] = g_unaligned_prep_sequence(rtt_base);
-        break;
-
-    /* Select a undelegated granule for rtt */
-    case PARAMS_AUX_RTT_UNDELEGATED:
-        params->num_aux_planes = 1;
-        params->aux_rtt_base[0] = g_undelegated_prep_sequence();
-        if (params->rtt_base == VAL_TEST_PREP_SEQ_FAILED)
-            return VAL_TEST_PREP_SEQ_FAILED;
-        break;
-
-    case PARAMS_AUX_VMID_INVALID:
-
-        vmidbits = VAL_EXTRACT_BITS(val_id_aa64mmfr1_el1_read(), 4, 7);
-
-        if (vmidbits == 0x1)
-        {
-            params->num_aux_planes = 1;
-            params->aux_vmid[0] = 0xFF00;
-        }
-        else
-        {
-            LOG(TEST, "Couldn't create VMID Invalid sequence\n");
-            return VAL_SKIP_CHECK;
-        }
-        break;
-
-    case PARAMS_AUX_VMID_USED:
-        params->num_aux_planes = 1;
-        params->vmid = 1;
-        break;
-
-    case PARAMS_MECID_BOUND:
-        val_host_rmi_features(1, &featreg1);
-        params->mecid = featreg1;
-        break;
-
-    case PARAMS_MECID_STATE:
-        params->mecid = g_mec_state_private_assigned_prep_sequence(REALM_MEC);
-        if (params->mecid == VAL_TEST_PREP_SEQ_FAILED)
-            return VAL_TEST_PREP_SEQ_FAILED;
+    case PARAMS_ATS_PLANE_INVALID:
+        params->ats_plane = 1;
         break;
 
     default:
@@ -341,15 +260,9 @@ static uint64_t params_valid_prep_sequence(void)
     params->s2sz = IPA_WIDTH;
     params->rtt_num_start = 1;
     params->rtt_level_start = 0;
-    params->vmid = REALM_VALID;
     params->rtt_base = rtt0;
     params->num_bps = 1;
     params->num_wps = 1;
-
-#ifdef RMM_V_1_1
-    params->mecid = MECID_VALID;
-    params->flags1 |= VAL_REALM_FLAG_RTT_TREE_PP;
-#endif
 
     return (uint64_t)params;
 }
@@ -419,16 +332,6 @@ static uint64_t intent_to_seq(struct stimulus *test_data, struct arguments *args
             args->params_ptr = g_unaligned_prep_sequence(c_args.params_valid);
             break;
 
-        case PARAMS_DEV_MEM:
-            args->rd = c_args.rd_valid;
-            args->params_ptr = g_dev_mem_prep_sequence();
-            break;
-
-        case PARAMS_OUTSIDE_OF_PERMITTED_PA:
-            args->rd = c_args.rd_valid;
-            args->params_ptr = g_outside_of_permitted_pa_prep_sequence();
-            break;
-
         case PARAMS_PAS_REALM:
             args->rd = c_args.rd_valid;
             args->params_ptr = g_delegated_prep_sequence();
@@ -448,11 +351,13 @@ static uint64_t intent_to_seq(struct stimulus *test_data, struct arguments *args
                 return VAL_ERROR;
             break;
 
-        case S2SZ_INVALID:
+        case S2SZ_UNSUPPORTED:
             args->rd = c_args.rd_valid;
-            args->params_ptr = g_params_prep_sequence(PARAMS_INVALID_S2SZ);
+            args->params_ptr = g_params_prep_sequence(PARAMS_S2SZ_UNSUPPORTED);
             if (args->params_ptr == VAL_TEST_PREP_SEQ_FAILED)
                 return VAL_ERROR;
+            else if (args->params_ptr == VAL_SKIP_CHECK)
+                return VAL_SKIP_CHECK;
             break;
 
         case HASH_ALGO_UNSUPPORTED:
@@ -509,6 +414,30 @@ static uint64_t intent_to_seq(struct stimulus *test_data, struct arguments *args
                 return VAL_SKIP_CHECK;
             break;
 
+        case BPS_ZERO:
+            args->rd = c_args.rd_valid;
+            args->params_ptr = g_params_prep_sequence(PARAMS_BPS_ZERO);
+            break;
+
+        case WPS_ZERO:
+            args->rd = c_args.rd_valid;
+            args->params_ptr = g_params_prep_sequence(PARAMS_WPS_ZERO);
+            break;
+
+        case DA_UNSUPPORTED:
+            args->rd = c_args.rd_valid;
+            args->params_ptr = g_params_prep_sequence(PARAMS_DA_UNSUPPORTED);
+            if (args->params_ptr == VAL_SKIP_CHECK)
+                return VAL_SKIP_CHECK;
+            break;
+
+        case ATS_UNSUPPORTED:
+            args->rd = c_args.rd_valid;
+            args->params_ptr = g_params_prep_sequence(PARAMS_ATS_UNSUPPORTED);
+            if (args->params_ptr == VAL_SKIP_CHECK)
+                return VAL_SKIP_CHECK;
+            break;
+
 
         case RTT_BASE_RD_ALIASED:
             args->rd = realm[REALM_VALID].rtt_l0_addr;
@@ -520,13 +449,12 @@ static uint64_t intent_to_seq(struct stimulus *test_data, struct arguments *args
             args->params_ptr = c_args.params_valid;
             break;
 
-        case RD_DEV_MEM:
-            args->rd = g_dev_mem_prep_sequence();
-            args->params_ptr = c_args.params_valid;
-            break;
-
-        case RD_OUTSIDE_OF_PERMITTED_PA:
-            args->rd = g_outside_of_permitted_pa_prep_sequence();
+        case RD_TRACK_COARSE:
+            args->rd = rd_track_prep_sequence();
+            if (args->rd == VAL_SKIP_CHECK)
+                return VAL_SKIP_CHECK;
+            if (args->rd == VAL_TEST_PREP_SEQ_FAILED)
+                return VAL_ERROR;
             args->params_ptr = c_args.params_valid;
             break;
 
@@ -568,9 +496,9 @@ static uint64_t intent_to_seq(struct stimulus *test_data, struct arguments *args
                 return VAL_ERROR;
             break;
 
-         case RTT_START_INVALID:
+         case RTT_CONFIG_INVALID:
             args->rd = c_args.rd_valid;
-            args->params_ptr = g_params_prep_sequence(PARAMS_INVALID_RTT_START);
+            args->params_ptr = g_params_prep_sequence(PARAMS_INVALID_RTT_CONFIG);
             if (args->params_ptr == VAL_TEST_PREP_SEQ_FAILED)
                 return VAL_ERROR;
             break;
@@ -582,65 +510,9 @@ static uint64_t intent_to_seq(struct stimulus *test_data, struct arguments *args
                 return VAL_ERROR;
             break;
 
-        case VMID_INVALID:
+        case ATS_PLANE_INVALID:
             args->rd = c_args.rd_valid;
-            args->params_ptr = g_params_prep_sequence(PARAMS_VMID_INVALID);
-            if (args->params_ptr == VAL_TEST_PREP_SEQ_FAILED)
-                return VAL_ERROR;
-            else if (args->params_ptr == VAL_SKIP_CHECK)
-                return VAL_SKIP_CHECK;
-            break;
-
-        case VMID_USED:
-            args->rd = c_args.rd_valid;
-            args->params_ptr = g_params_prep_sequence(PARAMS_VMID_USED);
-            if (args->params_ptr == VAL_TEST_PREP_SEQ_FAILED)
-                return VAL_ERROR;
-            break;
-
-        case NUM_AUX_PLANES_INVALID:
-            args->rd = c_args.rd_valid;
-            args->params_ptr = g_params_prep_sequence(PARAMS_PLANES_UNSUPPORTED);
-            break;
-
-        case AUX_RTT_UNALIGNED:
-            args->rd = c_args.rd_valid;
-            args->params_ptr = g_params_prep_sequence(PARAMS_AUX_RTT_UNALIGNED);
-            if (args->params_ptr == VAL_TEST_PREP_SEQ_FAILED)
-                return VAL_ERROR;
-            break;
-
-        case AUX_RTT_BASE_UNDELEGATED:
-            args->rd = c_args.rd_valid;
-            args->params_ptr = g_params_prep_sequence(PARAMS_AUX_RTT_UNDELEGATED);
-            if (args->params_ptr == VAL_TEST_PREP_SEQ_FAILED)
-                return VAL_ERROR;
-            break;
-
-        case AUX_VMID_INVALID:
-            args->rd = c_args.rd_valid;
-            args->params_ptr = g_params_prep_sequence(PARAMS_AUX_VMID_INVALID);
-            if (args->params_ptr == VAL_TEST_PREP_SEQ_FAILED)
-                return VAL_ERROR;
-            else if (args->params_ptr == VAL_SKIP_CHECK)
-                return VAL_SKIP_CHECK;
-            break;
-
-        case AUX_VMID_USED:
-            args->rd = c_args.rd_valid;
-            args->params_ptr = g_params_prep_sequence(PARAMS_AUX_VMID_USED);
-            break;
-
-        case MECID_BOUND:
-            args->rd = c_args.rd_valid;
-            args->params_ptr = g_params_prep_sequence(PARAMS_MECID_BOUND);
-            break;
-
-        case MECID_STATE:
-            args->rd = c_args.rd_valid;
-            args->params_ptr = g_params_prep_sequence(PARAMS_MECID_STATE);
-            if (args->params_ptr == VAL_TEST_PREP_SEQ_FAILED)
-                return VAL_ERROR;
+            args->params_ptr = g_params_prep_sequence(PARAMS_ATS_PLANE_INVALID);
             break;
 
         default:
@@ -656,6 +528,7 @@ static uint64_t intent_to_seq(struct stimulus *test_data, struct arguments *args
 void cmd_realm_create_host(void)
 {
     uint64_t ret;
+    val_smc_param_ts cmd_ret;
     struct arguments args = {0, 0};
     uint64_t i;
 
@@ -673,7 +546,7 @@ void cmd_realm_create_host(void)
         ret = intent_to_seq(&test_data[i], &args);
         if (ret == VAL_SKIP_CHECK)
         {
-            LOG(TEST, "Skipping Test case\n");
+            LOG(TEST, "Skipping Check %d\n", (int)(i + 1));
             continue;
         }
         else if (ret == VAL_ERROR) {
@@ -682,7 +555,22 @@ void cmd_realm_create_host(void)
             goto exit;
         }
 
-        ret = val_host_rmi_realm_create(args.rd, args.params_ptr);
+        cmd_ret = val_host_rmi_realm_create_smc(args.rd, args.params_ptr);
+        ret = val_host_sro_complete(&cmd_ret);
+
+        if (test_data[i].label == RD_TRACK_COARSE)
+        {
+            if ((RMI_STATUS(ret) != RMI_ERROR_TRACKING) ||
+                (RMI_TRACKING_LEVEL(ret) != RMI_TRACKING_LEVEL_COARSE) ||
+                (VAL_EXTRACT_BITS(ret, 16, 55) != (args.rd >> PAGE_BITS_4K)))
+            {
+                LOG(ERROR, "RD tracking check returned 0x%lx, expected "
+                    "TRACKING at 0x%lx\n", ret, args.rd);
+                val_set_status(RESULT_FAIL(VAL_ERROR_POINT(3)));
+                goto exit;
+            }
+            continue;
+        }
 
         if (ret != PACK_CODE(test_data[i].status, test_data[i].index))
         {
@@ -703,7 +591,8 @@ void cmd_realm_create_host(void)
     }
 
     LOG(TEST, "Check %2d : Negative Observability\n", ++i);
-    ret = val_host_rmi_realm_create(c_args.rd_valid, c_args.params_valid);
+    cmd_ret = val_host_rmi_realm_create_smc(c_args.rd_valid, c_args.params_valid);
+    ret = val_host_sro_complete(&cmd_ret);
     /* Now the command should fail with the same parameters (footprint has changed) */
     if (ret == 0) {
         LOG(ERROR, "Negative Observability Check Failed\n");
@@ -714,5 +603,7 @@ void cmd_realm_create_host(void)
     val_set_status(RESULT_PASS(VAL_SUCCESS));
 
 exit:
+    if (rd_track_cleanup() != VAL_SUCCESS)
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(6)));
     return;
 }

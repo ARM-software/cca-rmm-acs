@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2025, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2025-2026, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -14,8 +14,10 @@
 
 void attestation_rem_extend_check_realm_token_realm(void)
 {
-    val_smc_param_ts args = {0}, zero_ref = {0};
+    val_smc_param_ts args = {0}, rem_before, rem_after;
+    uint64_t zero_measurement[8] = {0};
     uint64_t token_size = 0, ret, size, max_size, len;
+    int i;
     __attribute__((aligned (PAGE_SIZE))) uint64_t token[MAX_REALM_CCA_TOKEN_SIZE/8] = {0,};
     uint64_t *granule = token;
     uint64_t challenge[8] = {0xb4ea40d262abaf22,
@@ -28,6 +30,20 @@ void attestation_rem_extend_check_realm_token_realm(void)
                              0xc7f17650fe9fca60};
     attestation_token_ts attestation_token;
 
+    rem_before = val_realm_rsi_measurement_read(1);
+    if (rem_before.x0)
+    {
+        LOG(ERROR, "Initial REM read failed, ret=%x\n", rem_before.x0);
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(6)));
+        goto exit;
+    }
+    if (val_memcmp(&rem_before.x1, zero_measurement, sizeof(zero_measurement)))
+    {
+        LOG(ERROR, "Initial REM is not zero.\n");
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(7)));
+        goto exit;
+    }
+
     /* Extend REM for index 1 */
     ret = val_realm_rsi_measurement_extend(1, MEASUREMENT_SIZE,
 					      0x05a9bf223fedf80a,
@@ -39,6 +55,14 @@ void attestation_rem_extend_check_realm_token_realm(void)
     {
         LOG(ERROR, "Realm RSI MEASUREMENT EXTEND failed, ret=%x\n", ret);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(1)));
+        goto exit;
+    }
+
+    rem_after = val_realm_rsi_measurement_read(1);
+    if (rem_after.x0)
+    {
+        LOG(ERROR, "Extended REM read failed, ret=%x\n", rem_after.x0);
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(8)));
         goto exit;
     }
 
@@ -86,12 +110,30 @@ void attestation_rem_extend_check_realm_token_realm(void)
         goto exit;
     }
 
-    /* Compare REM for index 1 with zero initialize structure, if REM is zero it should fail */
-    if (!val_memcmp(&zero_ref, (void *)attestation_token.rem[0].ptr, attestation_token.rem[0].len))
+    /* The extended REM in the token must not remain zero. */
+    if (!val_memcmp(zero_measurement, (void *)attestation_token.rem[0].ptr,
+                    attestation_token.rem[0].len))
     {
-        LOG(ERROR, " rem is zero. \n");
+        LOG(ERROR, "Extended REM in token is zero.\n");
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(5)));
         goto exit;
+    }
+    if (val_memcmp(&rem_after.x1, (void *)attestation_token.rem[0].ptr,
+                   attestation_token.rem[0].len))
+    {
+        LOG(ERROR, "Token REM does not match RSI measurement read.\n");
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(9)));
+        goto exit;
+    }
+    for (i = 1; i < 4; i++)
+    {
+        if (val_memcmp(zero_measurement, (void *)attestation_token.rem[i].ptr,
+                       attestation_token.rem[i].len))
+        {
+            LOG(ERROR, "Unextended REM %d in token is not zero.\n", i + 1);
+            val_set_status(RESULT_FAIL(VAL_ERROR_POINT(10)));
+            goto exit;
+        }
     }
 
 exit:

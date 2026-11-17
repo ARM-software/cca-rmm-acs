@@ -6,7 +6,7 @@
  */
 #include "test_database.h"
 #include "val_host_rmi.h"
-#include "command_common_host.h"
+#include "val_host_rmi_sro.h"
 #include "val_host_pcie.h"
 #include "val_host_helpers.h"
 #include "val_host_alloc.h"
@@ -73,7 +73,6 @@ static uint64_t create_locked_vdev2(val_host_realm_ts *realm,
     val_memset(&vdev_flags, 0, sizeof(vdev_flags));
 
     pdev_flags.spdm = RMI_SPDM_TRUE;
-    pdev_flags.ncoh_ide = RMI_IDE_TRUE;
     vdev_flags.vsmmu = RMI_FEATURE_FALSE;
 
     val_memcpy(&flags_pdev, &pdev_flags, sizeof(pdev_flags));
@@ -134,11 +133,11 @@ static uint64_t create_locked_vdev2(val_host_realm_ts *realm,
         }
     }
 
-    args = val_host_rmi_vdev_create(realm->rd, pdev_dev->pdev, vdev,
-                                    (uint64_t)vdev_params);
-    if (args.x0)
+    ret = val_host_rmi_vdev_create(realm->rd, pdev_dev->pdev, vdev,
+                                   (uint64_t)vdev_params);
+    if (ret)
     {
-        LOG(ERROR, "Vdev create failed.\n");
+        LOG(ERROR, "Vdev create failed, ret=0x%lx.\n", ret);
         goto exit;
     }
 
@@ -164,7 +163,7 @@ static uint64_t create_locked_vdev2(val_host_realm_ts *realm,
         goto exit;
 
     vdev_dev->dev_comm_data->enter.req_addr = pdev_dev->dev_comm_data->enter.req_addr;
-    vdev_dev->dev_comm_data->enter.resp_addr = pdev_dev->dev_comm_data->enter.resp_addr;
+    vdev_dev->dev_comm_data->enter.rsp_addr = pdev_dev->dev_comm_data->enter.rsp_addr;
 
     if (val_host_dev_communicate(realm, pdev_dev, vdev_dev, RMI_VDEV_UNLOCKED))
         goto exit;
@@ -232,7 +231,6 @@ void da_pdev_single_active_transaction_host(void)
         goto destroy_vdev2;
     }
     val_memset(vdev_measure_params, 0, PAGE_SIZE);
-    vdev_measure_params->indices[31] = (unsigned char)1U << 6U;
 
     cmd_ret = val_host_rmi_vdev_get_measurements(realm.rd, pdev_dev.pdev,
                                                  vdev1.vdev, (uint64_t)vdev_measure_params);

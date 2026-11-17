@@ -1,3 +1,10 @@
+#-------------------------------------------------------------------------------
+# Copyright (c) 2024, 2026, Arm Limited or its affiliates. All rights reserved.
+#
+# SPDX-License-Identifier: BSD-3-Clause
+#
+#-------------------------------------------------------------------------------
+
 #function to get Specification version from flag
 function(GetSpecVersion INPUT OUTPUT)
     # Use a regular expression to match the pattern x_x and
@@ -24,12 +31,18 @@ function(ExtractandDefineRmiRsiVersion version_string)
         set(MAJOR_VERSION ${CMAKE_MATCH_1})
         set(MINOR_VERSION ${CMAKE_MATCH_2})
 
-        # Add definitions for major and minor versions
+        # Add definitions for RMI major and minor versions
         add_definitions(-DRMI_ABI_VERSION_MAJOR=${MAJOR_VERSION})
         add_definitions(-DRMI_ABI_VERSION_MINOR=${MINOR_VERSION})
 
-        add_definitions(-DRSI_ABI_VERSION_MAJOR=${MAJOR_VERSION})
-        add_definitions(-DRSI_ABI_VERSION_MINOR=${MINOR_VERSION})
+        # RMM v2.0 keeps RSI ABI at v1.1.
+        if(version_string VERSION_GREATER_EQUAL "2.0")
+            add_definitions(-DRSI_ABI_VERSION_MAJOR=1)
+            add_definitions(-DRSI_ABI_VERSION_MINOR=1)
+        else()
+            add_definitions(-DRSI_ABI_VERSION_MAJOR=${MAJOR_VERSION})
+            add_definitions(-DRSI_ABI_VERSION_MINOR=${MINOR_VERSION})
+        endif()
 
     else()
         message(FATAL_ERROR "Invalid version string format: ${version_string}")
@@ -57,7 +70,7 @@ endfunction()
 # Functionn to check the flag and add definitions accordingly
 function(CheckSpecVersionAndAddDefinitions FLAG)
     # List of possible values
-    set(POSSIBLE_VALUES "RMM_V_1_0" "RMM_V_1_1") # Add more values as spec evolves
+    set(POSSIBLE_VALUES "RMM_V_2_0") # Add more values as spec evolves
 
     # If the flag is not defined or set to ALL, add definitions for all values
     if(NOT DEFINED FLAG OR ${FLAG} STREQUAL "ALL")

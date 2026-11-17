@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2025, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2025-2026, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -18,7 +18,8 @@ void mm_hipas_unassigned_ripas_empty_da_ia_host(void)
     uint64_t ripas_ipa, ripas_size;
     uint64_t phys;
     val_data_create_ts data_create;
-    val_host_data_destroy_ts data_destroy;
+    val_host_rmi_rtt_unmap_flags_ts data_unmap_flags;
+    uint64_t unmap_flags = 0;
     uint64_t out_top;
 
     val_memset(&realm, 0, sizeof(realm));
@@ -113,7 +114,13 @@ void mm_hipas_unassigned_ripas_empty_da_ia_host(void)
     }
 
 
-    ret = val_host_rmi_data_destroy(realm.rd, ripas_ipa, &data_destroy);
+    val_memset(&data_unmap_flags, 0x0, sizeof(data_unmap_flags));
+    data_unmap_flags.oaddr_type = RMI_ADDR_TYPE_SINGLE;
+    val_memcpy(&unmap_flags, &data_unmap_flags, sizeof(data_unmap_flags));
+
+    ret = val_host_rmi_rtt_data_unmap(realm.rd, ripas_ipa,
+                                      ripas_ipa + PAGE_SIZE,
+                                      unmap_flags, 0);
     if (ret)
     {
         LOG(ERROR, "Data destroy failed, ipa=0x%lx, ret=0x%x\n", ripas_ipa, ret);

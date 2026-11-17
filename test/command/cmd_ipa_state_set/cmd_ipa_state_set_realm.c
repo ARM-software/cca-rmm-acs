@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2025, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2025-2026, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -64,9 +64,9 @@ static uint64_t intent_to_seq(struct stimulus *test_data, struct arguments *args
             args->flags = c_args.flags_valid;
             break;
 
-        case TOP_UNALLIGNED:
+        case TOP_UNALIGNED:
             args->base = c_args.base_valid;
-            args->top = c_args.top_valid / 2;
+            args->top = unaligned_prep_sequence(c_args.top_valid);
             args->ripas = c_args.ripas_valid;
             args->flags = c_args.flags_valid;
             break;
@@ -107,6 +107,7 @@ void cmd_ipa_state_set_realm(void)
     struct arguments args;
     uint64_t i;
     val_smc_param_ts cmd_ret;
+    val_smc_param_ts read_ret;
 
     /* Prepare Valid arguments */
     valid_argument_prep_sequence();
@@ -154,24 +155,65 @@ void cmd_ipa_state_set_realm(void)
         goto exit;
     }
 
-    /* Check RIPAS reject flow */
-    cmd_ret = val_realm_rsi_ipa_state_set(IPA_RIPAS_REJECT, PAGE_SIZE,
-                                        c_args.ripas_valid, c_args.flags_valid);
-    if (cmd_ret.x0)
-    {
-        LOG(ERROR, "RSI_IPA_STATE_SET Failed with ret = 0x%x\n", cmd_ret.x0);
+    read_ret = val_realm_rsi_ipa_state_get(c_args.base_valid,
+                                            c_args.top_valid);
+    if ((read_ret.x0 != RSI_SUCCESS) ||
+        (read_ret.x1 != c_args.top_valid) ||
+        (read_ret.x2 != c_args.ripas_valid)) {
+        LOG(ERROR, "Accepted RIPAS change is not observable\n");
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(5)));
         goto exit;
     }
 
-    if ((cmd_ret.x2 == RSI_REJECT) && (cmd_ret.x1 != IPA_RIPAS_REJECT))
+    /* Restore RIPAS to RAM and check the other valid RIPAS encoding. */
+    cmd_ret = val_realm_rsi_ipa_state_set(c_args.base_valid, c_args.top_valid,
+                                          RSI_RAM, RSI_NO_CHANGE_DESTROYED);
+    if (cmd_ret.x0)
     {
-        LOG(ERROR, "Positive Observability failed.\n");
+        LOG(ERROR, "RSI_IPA_STATE_SET Failed with ret = 0x%x\n", cmd_ret.x0);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(6)));
         goto exit;
     }
 
+    if ((cmd_ret.x1 != c_args.top_valid) || (cmd_ret.x2 != RSI_ACCEPT) ||
+        (VAL_EXTRACT_BITS(cmd_ret.x2, 1, 63) != 0))
+    {
+        LOG(ERROR, "RAM RIPAS observability failed.\n");
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(7)));
+        goto exit;
+    }
+
+    read_ret = val_realm_rsi_ipa_state_get(c_args.base_valid,
+                                            c_args.top_valid);
+    if ((read_ret.x0 != RSI_SUCCESS) ||
+        (read_ret.x1 != c_args.top_valid) ||
+        (read_ret.x2 != RSI_RAM)) {
+        LOG(ERROR, "Accepted RAM RIPAS change is not observable\n");
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(8)));
+        goto exit;
+    }
+
+    /* Check RIPAS reject flow */
+    cmd_ret = val_realm_rsi_ipa_state_set(IPA_RIPAS_REJECT, PAGE_SIZE,
+                                          RSI_RAM, RSI_NO_CHANGE_DESTROYED);
+    if (cmd_ret.x0)
+    {
+        LOG(ERROR, "RSI_IPA_STATE_SET Failed with ret = 0x%x\n", cmd_ret.x0);
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(9)));
+        goto exit;
+    }
+
+    if ((cmd_ret.x2 != RSI_REJECT) ||
+        (cmd_ret.x1 != IPA_RIPAS_REJECT) ||
+        (VAL_EXTRACT_BITS(cmd_ret.x2, 1, 63) != 0))
+    {
+        LOG(ERROR, "Positive Observability failed.\n");
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(10)));
+        goto exit;
+    }
+
+    val_set_status(RESULT_PASS(VAL_SUCCESS));
+
 exit:
     val_realm_return_to_host();
 }
-

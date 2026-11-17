@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2025, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2025-2026, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -54,7 +54,8 @@ void cmd_host_call_host(void)
         goto destroy_realm;
     }
 
-    val_set_status(RESULT_PASS(VAL_SUCCESS));
+    if (IS_TEST_START(val_get_status()))
+        val_set_status(RESULT_PASS(VAL_SUCCESS));
 
     /* Free test resources */
 destroy_realm:

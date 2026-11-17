@@ -6,6 +6,7 @@
  */
 #include "test_database.h"
 #include "val_host_rmi.h"
+#include "val_host_rmi_sro.h"
 #include "val_host_doe.h"
 #include "pal_common_support.h"
 #include "val_host_pcie.h"
@@ -14,6 +15,8 @@
 #include "val_host_helpers.h"
 #include "val_host_da.h"
 #include "val_host_rhi.h"
+#include "val_host_realm.h"
+#include "val_host_rmi_sro.h"
 
 uint32_t g_da_vdev_count;
 
@@ -22,13 +25,12 @@ uint64_t da_init(val_host_realm_ts *realm,
                   val_host_vdev_ts *vdev_obj,
                   uint8_t vdev_state)
 {
-    uint64_t feature_reg, pdev, ret, req_addr, resp_addr, vdev;
-    val_host_pdev_params_ts *pdev_params;
-    val_host_vdev_params_ts *vdev_params;
+    uint64_t pdev, ret, req_addr, resp_addr, vdev;
+    val_host_rmi_pdev_params_ts *pdev_params;
+    val_host_rmi_vdev_params_ts *vdev_params;
     val_smc_param_ts args;
-    uint64_t i, j, flags_pdev, flags_vdev;
+    uint64_t i;
     uint32_t num_bdf;
-    val_host_vdev_flags_ts vdev_flags;
     int rc;
     uint8_t public_key_algo;
     uint8_t *shared_vca_buff = (val_get_shared_region_base() + TEST_USE_OFFSET1);
@@ -40,16 +42,13 @@ uint64_t da_init(val_host_realm_ts *realm,
     val_host_realm_flags_ts realm_flags;
     val_host_public_key_params_ts *pubkey_params;
     val_host_pdev_flags_ts pdev_flags;
-    uint64_t aux_count;
     uint32_t rp_bdf, status;
 
     val_memset(pdev_obj, 0, sizeof(*pdev_obj));
     val_memset(vdev_obj, 0, sizeof(*vdev_obj));
     g_da_vdev_count = 1;
 
-    /* Read Feature Register 0 and check for DA support */
-    val_host_rmi_features(0, &feature_reg);
-    if (VAL_EXTRACT_BITS(feature_reg, 42, 42) == 0) {
+    if (!val_host_rmm_supports_da()) {
         LOG(ERROR, "DA feature not supported.\n");
         return VAL_ERROR;
     }
@@ -61,7 +60,7 @@ uint64_t da_init(val_host_realm_ts *realm,
         LOG(ERROR, "Failed to allocate memory for pdev");
         return VAL_ERROR;
     } else {
-        ret = val_host_rmi_granule_delegate(pdev);
+        ret = val_host_rmi_granule_range_delegate(pdev, pdev + PAGE_SIZE);
         if (ret)
         {
             LOG(ERROR, "PDEV delegation failed, pdev=0x%x, ret=0x%x", pdev, ret);
@@ -111,55 +110,22 @@ uint64_t da_init(val_host_realm_ts *realm,
     /* Populate params */
     val_memset(&pdev_flags, 0, sizeof(pdev_flags));
     pdev_flags.spdm = RMI_SPDM_TRUE;
-    pdev_flags.ncoh_ide = RMI_IDE_TRUE;
+    pdev_flags.category = RMI_PDEV_ENDPOINT_ACCEL_OFF_CHIP;
     val_memcpy(&pdev_params->flags, &pdev_flags, sizeof(pdev_flags));
 
-    /* Get aux granules count */
-    args = val_host_rmi_pdev_aux_count(pdev_params->flags);
-    if (args.x0)
-    {
-        return VAL_ERROR;
-    }
-    aux_count = args.x1;
-
+    pdev_params->hb_base = val_pcie_get_ecam_base(pdev_obj->bdf);
+    pdev_params->pdev_id = PCIE_CREATE_BDF_PACKED(pdev_obj->bdf);
+    pdev_params->routing_id = PCIE_EXTRACT_BDF_SEG(pdev_obj->bdf);
+    pdev_params->id_index = 0;
+    pdev_params->rid_base = PCIE_CREATE_BDF_PACKED(pdev_obj->bdf);
+    pdev_params->rid_top = pdev_params->rid_base + 1;
     pdev_params->hash_algo = RMI_HASH_SHA_512;
-    pdev_params->pdev_id = pdev_obj->bdf;
-    pdev_params->cert_id = 0;
-    pdev_params->root_id = (uint16_t)rp_bdf;
-    pdev_params->ecam_addr = PLATFORM_OVERRIDE_PCIE_ECAM_BASE_ADDR_0;
-    pdev_params->num_aux = aux_count;
-
-    for (j = 0; j < pdev_params->num_aux; j++)
-    {
-        pdev_params->aux[j] = (uint64_t)val_host_mem_alloc(PAGE_SIZE, PAGE_SIZE);
-        if (!pdev_params->aux[j])
-        {
-            LOG(ERROR, "Failed to allocate memory for aux pdev");
-            return VAL_ERROR;
-        }
-        else
-        {
-            ret = val_host_rmi_granule_delegate(pdev_params->aux[j]);
-            if (ret)
-            {
-                LOG(ERROR, "pdev delegation failed, pdev=0x%x, ret=0x%x", pdev_params->aux[j],
-                                                                               ret);
-                return VAL_ERROR;
-            }
-        }
-    }
-
-    pdev_params->ncoh_num_addr_range = pdev_obj->ncoh_num_addr_range;
-
-    for (j = 0; j < pdev_obj->ncoh_num_addr_range; j++) {
-        pdev_params->ncoh_addr_range[j] = pdev_obj->ncoh_addr_range[j];
-    }
 
     /* Create pdev */
-    args = val_host_rmi_pdev_create(pdev, (uint64_t)pdev_params);
-    if (args.x0)
+    ret = val_host_rmi_pdev_create(pdev, (uint64_t)pdev_params);
+    if (ret)
     {
-        LOG(ERROR, "PDEV create failed\n");
+        LOG(ERROR, "PDEV create failed, ret=0x%lx\n", ret);
         return VAL_ERROR;
     }
 
@@ -227,7 +193,7 @@ uint64_t da_init(val_host_realm_ts *realm,
     pdev_obj->pdev = pdev;
     pdev_obj->dev_comm_data = val_host_mem_alloc(PAGE_SIZE, PAGE_SIZE);
     pdev_obj->dev_comm_data->enter.req_addr = req_addr;
-    pdev_obj->dev_comm_data->enter.resp_addr = resp_addr;
+    pdev_obj->dev_comm_data->enter.rsp_addr = resp_addr;
 
     if (val_host_dev_communicate(NULL, pdev_obj, NULL, RMI_PDEV_NEEDS_KEY))
     {
@@ -266,12 +232,10 @@ uint64_t da_init(val_host_realm_ts *realm,
     }
 
     val_memset(pubkey_params, 0, PAGE_SIZE_4K);
-    val_memcpy(pubkey_params->key, pdev_obj->public_key, pdev_obj->public_key_len);
-    val_memcpy(pubkey_params->metadata, pdev_obj->public_key_metadata,
-                                pdev_obj->public_key_metadata_len);
+    pubkey_params->key_addr = (uint64_t)pdev_obj->public_key;
+    pubkey_params->metadata_addr = (uint64_t)pdev_obj->public_key_metadata;
     pubkey_params->key_len = pdev_obj->public_key_len;
     pubkey_params->metadata_len = pdev_obj->public_key_metadata_len;
-    pubkey_params->algo = pdev_obj->public_key_sig_algo;
 
     args = val_host_rmi_pdev_set_pubkey(pdev_obj->pdev, (uint64_t)pubkey_params);
     if (args.x0)
@@ -304,6 +268,24 @@ uint64_t da_init(val_host_realm_ts *realm,
 
     LOG(TEST, "\n\tPDEV state has been changed to RMI_PDEV_READY\n");
 
+    /*
+     * RMM v2.0 requires the endpoint's non-coherent stream to be connected
+     * and the corresponding PSMMU stream to be configured before VDEV_CREATE.
+     */
+    vdev_obj->pdev_stream = val_host_mem_alloc(
+        PAGE_SIZE, sizeof(*vdev_obj->pdev_stream));
+    if ((vdev_obj->pdev_stream == NULL) ||
+        val_host_pdev_stream_setup(pdev_obj, rp_bdf,
+                                   PLATFORM_OVERRIDE_SMMUV3_BASE,
+                                   vdev_obj->pdev_stream))
+    {
+        LOG(ERROR, "PDEV stream setup failed\n");
+        if (vdev_obj->pdev_stream != NULL)
+            val_host_mem_free(vdev_obj->pdev_stream);
+        vdev_obj->pdev_stream = NULL;
+        return VAL_ERROR;
+    }
+
     vca_size = pdev_obj->vca_len;
     val_memcpy(shared_vca_buff, pdev_obj->vca, vca_size);
 
@@ -319,6 +301,7 @@ uint64_t da_init(val_host_realm_ts *realm,
     realm_flags.da = RMI_FEATURE_TRUE;
 
     val_host_realm_params(realm);
+    realm->max_num_vdevs = 1;
     val_memcpy(&realm->flags, &realm_flags, sizeof(realm->flags));
 
     /* Populate realm with one REC*/
@@ -336,7 +319,7 @@ uint64_t da_init(val_host_realm_ts *realm,
         LOG(ERROR, "Failed to allocate memory for vdev");
         return VAL_ERROR;
     } else {
-        ret = val_host_rmi_granule_delegate(vdev);
+        ret = val_host_rmi_granule_range_delegate(vdev, vdev + PAGE_SIZE);
         if (ret)
         {
             LOG(ERROR, "vdev delegation failed, vdev=0x%x, ret=0x%x", vdev, ret);
@@ -355,47 +338,26 @@ uint64_t da_init(val_host_realm_ts *realm,
     val_memset(vdev_params, 0, PAGE_SIZE_4K);
 
     /* Populate params */
-    val_memset(&vdev_flags, 0, sizeof(vdev_flags));
     vdev_params->flags = 0;
     vdev_params->vdev_id = 0;
     vdev_params->tdi_id = pdev_obj->bdf;
 
-    val_memcpy(&flags_pdev, &pdev_obj->pdev_flags, sizeof(pdev_obj->pdev_flags));
-    val_memcpy(&flags_vdev, &vdev_flags, sizeof(vdev_flags));
-    args = val_host_rmi_vdev_aux_count(flags_pdev, flags_vdev);
-    if (args.x0)
-    {
-        LOG(ERROR, "VDEV AUX count ABI failed, ret=%lx", args.x0);
+    if ((pdev_obj->ncoh_num_addr_range > NCOH_ADDR_RANGE_NUM) ||
+        (pdev_obj->ncoh_num_addr_range >
+         (sizeof(vdev_params->addr_range) /
+          sizeof(vdev_params->addr_range[0]))))
         return VAL_ERROR;
-    }
 
-    vdev_params->num_aux = args.x1;
-
-    for (j = 0; j < vdev_params->num_aux; j++)
-    {
-        vdev_params->aux[j] = (uint64_t)val_host_mem_alloc(PAGE_SIZE, PAGE_SIZE);
-        if (!vdev_params->aux[j])
-        {
-            LOG(ERROR, "Failed to allocate memory for aux vdev");
-            return VAL_ERROR;
-        }
-        else
-        {
-            ret = val_host_rmi_granule_delegate(vdev_params->aux[j]);
-            if (ret)
-            {
-                LOG(ERROR, "VDEV delegation failed, vdev=0x%x, ret=0x%x",
-                                                 vdev_params->aux[j], ret);
-                return VAL_ERROR;
-            }
-        }
-    }
+    vdev_params->num_addr_range = pdev_obj->ncoh_num_addr_range;
+    for (i = 0; i < vdev_params->num_addr_range; i++)
+        vdev_params->addr_range[i] = pdev_obj->ncoh_addr_range[i];
 
     /* Create vdev */
-    args = val_host_rmi_vdev_create(realm->rd,  pdev_obj->pdev, vdev, (uint64_t)vdev_params);
-    if (args.x0)
+    ret = val_host_rmi_vdev_create(realm->rd, pdev_obj->pdev, vdev,
+                                   (uint64_t)vdev_params);
+    if (ret)
     {
-        LOG(ERROR, "VDEV create failed");
+        LOG(ERROR, "VDEV create failed, ret=0x%lx", ret);
         return VAL_ERROR;
     }
 
@@ -417,9 +379,10 @@ uint64_t da_init(val_host_realm_ts *realm,
 
     vdev_obj->pdev = pdev;
     vdev_obj->vdev = vdev;
+    vdev_obj->realm_rd = realm->rd;
     vdev_obj->dev_comm_data = val_host_mem_alloc(PAGE_SIZE, PAGE_SIZE);
     vdev_obj->dev_comm_data->enter.req_addr = req_addr;
-    vdev_obj->dev_comm_data->enter.resp_addr = resp_addr;
+    vdev_obj->dev_comm_data->enter.rsp_addr = resp_addr;
 
     if (vdev_state == RMI_VDEV_NEW)
         return VAL_SUCCESS;
@@ -482,11 +445,11 @@ uint64_t da_create_vdev(val_host_realm_ts *realm, val_host_pdev_ts *pdev_obj,
                         val_host_vdev_ts *vdev_obj, uint64_t vdev_id,
                         uint8_t vdev_state)
 {
-    val_host_vdev_params_ts *vdev_params;
-    val_host_vdev_flags_ts vdev_flags;
+    val_host_rmi_vdev_params_ts *vdev_params = NULL;
     val_smc_param_ts args;
-    uint64_t vdev;
-    uint64_t ret, flags_pdev, flags_vdev, aux_count;
+    uint64_t vdev = 0U;
+    uint64_t ret, i;
+    uint32_t vdev_delegated = 0U;
 
     val_memset(vdev_obj, 0, sizeof(*vdev_obj));
 
@@ -494,43 +457,37 @@ uint64_t da_create_vdev(val_host_realm_ts *realm, val_host_pdev_ts *pdev_obj,
     if (!vdev)
         return VAL_ERROR;
 
-    ret = val_host_rmi_granule_delegate(vdev);
+    ret = val_host_rmi_granule_range_delegate(vdev, vdev + PAGE_SIZE);
     if (ret)
-        return VAL_ERROR;
+        goto cleanup;
+    vdev_delegated = 1U;
 
     vdev_params = val_host_mem_alloc(PAGE_SIZE, PAGE_SIZE);
     if (vdev_params == NULL)
-        return VAL_ERROR;
+        goto cleanup;
 
     val_memset(vdev_params, 0, PAGE_SIZE_4K);
 
-    val_memset(&vdev_flags, 0, sizeof(vdev_flags));
+    if ((pdev_obj->ncoh_num_addr_range > NCOH_ADDR_RANGE_NUM) ||
+        (pdev_obj->ncoh_num_addr_range >
+         (sizeof(vdev_params->addr_range) /
+          sizeof(vdev_params->addr_range[0]))))
+        goto cleanup;
 
     vdev_params->flags = 0;
     vdev_params->vdev_id = vdev_id;
     vdev_params->tdi_id = pdev_obj->bdf;
-    val_memcpy(&flags_pdev, &pdev_obj->pdev_flags, sizeof(pdev_obj->pdev_flags));
-    val_memcpy(&flags_vdev, &vdev_flags, sizeof(vdev_flags));
-    args = val_host_rmi_vdev_aux_count(flags_pdev, flags_vdev);
-    if (args.x0)
-        return VAL_ERROR;
+    vdev_params->num_addr_range = pdev_obj->ncoh_num_addr_range;
+    for (i = 0; i < vdev_params->num_addr_range; i++)
+        vdev_params->addr_range[i] = pdev_obj->ncoh_addr_range[i];
 
-    aux_count = args.x1;
-    vdev_params->num_aux = aux_count;
-
-    for (ret = 0; ret < vdev_params->num_aux; ret++)
-    {
-        vdev_params->aux[ret] = (uint64_t)val_host_mem_alloc(PAGE_SIZE, PAGE_SIZE);
-        if (!vdev_params->aux[ret])
-            return VAL_ERROR;
-
-        if (val_host_rmi_granule_delegate(vdev_params->aux[ret]))
-            return VAL_ERROR;
-    }
-
-    args = val_host_rmi_vdev_create(realm->rd, pdev_obj->pdev, vdev, (uint64_t)vdev_params);
-    if (args.x0)
-        return VAL_ERROR;
+    ret = val_host_rmi_vdev_create(realm->rd, pdev_obj->pdev, vdev,
+                                   (uint64_t)vdev_params);
+    val_host_mem_free(vdev_params);
+    vdev_params = NULL;
+    if (ret)
+        goto cleanup;
+    vdev_delegated = 0U;
 
     args = val_host_rmi_vdev_get_state(vdev);
     if (args.x0 || args.x1 != RMI_VDEV_NEW)
@@ -544,7 +501,7 @@ uint64_t da_create_vdev(val_host_realm_ts *realm, val_host_pdev_ts *pdev_obj,
         return VAL_ERROR;
 
     vdev_obj->dev_comm_data->enter.req_addr = pdev_obj->dev_comm_data->enter.req_addr;
-    vdev_obj->dev_comm_data->enter.resp_addr = pdev_obj->dev_comm_data->enter.resp_addr;
+    vdev_obj->dev_comm_data->enter.rsp_addr = pdev_obj->dev_comm_data->enter.rsp_addr;
 
     if (vdev_state == RMI_VDEV_NEW)
         return VAL_SUCCESS;
@@ -578,4 +535,18 @@ uint64_t da_create_vdev(val_host_realm_ts *realm, val_host_pdev_ts *pdev_obj,
 
     g_da_vdev_count++;
     return VAL_SUCCESS;
+
+cleanup:
+    if (vdev_params != NULL)
+        val_host_mem_free(vdev_params);
+
+    if (vdev != 0U) {
+        if (vdev_delegated != 0U) {
+            (void)val_host_rmi_granule_range_undelegate(vdev,
+                                                        vdev + PAGE_SIZE);
+        }
+        val_host_mem_free((void *)vdev);
+    }
+
+    return VAL_ERROR;
 }

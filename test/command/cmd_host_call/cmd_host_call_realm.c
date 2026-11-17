@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2025, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2025-2026, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -9,6 +9,8 @@
 #include "val_realm_rsi.h"
 #include "val_realm_framework.h"
 #include "rsi_host_call_data.h"
+
+#define IPA_ADDR_PROTECTED_UNASSIGNED_EMPTY    (3UL * PAGE_SIZE)
 
 __attribute__((aligned (PAGE_SIZE))) val_realm_rsi_host_call_t realm_host_call = {0};
 
@@ -50,6 +52,10 @@ static uint64_t intent_to_seq(struct stimulus *test_data, struct arguments *args
 
         case ADDR_UNPROTECTED:
             args->addr = address_unprotected_prep_sequence();
+            break;
+
+        case ADDR_RIPAS_EMPTY:
+            args->addr = IPA_ADDR_PROTECTED_UNASSIGNED_EMPTY;
             break;
 
         default:
@@ -114,5 +120,4 @@ void cmd_host_call_realm(void)
 exit:
     val_realm_return_to_host();
 }
-
 

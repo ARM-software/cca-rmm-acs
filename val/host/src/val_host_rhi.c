@@ -823,7 +823,8 @@ uint64_t val_rhi_da_vdev_abort(val_host_realm_ts *realm,
     if (vdev_obj->vdev_id != vdev_id)
         return RHI_DA_ERROR_INVALID_VDEV_ID;
 
-    args = val_host_rmi_vdev_abort(vdev_obj->vdev);
+    args = val_host_rmi_vdev_abort(vdev_obj->realm_rd, vdev_obj->pdev,
+                                   vdev_obj->vdev);
     if (args.x0)
     {
         LOG(ERROR, "VDEV abort failed: %lx\n", args.x0);

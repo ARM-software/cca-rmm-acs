@@ -5,6 +5,24 @@
 Change-log
 ##########
 
+*******************
+v26.11_RMM_DA_2.0.0
+*******************
+
+-  This release is aligned to `RMM v2.0 bet1 specification`_. Details are given below.
+
+New Features / Tests Added
+==========================
+
+- Added RMM v2.0 support across test infrastructure and the command suite.
+- Expanded Device Assignment coverage with additional command and end-to-end
+  scenarios.
+- Added PSMMU command and scenario coverage.
+- Added granule tracking and SRO scenarios.
+- Aligned attestation, measurement, PSCI, GIC, and exception tests with RMM
+  v2.0 requirements.
+
+
 *********************************
 v1.1_DA_ALPHA_v1.0_RHI_BETA_03_26
 *********************************
@@ -144,6 +162,7 @@ New Features / Tests Added
 
 - Initial tests and infrastructure for Interface, Exception, GIC and Memory management tests.
 
+.. _RMM v2.0 bet1 specification: https://support.arm.com/documentation/den0137/2-0bet1/?lang=en
 .. _RMM v1.0 rel0 specification: https://developer.arm.com/documentation/den0137/1-0rel0/?lang=en
 .. _RMM Eac5 specification: https://developer.arm.com/documentation/den0137/1-0eac5/?lang=en
 .. _RMM Eac2 specification: https://developer.arm.com/documentation/den0137/1-0eac2/?lang=en

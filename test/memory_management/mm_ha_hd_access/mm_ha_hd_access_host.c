@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023-2025, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023-2026, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -17,6 +17,7 @@ void mm_ha_hd_access_host(void)
     uint64_t ret;
     uint64_t index, mem_attr;
     val_host_rec_enter_ts *rec_enter = NULL;
+    val_host_rec_exit_ts *rec_exit = NULL;
     uint64_t ripas_ipa, ripas_size = 0x1000;
     uint64_t phys;
     val_data_create_ts data_create;
@@ -62,6 +63,7 @@ void mm_ha_hd_access_host(void)
     }
 
     rec_enter = &(((val_host_rec_run_ts *)realm.run[0])->enter);
+    rec_exit = &(((val_host_rec_run_ts *)realm.run[0])->exit);
     /* REC enter REC[0] execution */
     ret = val_host_rmi_rec_enter(realm.rec[0], realm.run[0]);
     if (ret)
@@ -85,14 +87,40 @@ void mm_ha_hd_access_host(void)
         LOG(ERROR, "Rec enter failed, ret=%x\n", ret);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(7)));
         goto destroy_realm;
+    } else if (val_host_check_realm_exit_host_call(
+                   (val_host_rec_run_ts *)realm.run[0]))
+    {
+        LOG(ERROR, "REC_EXIT: HOST_CALL params mismatch\n");
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(8)));
+        goto destroy_realm;
     }
 
-    mem_attr = ATTR_NORMAL_WB | ATTR_STAGE2_MASK_RO | ATTR_DBM;
-    index = val_host_map_ns_shared_region(&realm, 0x1000, mem_attr);
-    if (index)
+    mem_attr = ATTR_NORMAL_WB | ATTR_STAGE2_MASK_RO;
+    index = val_host_map_ns_shared_region(&realm, PAGE_SIZE, mem_attr);
+    if (!index)
     {
-        LOG(ERROR, "rmi_rtt_map_unprotected must return error for DBM attribute\n");
-        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(8)));
+        LOG(ERROR, "val_host_map_ns_shared_region failed\n");
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(9)));
+        goto destroy_realm;
+    }
+
+    rec_enter->gprs[1] = realm.granules[index].ipa;
+    rec_enter->flags = 0;
+
+    ret = val_host_rmi_rec_enter(realm.rec[0], realm.run[0]);
+    if (ret)
+    {
+        LOG(ERROR, "Rec enter failed, ret=%x\n", ret);
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(10)));
+        goto destroy_realm;
+    }
+
+    if (validate_rec_exit_da(rec_exit, realm.granules[index].ipa,
+                             ESR_ISS_DFSC_PF_L3, EMULATABLE_DA,
+                             ESR_WnR_WRITE))
+    {
+        LOG(ERROR, "Expected stage-2 write permission fault\n");
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(11)));
         goto destroy_realm;
     }
 

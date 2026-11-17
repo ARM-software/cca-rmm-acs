@@ -1,0 +1,1370 @@
+diff --git a/app/device_assignment/el0_app/src/dev_assign_el0_app.c b/app/device_assignment/el0_app/src/dev_assign_el0_app.c
+index 658ad6cc130f3b4f7b0e4db0552d6674685c03bd..6563e23b85f19f4c0f66c5615c48922b4e3018eb 100644
+--- a/app/device_assignment/el0_app/src/dev_assign_el0_app.c
++++ b/app/device_assignment/el0_app/src/dev_assign_el0_app.c
+@@ -1109,22 +1109,68 @@ void dev_assign_unset_pubkey(struct dev_assign_info *info)
+ 			       &parameter, (void *)&data_ptr, sizeof(data_ptr));
+ }
+ 
+-/*
+- * Set public key context in libspdm connection
+- */
++static int dev_assign_validate_pubkey_params(struct dev_assign_info *info,
++					     const struct public_key_params *params,
++					     unsigned long key_sig_algo)
++{
++	libspdm_data_parameter_t parameter = { 0 };
++	libspdm_return_t status;
++	uint32_t negotiated_algo;
++	size_t data_size = sizeof(negotiated_algo);
++
++	parameter.location = LIBSPDM_DATA_LOCATION_CONNECTION;
++	status = libspdm_get_data(info->libspdm_ctx, LIBSPDM_DATA_BASE_ASYM_ALGO,
++				  &parameter, &negotiated_algo, &data_size);
++	if (status != LIBSPDM_STATUS_SUCCESS) {
++		return DEV_ASSIGN_STATUS_ERROR;
++	}
++
++	switch (negotiated_algo) {
++	case SPDM_ALGORITHMS_BASE_ASYM_ALGO_TPM_ALG_ECDSA_ECC_NIST_P256:
++		if ((key_sig_algo != RMI_SIGNATURE_ALGORITHM_ECDSA_P256) ||
++		    (params->key_len != RMI_ALGORITHM_ECDSA_P256_LEN) ||
++		    (params->metadata_len != 0U)) {
++			return DEV_ASSIGN_STATUS_INVALID_PARAMS;
++		}
++		break;
++	case SPDM_ALGORITHMS_BASE_ASYM_ALGO_TPM_ALG_ECDSA_ECC_NIST_P384:
++		if ((key_sig_algo != RMI_SIGNATURE_ALGORITHM_ECDSA_P384) ||
++		    (params->key_len != RMI_ALGORITHM_ECDSA_P384_LEN) ||
++		    (params->metadata_len != 0U)) {
++			return DEV_ASSIGN_STATUS_INVALID_PARAMS;
++		}
++		break;
++	case SPDM_ALGORITHMS_BASE_ASYM_ALGO_TPM_ALG_RSASSA_3072:
++		if ((key_sig_algo != RMI_SIGNATURE_ALGORITHM_RSASSA_3072) ||
++		    (params->key_len != RMI_ALGORITHM_RSASSA_3072_LEN) ||
++		    (params->metadata_len == 0U)) {
++			return DEV_ASSIGN_STATUS_INVALID_PARAMS;
++		}
++		break;
++	default:
++		return DEV_ASSIGN_STATUS_ERROR;
++	}
++
++	return DEV_ASSIGN_STATUS_SUCCESS;
++}
++
++/* Set public key context in libspdm connection. */
+ static int dev_assign_set_pubkey(uintptr_t heap,
+ 				 unsigned long key_sig_algo)
+ {
+ 	libspdm_data_parameter_t parameter;
+ 	libspdm_return_t status;
+ 	struct dev_assign_info *info;
++	struct public_key_params *params;
+ 	void *data_ptr;
+ 	int rc;
+ 
+ 	info = heap_start_to_dev_assign_info(heap);
+-
+-	struct public_key_params *params =
+-		(struct public_key_params *)get_shared_mem_start();
++	params = (struct public_key_params *)get_shared_mem_start();
++	rc = dev_assign_validate_pubkey_params(info, params, key_sig_algo);
++	if (rc != DEV_ASSIGN_STATUS_SUCCESS) {
++		return rc;
++	}
+ 
+ 	if ((key_sig_algo == RMI_SIGNATURE_ALGORITHM_ECDSA_P256) ||
+ 	    (key_sig_algo == RMI_SIGNATURE_ALGORITHM_ECDSA_P384)) {
+@@ -1132,6 +1178,7 @@ static int dev_assign_set_pubkey(uintptr_t heap,
+ 		mbedtls_ecp_keypair kp;
+ 		mbedtls_ecp_group grp;
+ 		mbedtls_ecp_point pt;
++		int key_status = DEV_ASSIGN_STATUS_ERROR;
+ 
+ 		ecdh = &info->pk_ctx.ecdh;
+ 
+@@ -1156,6 +1203,19 @@ static int dev_assign_set_pubkey(uintptr_t heap,
+ 
+ 		rc = mbedtls_ecp_point_read_binary(&grp, &pt, params->key, params->key_len);
+ 		if (rc != 0) {
++			if ((rc == MBEDTLS_ERR_ECP_BAD_INPUT_DATA) ||
++			    (rc == MBEDTLS_ERR_ECP_FEATURE_UNAVAILABLE)) {
++				key_status = DEV_ASSIGN_STATUS_INVALID_PARAMS;
++			}
++			goto end_ecdsa;
++		}
++
++		rc = mbedtls_ecp_check_pubkey(&grp, &pt);
++		if (rc != 0) {
++			if ((rc == MBEDTLS_ERR_ECP_INVALID_KEY) ||
++			    (rc == MBEDTLS_ERR_ECP_BAD_INPUT_DATA)) {
++				key_status = DEV_ASSIGN_STATUS_INVALID_PARAMS;
++			}
+ 			goto end_ecdsa;
+ 		}
+ 
+@@ -1180,7 +1240,7 @@ end_ecdsa:
+ 		mbedtls_ecp_point_free(&pt);
+ 		if (rc != 0) {
+ 			mbedtls_ecdh_free(ecdh);
+-			return DEV_ASSIGN_STATUS_ERROR;
++			return key_status;
+ 		}
+ 	} else if (key_sig_algo == RMI_SIGNATURE_ALGORITHM_RSASSA_3072) {
+ 		mbedtls_rsa_context *ctx = &info->pk_ctx.rsa;
+@@ -1194,6 +1254,12 @@ end_ecdsa:
+ 			mbedtls_rsa_free(ctx);
+ 			return DEV_ASSIGN_STATUS_ERROR;
+ 		}
++
++		rc = mbedtls_rsa_check_pubkey(ctx);
++		if (rc != 0) {
++			mbedtls_rsa_free(ctx);
++			return DEV_ASSIGN_STATUS_INVALID_PARAMS;
++		}
+ 	} else {
+ 		ERROR("PDEV_SET_PUBKEY: Invalid Signature algorithm: %lu\n", key_sig_algo);
+ 		return DEV_ASSIGN_STATUS_ERROR;
+@@ -1377,9 +1443,20 @@ static int dev_assign_init(uintptr_t el0_heap, size_t heap_size, struct dev_assi
+ 	info->cert_slot_id = params->cert_slot_id;
+ 	info->has_ide = params->has_ide;
+ 	info->bdf = params->bdf;
++	info->shared_buf = (void *)params;
+ 	if (info->has_ide) {
+ 		info->ecam_addr = params->ecam_addr;
+-		/* Rootport ID and IDE SID is set on pdev stream connect */
++		info->rp_id = params->rp_id;
++		if (dvsec_init(info) != 0) {
++			ERROR("PDEV create: dvsec init failed\n");
++			info->shared_buf = NULL;
++			return DEV_ASSIGN_STATUS_ERROR;
++		}
++		if (dvsec_tdisp_enable(info) != 0) {
++			ERROR("PDEV create: dvsec tdisp enable failed\n");
++			info->shared_buf = NULL;
++			return DEV_ASSIGN_STATUS_ERROR;
++		}
+ 	}
+ 	info->spdm_cert_chain_digest_length = 0;
+ 	info->spdm_request_len = 0;
+@@ -1530,9 +1607,6 @@ static int dev_assign_init(uintptr_t el0_heap, size_t heap_size, struct dev_assi
+ 	libspdm_register_verify_spdm_cert_chain_func(spdm_ctx,
+ 						     cma_spdm_verify_cert_chain);
+ 
+-	/* Assign the shared_buf. This serves as a marker that init is done. */
+-	info->shared_buf = (void *)params;
+-
+ 	return DEV_ASSIGN_STATUS_SUCCESS;
+ }
+ 
+diff --git a/app/device_assignment/rmm_stub/include/dev_assign_app.h b/app/device_assignment/rmm_stub/include/dev_assign_app.h
+index a5e8e99fa30f3b04007036489bd9ee3170188566..43af905c07a2b87aa987fa23ee85ddc7ce4182bd 100644
+--- a/app/device_assignment/rmm_stub/include/dev_assign_app.h
++++ b/app/device_assignment/rmm_stub/include/dev_assign_app.h
+@@ -80,8 +80,9 @@ int dev_assign_abort_app_operation(struct app_data_cfg *app_data);
+  * app_data - Pointer to app_data_cfg. This is opaque to caller
+  * pubkey_params - Public key parameters as received from the NS host
+  *
+- * Returns DEV_ASSIGN_STATUS_SUCCESS if setting the public was successful
+- *         DEV_ASSIGN_STATUS_ERROR otherwise.
++ * Returns DEV_ASSIGN_STATUS_SUCCESS if setting the public key was successful,
++ *         DEV_ASSIGN_STATUS_INVALID_PARAMS if the parameters do not match the
++ *         negotiated signature algorithm, or DEV_ASSIGN_STATUS_ERROR otherwise.
+  */
+ int dev_assign_set_public_key(struct app_data_cfg *app_data,
+ 			      struct public_key_params *pubkey_params);
+diff --git a/app/device_assignment/rmm_stub/include/dev_assign_structs.h b/app/device_assignment/rmm_stub/include/dev_assign_structs.h
+index ea158a053717f66fb6995302eae49e5dbe837111..4899d1d8b89c346177809f26fdb6417a524e602a 100644
+--- a/app/device_assignment/rmm_stub/include/dev_assign_structs.h
++++ b/app/device_assignment/rmm_stub/include/dev_assign_structs.h
+@@ -15,6 +15,7 @@
+ 
+ #define DEV_ASSIGN_STATUS_SUCCESS			(0)
+ #define DEV_ASSIGN_STATUS_ERROR				(-1)
++#define DEV_ASSIGN_STATUS_INVALID_PARAMS		(-2)
+ #define DEV_ASSIGN_STATUS_COMM_BLOCKED_APP_YIELD	(1)
+ #define DEV_ASSIGN_STATUS_COMM_BLOCKED_NO_APP_YIELD	(2)
+ 
+@@ -77,6 +78,7 @@ struct dev_assign_params {
+ 	/* Identify the root complex (RC). */
+ 	uint64_t ecam_addr;
+ 	uint64_t bdf;
++	uint16_t rp_id;
+ };
+ 
+ /* Shared structure on the app heap for SPDM comms */
+@@ -211,6 +213,8 @@ struct public_key_params {
+  * Shared app buf == `struct rmi_public_key_params`
+  *
+  * ret0 == DEV_ASSIGN_STATUS_SUCCESS if the public key is successfully set.
++ *         DEV_ASSIGN_STATUS_INVALID_PARAMS if the parameters do not match the
++ *         negotiated signature algorithm.
+  *         DEV_ASSIGN_STATUS_ERROR if error occurred during key loading.
+  */
+ #define DEVICE_ASSIGN_APP_FUNC_SET_PUBLIC_KEY		3
+diff --git a/lib/arch/include/arch.h b/lib/arch/include/arch.h
+index 93a07d00870efb5d8062a2f8eb301b4bd1efa52b..7665d4d039f78e8c2d2197561f1ffaebf7be874d 100644
+--- a/lib/arch/include/arch.h
++++ b/lib/arch/include/arch.h
+@@ -1133,6 +1133,9 @@
+ #define PMCR_EL0_INIT			(PMCR_EL0_LC_BIT | PMCR_EL0_DP_BIT)
+ #define PMCR_EL0_INIT_RESET		(PMCR_EL0_INIT | PMCR_EL0_C_BIT | \
+ 					 PMCR_EL0_P_BIT)
++
++/* PMCNTENSET_EL0 definitions */
++#define PMCNTENSET_EL0_C_BIT		(UL(1) << 31)
+ /* PMSELR_EL0 Definitions */
+ #define PMSELR_EL0_SEL_SHIFT		0
+ #define PMSELR_EL0_SEL_WIDTH		U(5)
+diff --git a/lib/arch/include/pmu.h b/lib/arch/include/pmu.h
+index f9f537fbf70717676e06321769de6fff94e8f042..8ae73540dadbdf2bbd24b6701916548dc1c9cb0c 100644
+--- a/lib/arch/include/pmu.h
++++ b/lib/arch/include/pmu.h
+@@ -38,8 +38,11 @@ struct pmu_state {
+ 
+ } __aligned(CACHE_WRITEBACK_GRANULE);
+ 
+-void pmu_save_state(struct pmu_state *pmu, unsigned int num_cnts);
+-void pmu_restore_state(struct pmu_state *pmu, unsigned int num_cnts);
++void pmu_save_state(struct pmu_state *pmu, unsigned int num_cnts,
++		    bool save_cycle_counter);
++void pmu_restore_state(struct pmu_state *pmu, unsigned int num_cnts,
++		       bool restore_cycle_counter);
++void pmu_mask_realm_overflow_interrupts(unsigned int num_cnts);
+ bool pmu_is_ovf_set(void);
+ 
+ #endif /* PMU_H */
+diff --git a/lib/arch/src/pmu.c b/lib/arch/src/pmu.c
+index 266544f8e76109244a23ad30dc3e71917a6fb823..2b692d5f4fd1a7e76bc5a976230710643cb14333 100644
+--- a/lib/arch/src/pmu.c
++++ b/lib/arch/src/pmu.c
+@@ -27,13 +27,16 @@
+  * Save PMU context to memory with number of event counters
+  * passed in 'num_cnts' and disable all event counters.
+  */
+-void pmu_save_state(struct pmu_state *pmu, unsigned int num_cnts)
++void pmu_save_state(struct pmu_state *pmu, unsigned int num_cnts,
++		    bool save_cycle_counter)
+ {
+ 	assert(pmu != NULL);
+ 
+ 	pmu->pmcr_el0 = read_pmcr_el0();
+ 	pmu->pmccfiltr_el0 = read_pmccfiltr_el0();
+-	pmu->pmccntr_el0 = read_pmccntr_el0();
++	if (save_cycle_counter) {
++		pmu->pmccntr_el0 = read_pmccntr_el0();
++	}
+ 	pmu->pmcntenset_el0 = read_pmcntenset_el0();
+ 	pmu->pmintenset_el1 = read_pmintenset_el1();
+ 	pmu->pmovsset_el0 = read_pmovsset_el0();
+@@ -84,13 +87,23 @@ void pmu_save_state(struct pmu_state *pmu, unsigned int num_cnts)
+  * Restore PMU context from memory with
+  * number of event counters passed in 'num_cnts'.
+  */
+-void pmu_restore_state(struct pmu_state *pmu, unsigned int num_cnts)
++void pmu_restore_state(struct pmu_state *pmu, unsigned int num_cnts,
++		       bool restore_cycle_counter)
+ {
++	unsigned long pmcr;
++
+ 	assert(pmu != NULL);
+ 
+-	write_pmcr_el0(pmu->pmcr_el0);
++	pmcr = pmu->pmcr_el0;
++	if (!restore_cycle_counter) {
++		/* Do not reset the Host's live cycle counter. */
++		pmcr &= ~PMCR_EL0_C_BIT;
++	}
++	write_pmcr_el0(pmcr);
+ 	write_pmccfiltr_el0(pmu->pmccfiltr_el0);
+-	write_pmccntr_el0(pmu->pmccntr_el0);
++	if (restore_cycle_counter) {
++		write_pmccntr_el0(pmu->pmccntr_el0);
++	}
+ 	write_pmcntenset_el0(pmu->pmcntenset_el0);
+ 	write_pmcntenclr_el0(pmu->pmcntenset_el0 ^ PMU_CLEAR_ALL);
+ 	write_pmintenset_el1(pmu->pmintenset_el1);
+@@ -140,6 +153,16 @@ void pmu_restore_state(struct pmu_state *pmu, unsigned int num_cnts)
+ 	}
+ }
+ 
++void pmu_mask_realm_overflow_interrupts(unsigned int num_cnts)
++{
++	assert(num_cnts <= PMU_N_PMEV_REGS);
++
++	if (num_cnts != 0U) {
++		write_pmintenclr_el1((1UL << num_cnts) - 1UL);
++		isb();
++	}
++}
++
+ /*
+  * Expose Realm PMU OVF status
+  */
+diff --git a/lib/rmm_el3_ifc/include/rmm_el3_ifc.h b/lib/rmm_el3_ifc/include/rmm_el3_ifc.h
+index b0b749edfda5450c9a64cfde3580d50ff6d0d494..3cfc4a4b00aade149afc99d2ba08fe5f1c3a928c 100644
+--- a/lib/rmm_el3_ifc/include/rmm_el3_ifc.h
++++ b/lib/rmm_el3_ifc/include/rmm_el3_ifc.h
+@@ -948,6 +948,18 @@ bool rmm_el3_ifc_is_rid_range_valid(unsigned long ecam_addr,
+ bool rmm_el3_ifc_is_root_port_id_valid(unsigned long ecam_addr,
+ 				       unsigned int root_port_id);
+ 
++/*
++ * Resolve endpoint @bdf to the Root Port ID which owns its BDF mapping in the
++ * Root Complex identified by @ecam_addr in the cached Boot Manifest.
++ *
++ * Return:
++ *	- E_RMM_OK	On success.
++ *	- E_RMM_INVAL	If @ecam_addr does not match any Root Complex or
++ *			@bdf is not covered by any BDF mapping entry.
++ */
++int rmm_el3_ifc_bdf_to_root_port(unsigned long ecam_addr, unsigned int bdf,
++				 unsigned int *root_port_id);
++
+ /*
+  * Resolve a PCIe device BDF to an SMMU index and StreamID using the
+  * cached Root Complex topology from the Boot Manifest.
+diff --git a/lib/rmm_el3_ifc/src/fake_host/cbmc_rmm_el3_ifc_manifest.c b/lib/rmm_el3_ifc/src/fake_host/cbmc_rmm_el3_ifc_manifest.c
+index cd47c25b8a2f56adfa64b86fc4533c048e86202e..6f329aab6f47e21a5c6007cd49f09ccde21e5f1b 100644
+--- a/lib/rmm_el3_ifc/src/fake_host/cbmc_rmm_el3_ifc_manifest.c
++++ b/lib/rmm_el3_ifc/src/fake_host/cbmc_rmm_el3_ifc_manifest.c
+@@ -56,6 +56,17 @@ bool rmm_el3_ifc_is_root_port_id_valid(unsigned long ecam_addr,
+ 	return true;
+ }
+ 
++int rmm_el3_ifc_bdf_to_root_port(unsigned long ecam_addr, unsigned int bdf,
++				 unsigned int *root_port_id)
++{
++	(void)ecam_addr;
++	(void)bdf;
++	(void)root_port_id;
++
++	ASSERT(false, "rmm_el3_ifc_bdf_to_root_port");
++	return 0;
++}
++
+ int rmm_el3_ifc_sid_max(unsigned int smmu_idx, unsigned int *sid_max)
+ {
+ 	(void)smmu_idx;
+diff --git a/lib/rmm_el3_ifc/src/rmm_el3_ifc_manifest.c b/lib/rmm_el3_ifc/src/rmm_el3_ifc_manifest.c
+index 0fd56adc44e39cc9d5c942e1ff2c9d3450fc9003..cee1462456b9f513b605c92c5534ec9f5ad3985c 100644
+--- a/lib/rmm_el3_ifc/src/rmm_el3_ifc_manifest.c
++++ b/lib/rmm_el3_ifc/src/rmm_el3_ifc_manifest.c
+@@ -732,6 +732,65 @@ bool rmm_el3_ifc_is_root_port_id_valid(unsigned long ecam_addr,
+ 	return false;
+ }
+ 
++int rmm_el3_ifc_bdf_to_root_port(unsigned long ecam_addr, unsigned int bdf,
++				 unsigned int *root_port_id)
++{
++	struct root_complex_list *rc_list;
++	struct root_complex_info *root_complex;
++	uint64_t num_root_complexes;
++
++	assert(root_port_id != NULL);
++	assert(local_core_manifest != NULL);
++
++	rc_list = &local_core_manifest->plat_root_complex;
++	num_root_complexes = rc_list->num_root_complex;
++	root_complex = rc_list->root_complex;
++
++	if ((num_root_complexes == 0UL) || (root_complex == NULL)) {
++		return E_RMM_INVAL;
++	}
++
++	for (uint64_t rc_idx = 0UL; rc_idx < num_root_complexes; rc_idx++) {
++		struct root_port_info *rp_info;
++		uint32_t num_root_ports;
++
++		if (root_complex[rc_idx].ecam_base != ecam_addr) {
++			continue;
++		}
++
++		rp_info = root_complex[rc_idx].root_ports;
++		num_root_ports = root_complex[rc_idx].num_root_ports;
++
++		if ((num_root_ports == 0U) || (rp_info == NULL)) {
++			return E_RMM_INVAL;
++		}
++
++		for (uint32_t rp_idx = 0U; rp_idx < num_root_ports; rp_idx++) {
++			struct bdf_mapping_info *bdf_info =
++						rp_info[rp_idx].bdf_mappings;
++			uint32_t num_bdf_mappings =
++						rp_info[rp_idx].num_bdf_mappings;
++
++			if ((num_bdf_mappings == 0U) || (bdf_info == NULL)) {
++				continue;
++			}
++
++			for (uint32_t map_idx = 0U;
++			     map_idx < num_bdf_mappings; map_idx++) {
++				if ((bdf >= bdf_info[map_idx].mapping_base) &&
++				    (bdf <= bdf_info[map_idx].mapping_top)) {
++					*root_port_id = rp_info[rp_idx].root_port_id;
++					return E_RMM_OK;
++				}
++			}
++		}
++
++		return E_RMM_INVAL;
++	}
++
++	return E_RMM_INVAL;
++}
++
+ /*
+  * Resolve a PCIe device BDF to an SMMU index and StreamID using the
+  * cached Root Complex topology.
+diff --git a/lib/smc/include/smc-rmi.h b/lib/smc/include/smc-rmi.h
+index 1e6be447dde0c1e6d61e6bd9ed4ee76fc46a79fd..125d461a9857b74fb1f16c4d272ba36ee8fd6993 100644
+--- a/lib/smc/include/smc-rmi.h
++++ b/lib/smc/include/smc-rmi.h
+@@ -888,6 +888,34 @@
+  */
+ #define SMC_RMI_PSMMU_ST_L2_DESTROY		SMC64_RMI_FID(U(0x8C))
+ 
++/*
++ * FID: 0xC40001DD
++ */
++#define SMC_RMI_DPT_L0_CREATE			SMC64_RMI_FID(U(0x8D))
++
++/*
++ * FID: 0xC40001DE
++ */
++#define SMC_RMI_DPT_L0_DESTROY			SMC64_RMI_FID(U(0x8E))
++
++/*
++ * FID: 0xC40001DF
++ */
++#define SMC_RMI_DPT_L1_CREATE			SMC64_RMI_FID(U(0x8F))
++
++/*
++ * FID: 0xC40001E0
++ */
++#define SMC_RMI_DPT_L1_DESTROY			SMC64_RMI_FID(U(0x90))
++
++/*
++ * FID: 0xC40001F0
++ *
++ * arg0 == PA of PSMMU
++ * arg1 == SMMU IRQ
++ */
++#define SMC_RMI_PSMMU_EVENT_CONSUME		SMC64_RMI_FID(U(0xA0))
++
+ /*
+  * FID: 0xC400020E
+  *
+diff --git a/lib/smmuv3/include/smmuv3.h b/lib/smmuv3/include/smmuv3.h
+index 15a58da457ae6922f547f62d82743d3d35f855dd..050ebb6df8f9bb46c2b0663d9035feec441ea30a 100644
+--- a/lib/smmuv3/include/smmuv3.h
++++ b/lib/smmuv3/include/smmuv3.h
+@@ -125,13 +125,14 @@ int smmuv3_init(uintptr_t driv_hdl, size_t hdl_sz);
+  *
+  * Return:
+  *   0		- Success.
+- *   -EINVAL	- ecam_addr, tdi_id or s2_cfg is invalid, or the STE is already valid.
+- *		  In this case, no driver state or STE contents are modified.
++ *   -EINVAL	- ecam_addr, tdi_id or s2_cfg is invalid.
++ *   -ENOENT	- The L2 stream table for the SID is not present.
++ *   -EEXIST	- The STE is already valid.
+  *   -ETIMEDOUT	- Timed out while issuing the SMMU command to write the STE.
+  *   -EIO	- SMMU queue or command interface error.
+  *
+- * On -EINVAL error, no Stream Table Entry (STE) is programmed and the driver's
+- * internal state remains unchanged.
++ * On -EINVAL, -ENOENT or -EEXIST, no Stream Table Entry (STE) is programmed
++ * and the driver's internal state remains unchanged.
+  */
+ int smmuv3_configure_stream(unsigned long ecam_addr, unsigned int tdi_id,
+ 			    struct smmu_stg2_config *s2_cfg,
+diff --git a/lib/smmuv3/include/smmuv3_psmmu.h b/lib/smmuv3/include/smmuv3_psmmu.h
+index b180ddd8032218d6395caa84df1633b22fa8356e..8a433aa5f361e5d95d26dd47508b4c23f4a05b81 100644
+--- a/lib/smmuv3/include/smmuv3_psmmu.h
++++ b/lib/smmuv3/include/smmuv3_psmmu.h
+@@ -32,6 +32,7 @@ struct psmmu_params;
+ struct smmuv3_dev *smmuv3_psmmu_find(unsigned long psmmu_ptr);
+ bool smmuv3_psmmu_validate_params(struct smmuv3_dev *smmu, struct psmmu_params *params);
+ bool smmuv3_psmmu_validate_sid(struct smmuv3_dev *smmu, unsigned long sid);
++bool smmuv3_psmmu_is_active(struct smmuv3_dev *smmu);
+ bool smmuv3_psmmu_set_busy(struct smmuv3_dev *smmu, unsigned int state);
+ void smmuv3_psmmu_set_active(struct smmuv3_dev *smmu);
+ void smmuv3_psmmu_set_inactive(struct smmuv3_dev *smmu);
+diff --git a/lib/smmuv3/src/smmuv3.c b/lib/smmuv3/src/smmuv3.c
+index 491acc4762537d2cbf1b6b293e06d29a55fb819e..127807a8c046d26e1944096848690d777d675541 100644
+--- a/lib/smmuv3/src/smmuv3.c
++++ b/lib/smmuv3/src/smmuv3.c
+@@ -1335,7 +1335,7 @@ int smmuv3_configure_stream(unsigned long ecam_addr, unsigned int tdi_id,
+ 	if (smmu->strtab_base[l1_idx] == 0UL) {
+ 		spinlock_release(&smmu->lock);
+ 		SMMU_ERROR(smmu, "STRTAB L2 for SID 0x%x not found\n", sid);
+-		return -EINVAL;
++		return -ENOENT;
+ 	}
+ 
+ 	ste_ptr = sid_to_ste(smmu, sid);
+@@ -1345,7 +1345,7 @@ int smmuv3_configure_stream(unsigned long ecam_addr, unsigned int tdi_id,
+ 	if (ste_ptr->ste[0] != 0UL) {
+ 		spinlock_release(&smmu->lock);
+ 		SMMU_ERROR(smmu, "STE for SID 0x%x already configured\n", sid);
+-		return -EINVAL;
++		return -EEXIST;
+ 	}
+ 
+ 	l2tab_pa = smmu_l1std_l2tab_pa(smmu, l1_idx);
+diff --git a/lib/smmuv3/src/smmuv3_psmmu.c b/lib/smmuv3/src/smmuv3_psmmu.c
+index 7497110474c73ce9cb78bc3646ae99f7a940a6db..cd79c7d383f19a40ccd32419fdd942fdd980915f 100644
+--- a/lib/smmuv3/src/smmuv3_psmmu.c
++++ b/lib/smmuv3/src/smmuv3_psmmu.c
+@@ -42,9 +42,20 @@ struct smmuv3_dev *smmuv3_psmmu_find(unsigned long psmmu_ptr)
+ bool smmuv3_psmmu_validate_params(struct smmuv3_dev *smmu, struct psmmu_params *params)
+ {
+ 	unsigned long flags = params->flags;
++	unsigned long irq_cfg = EXTRACT(RMI_PSMMU_FLAGS_IRQ_CFG, flags);
++	bool cmdq_sync_irq_wired =
++		((flags & RMI_PSMMU_FLAGS_CMDQ_SYNC_IRQ_WIRED_BIT) != 0UL);
+ 
+ 	assert(smmu != NULL);
+ 
++	if ((irq_cfg != RMI_IRQ_DISABLED) && (irq_cfg != RMI_IRQ_WIRED)) {
++		return false;
++	}
++
++	if ((irq_cfg == RMI_IRQ_WIRED) && cmdq_sync_irq_wired) {
++		return false;
++	}
++
+ 	if (EXTRACT(RMI_PSMMU_FLAGS_PRI, flags) == RMI_FEATURE_TRUE) {
+ 		return false;
+ 	}
+@@ -58,6 +69,19 @@ bool smmuv3_psmmu_validate_params(struct smmuv3_dev *smmu, struct psmmu_params *
+ 	return true;
+ }
+ 
++bool smmuv3_psmmu_is_active(struct smmuv3_dev *smmu)
++{
++	bool active;
++
++	assert(smmu != NULL);
++
++	spinlock_acquire(&smmu->lock);
++	active = (smmu->state == PSMMU_ACTIVE);
++	spinlock_release(&smmu->lock);
++
++	return active;
++}
++
+ void smmuv3_psmmu_set_active(struct smmuv3_dev *smmu)
+ {
+ 	assert(smmu != NULL);
+diff --git a/lib/sro_context/src/sro_aux.c b/lib/sro_context/src/sro_aux.c
+index a128aa2ff5b46530ca285f3485f9fd21f31b9581..c4da55c0a888684b5ae5e98e04612ee3170f23cf 100644
+--- a/lib/sro_context/src/sro_aux.c
++++ b/lib/sro_context/src/sro_aux.c
+@@ -123,7 +123,28 @@ void sro_obj_memory_donate(unsigned long fid, struct smc_result *res)
+ 	unsigned long st;
+ 
+ 	assert(sro != NULL);
+-	(void)fid;
++
++	if (fid == SMC_RMI_OP_CANCEL) {
++		if (sro->aux_op_ctx.total_transferred == 0UL) {
++			sro->aux_op_ctx.ret_err = RMI_SUCCESS;
++			sro->aux_op_ctx.cb_id = SRO_OBJ_DESTROY_FINISH;
++
++			res->x[0] = pack_return_code_incomplete(
++					RMI_OP_MEM_REQ_NONE,
++					SRO_CAN_CANCEL_FLAG(sro));
++			res->x[1] = sro_ctx_my_handle();
++			res->x[2] = 0UL;
++		} else {
++			sro_aux_op_start_reclaim(sro, res,
++						 sro->aux_op_ctx.obj_addr,
++						 false,
++						 RMI_SUCCESS,
++						 sro->aux_op_ctx.total_transferred,
++						 sro->aux_op_ctx.aux_granule_state);
++			res->x[1] = sro_ctx_my_handle();
++		}
++		return;
++	}
+ 
+ 	/* Validate that this was invoked from RMI_OP_MEM_DONATE */
+ 	assert(fid == SMC_RMI_OP_MEM_DONATE);
+diff --git a/runtime/core/handler.c b/runtime/core/handler.c
+index 3d67d47aeb4fa69120292f5218b05154920541d8..05b98ee3e842aa00ef432ff734f54d86bcd0b8c2 100644
+--- a/runtime/core/handler.c
++++ b/runtime/core/handler.c
+@@ -162,10 +162,16 @@ static const struct smc_handler smc_handlers[] = {
+ 	HANDLER(VDEV_GET_MEASUREMENTS,	4, 1, smc_vdev_get_measurements, true, true),
+ 	HANDLER(VDEV_LOCK,		3, 1, smc_vdev_lock,		 true, true),
+ 	HANDLER(VDEV_START,		3, 1, smc_vdev_start,		 true, true),
++	HANDLER(PSMMU_IRQ_NOTIFY,	2, 2, smc_psmmu_irq_notify,	 true, true),
++	HANDLER(PSMMU_EVENT_CONSUME,	2, 1, smc_psmmu_event_consume, true, true),
+ 	HANDLER(PSMMU_ACTIVATE,		2, 1, smc_psmmu_activate,	 true, true),
+ 	HANDLER(PSMMU_DEACTIVATE,	1, 1, smc_psmmu_deactivate,	 true, true),
+ 	HANDLER(PSMMU_ST_L2_CREATE,	2, 1, smc_psmmu_st_l2_create,	 true, true),
+ 	HANDLER(PSMMU_ST_L2_DESTROY,	2, 1, smc_psmmu_st_l2_destroy,	 true, true),
++	HANDLER(DPT_L0_CREATE,		0, 1, smc_dpt_l0_create,	 true, true),
++	HANDLER(DPT_L0_DESTROY,		0, 1, smc_dpt_l0_destroy,	 true, true),
++	HANDLER(DPT_L1_CREATE,		1, 1, smc_dpt_l1_create,	 true, true),
++	HANDLER(DPT_L1_DESTROY,		1, 1, smc_dpt_l1_destroy,	 true, true),
+ 	HANDLER(PSMMU_INFO,		2, 1, smc_psmmu_info,		 true, true),
+ 	HANDLER(GRANULE_TRACKING_GET,	2, 4, smc_granule_tracking_get,	 true, true),
+ 	HANDLER(GRANULE_TRACKING_SET,	3, 1, smc_granule_tracking_set,	 true, true),
+diff --git a/runtime/core/run.c b/runtime/core/run.c
+index 50efc9b471df16da0729d5513dc68f9721397b6a..ca3d22af9365f6d669f8bad2829d0a629d9a9ad1 100644
+--- a/runtime/core/run.c
++++ b/runtime/core/run.c
+@@ -86,23 +86,59 @@ static void save_sysreg_state(STRUCT_TYPE sysreg_state * sysregs)
+ static void save_pmu(struct rec *rec)
+ {
+ 	if (rec->realm_info.pmu_enabled) {
++		struct pmu_state *realm_pmu = rec_active_plane_sysregs(rec)->pmu;
++		bool host_cycle_enabled =
++			(rec->ns->pmu.pmcntenset_el0 & PMCNTENSET_EL0_C_BIT) != 0UL;
++		unsigned long realm_pmcr = realm_pmu->pmcr_el0;
++		unsigned long realm_pmcnten = realm_pmu->pmcntenset_el0;
++
+ 		/* Save PMU context
+ 		 * Save number of PMU event counters configured for the realm.
+ 		 */
+-		pmu_save_state(rec_active_plane_sysregs(rec)->pmu,
+-				rec->realm_info.pmu_num_ctrs);
++		pmu_save_state(realm_pmu, rec->realm_info.pmu_num_ctrs,
++				!host_cycle_enabled);
++
++		if (host_cycle_enabled) {
++			/* Do not save the Host's cycle enable state in the REC. */
++			realm_pmu->pmcr_el0 =
++				(realm_pmu->pmcr_el0 & ~PMCR_EL0_E_BIT) |
++				(realm_pmcr & PMCR_EL0_E_BIT);
++			realm_pmu->pmcntenset_el0 =
++				(realm_pmu->pmcntenset_el0 & ~PMCNTENSET_EL0_C_BIT) |
++				(realm_pmcnten & PMCNTENSET_EL0_C_BIT);
++		} else {
++			/* Clear the Realm cycle value before restoring Host state. */
++			write_pmcntenclr_el0(PMCNTENSET_EL0_C_BIT);
++			write_pmccntr_el0(0UL);
++		}
+ 	}
+ }
+ 
+ static void restore_pmu(struct rec *rec)
+ {
+ 	if (rec->realm_info.pmu_enabled) {
++		bool host_cycle_enabled =
++			(rec->ns->pmu.pmcntenset_el0 & PMCNTENSET_EL0_C_BIT) != 0UL;
++
+ 		/*
+ 		 * Restore realm PMU context.
+ 		 * Restore number of PMU counters configured for the realm.
+ 		 */
+ 		pmu_restore_state(rec_active_plane_sysregs(rec)->pmu,
+-				  rec->realm_info.pmu_num_ctrs);
++				  rec->realm_info.pmu_num_ctrs,
++				  !host_cycle_enabled);
++
++		if (host_cycle_enabled) {
++			/* Keep the Host cycle counter running in the Realm. */
++			write_pmcntenset_el0(PMCNTENSET_EL0_C_BIT);
++			write_pmcr_el0(read_pmcr_el0() | PMCR_EL0_E_BIT);
++		}
++
++		if (rec_active_plane(rec)->plane_exit_info.pmu_ovf_status ==
++		    RMI_PMU_OVERFLOW_ACTIVE) {
++			/* Avoid a repeated physical IRQ before the virtual IRQ runs. */
++			pmu_mask_realm_overflow_interrupts(rec->realm_info.pmu_num_ctrs);
++		}
+ 	}
+ }
+ 
+@@ -305,7 +341,8 @@ static void save_ns_state(struct rec *rec)
+ 		 * Save all implemented PMU event counters.
+ 		 */
+ 		pmu_save_state(&ns_state->pmu,
+-				(unsigned int)EXTRACT(PMCR_EL0_N, read_pmcr_el0()));
++				(unsigned int)EXTRACT(PMCR_EL0_N, read_pmcr_el0()),
++				true);
+ 	} else {
+ 		/*
+ 		 * Even when PMU is disabled for the Realm, the NS host
+@@ -353,7 +390,9 @@ static void restore_ns_state(struct rec *rec)
+ 		 * Restore all implemented PMU event counters.
+ 		 */
+ 		pmu_restore_state(&ns_state->pmu,
+-				  (unsigned int)EXTRACT(PMCR_EL0_N, read_pmcr_el0()));
++				  (unsigned int)EXTRACT(PMCR_EL0_N, read_pmcr_el0()),
++				  (ns_state->pmu.pmcntenset_el0 &
++				   PMCNTENSET_EL0_C_BIT) == 0UL);
+ 	} else {
+ 		/* Restore NS PMCR_EL0 (re-enables counting if host had it on) */
+ 		write_pmcr_el0(ns_state->pmu.pmcr_el0);
+diff --git a/runtime/core/sysregs.c b/runtime/core/sysregs.c
+index ab7ebe14de4999ae995f3f8d393eb20fb8cdbf98..004f6e04369c89c0b9feee9061706e99432d8c46 100644
+--- a/runtime/core/sysregs.c
++++ b/runtime/core/sysregs.c
+@@ -68,8 +68,6 @@ static bool handle_id_sysreg_trap(struct rec *rec,
+ 		mask = MASK(ID_AA64DFR0_EL1_BRBE);
+ 		value &= ~mask;
+ 
+-		/* TODO: disable PMU temporarily for v2.0 */
+-		value &= ~MASK(ID_AA64DFR0_EL1_PMUVer);
+ 		break;
+ 	SYSREG_CASE(DFR1)
+ 		value = READ_CACHED_REG(id_aa64dfr1_el1);
+diff --git a/runtime/include/dev.h b/runtime/include/dev.h
+index 538280da8ba5c475d050ca10a8c64784f4861c9c..810f25c83e80ba8726221c238091ad3c5840cb78 100644
+--- a/runtime/include/dev.h
++++ b/runtime/include/dev.h
+@@ -192,6 +192,8 @@ struct pdev {
+ 	 * by NS host.
+ 	 */
+ 	struct dev_obj_digest cert_digest;
++	/* Digest of the public key supplied by RMI_PDEV_SET_PUBKEY. */
++	struct dev_obj_digest pubkey_digest;
+ 
+ 	/* Device communication state. RmmDevCommState */
+ 	unsigned int dev_comm_state;
+diff --git a/runtime/include/feature.h b/runtime/include/feature.h
+index a8a9448c065e6f21d99255e560f31f5310ff7451..2f98b87ada35b8c3c481eadc1ba452ab437a02e3 100644
+--- a/runtime/include/feature.h
++++ b/runtime/include/feature.h
+@@ -25,4 +25,10 @@ static inline bool is_rmi_feat_da_enabled(void)
+ 			get_feature_register_2()) == RMI_FEATURE_TRUE);
+ }
+ 
++static inline bool is_rmi_feat_ats_enabled(void)
++{
++	return (EXTRACT(RMI_FEATURE_REGISTER_2_ATS,
++			get_feature_register_2()) == RMI_FEATURE_TRUE);
++}
++
+ #endif /* FEATURE_H */
+diff --git a/runtime/include/psci.h b/runtime/include/psci.h
+index 9375d1349f6a90798e1494e246298d3f86c9884f..d4b1c25322d941807188ff4081fb92dacefa9b89 100644
+--- a/runtime/include/psci.h
++++ b/runtime/include/psci.h
+@@ -22,12 +22,12 @@
+ #define SMC64_PSCI_FID_MIN		SMC64_PSCI_FID(SMC64_PSCI_FNUM_MIN)
+ #define SMC64_PSCI_FID_MAX		SMC64_PSCI_FID(SMC64_PSCI_FNUM_MAX)
+ 
+-#define SMC32_PSCI_VERSION		SMC32_PSCI_FID(0x0U)
++#define SMC64_PSCI_VERSION		SMC64_PSCI_FID(0x0U)
+ 
+ #define SMC32_PSCI_CPU_SUSPEND		SMC32_PSCI_FID(0x1U)
+ #define SMC64_PSCI_CPU_SUSPEND		SMC64_PSCI_FID(0x1U)
+ 
+-#define SMC32_PSCI_CPU_OFF		SMC32_PSCI_FID(0x2U)
++#define SMC64_PSCI_CPU_OFF		SMC64_PSCI_FID(0x2U)
+ 
+ #define SMC32_PSCI_CPU_ON		SMC32_PSCI_FID(0x3U)
+ #define SMC64_PSCI_CPU_ON		SMC64_PSCI_FID(0x3U)
+@@ -43,11 +43,11 @@
+ #define SMC32_PSCI_MIGRATE_INFO_UP_CPU	SMC32_PSCI_FID(0x7U)
+ #define SMC64_PSCI_MIGRATE_INFO_UP_CPU	SMC64_PSCI_FID(0x7U)
+ 
+-#define SMC32_PSCI_SYSTEM_OFF		SMC32_PSCI_FID(0x8U)
++#define SMC64_PSCI_SYSTEM_OFF		SMC64_PSCI_FID(0x8U)
+ 
+-#define SMC32_PSCI_SYSTEM_RESET		SMC32_PSCI_FID(0x9U)
++#define SMC64_PSCI_SYSTEM_RESET		SMC64_PSCI_FID(0x9U)
+ 
+-#define SMC32_PSCI_FEATURES		SMC32_PSCI_FID(0xAU)
++#define SMC64_PSCI_FEATURES		SMC64_PSCI_FID(0xAU)
+ 
+ #define SMC32_PSCI_CPU_FREEZE		SMC32_PSCI_FID(0xBU)
+ 
+diff --git a/runtime/include/psmmu.h b/runtime/include/psmmu.h
+index 1dab518443962c946372cfab6d49b2c7eb805a3a..684e148c3aac3dac5b842aac6a1336cb7f43154f 100644
+--- a/runtime/include/psmmu.h
++++ b/runtime/include/psmmu.h
+@@ -34,6 +34,12 @@ void smc_psmmu_activate(unsigned long psmmu_ptr, unsigned long params_ptr,
+  */
+ void smc_psmmu_deactivate(unsigned long psmmu_ptr, struct smc_result *res);
+ 
++void smc_psmmu_irq_notify(unsigned long psmmu_ptr, unsigned long irq_set,
++			  struct smc_result *res);
++
++void smc_psmmu_event_consume(unsigned long psmmu_ptr, unsigned long irq,
++			     struct smc_result *res);
++
+ /*
+  * Return PSMMU information.
+  *
+@@ -79,6 +85,11 @@ void smc_psmmu_st_l2_create(unsigned long psmmu_ptr, unsigned long sid,
+ void smc_psmmu_st_l2_destroy(unsigned long psmmu_ptr, unsigned long sid,
+ 				struct smc_result *res);
+ 
++void smc_dpt_l0_create(struct smc_result *res);
++void smc_dpt_l0_destroy(struct smc_result *res);
++void smc_dpt_l1_create(unsigned long addr, struct smc_result *res);
++void smc_dpt_l1_destroy(unsigned long addr, struct smc_result *res);
++
+ void psmmu_activate_start(unsigned long fid, struct smc_result *res);
+ void psmmu_activate_finish(unsigned long fid, struct smc_result *res);
+ void psmmu_deactivate_start(unsigned long fid, struct smc_result *res);
+diff --git a/runtime/rmi/feature.c b/runtime/rmi/feature.c
+index bac46aeaa82cc45e7ccc0caac1f8bb16168dfcb2..c6a2bdf9d2739bb0f2fbe38a7801f298d79d57be 100644
+--- a/runtime/rmi/feature.c
++++ b/runtime/rmi/feature.c
+@@ -73,8 +73,6 @@ unsigned long get_feature_register_0(void)
+ 	}
+ 
+ 
+-	/* TODO: disable PMU temporarily for v2.0 */
+-#if 0
+ 	/*
+ 	 * Arm ARM says that when FEAT_PMUv3 and FEAT_RME are implemented, FEAT_PMUv3p7 is
+ 	 * implemented. Enable PMU for realm only if PMUv3p7+ is available.
+@@ -88,7 +86,6 @@ unsigned long get_feature_register_0(void)
+ 		feat_reg0 |= INPLACE(RMI_FEATURE_REGISTER_0_PMU_NUM_CTRS,
+ 					EXTRACT(PMCR_EL0_N, read_pmcr_el0()));
+ 	}
+-#endif
+ 
+ 	/* Set number of breakpoints and watchpoints supported, minus 1 */
+ 	feat_reg0 |= (INPLACE(RMI_FEATURE_REGISTER_0_NUM_BPS, num_bps) |
+@@ -144,6 +141,7 @@ unsigned long get_feature_register_2(void)
+ 	feat_reg2 |= INPLACE(RMI_FEATURE_REGISTER_2_DA_EN, feat_da_supported);
+ 
+ 	if (feat_da_supported == RMI_FEATURE_TRUE) {
++		feat_reg2 |= INPLACE(RMI_FEATURE_REGISTER_2_ATS, RMI_FEATURE_TRUE);
+ 		feat_reg2 |= INPLACE(RMI_FEATURE_REGISTER_2_PDEV_MAX_VDEVS_ORDER,
+ 				     MAX_VDEVS_ORDER_PER_PDEV);
+ 		feat_reg2 |= INPLACE(RMI_FEATURE_REGISTER_2_REALM_MAX_VDEVS_ORDER,
+diff --git a/runtime/rmi/pdev.c b/runtime/rmi/pdev.c
+index 0905a1d6e2b21c745973a46267580dd1f551c211..dc4843d15533df54e73867f575d8221c63d04d80 100644
+--- a/runtime/rmi/pdev.c
++++ b/runtime/rmi/pdev.c
+@@ -12,6 +12,7 @@
+ #include <dev_assign_app.h>
+ #include <feature.h>
+ #include <granule.h>
++#include <measurement.h>
+ #include <pcpu_data.h>
+ #include <pdev_comm.h>
+ #include <rmm_el3_ifc.h>
+@@ -398,6 +399,7 @@ static void pdev_create_continue_ep(unsigned long fid, struct smc_result *res)
+ 	unsigned int num_vdev_range_aux_granules;
+ 	unsigned int app_aux_start_idx;
+ 	unsigned int max_num_vdevs;
++	unsigned int root_port_id = 0U;
+ 
+ 	assert(sro != NULL);
+ 	assert(fid == SMC_RMI_OP_CONTINUE);
+@@ -446,6 +448,7 @@ static void pdev_create_continue_ep(unsigned long fid, struct smc_result *res)
+ 	bdf = sro_ctx->pdev_id;
+ 
+ 	/* Call init routine to initialize device class specific state */
++	(void)memset(&dparams, 0, sizeof(dparams));
+ 	dparams.dev_handle = (void *)pd;
+ 	dparams.rmi_hash_algo = sro_ctx->hash_algo;
+ 	dparams.cert_slot_id = (uint8_t)sro_ctx->id_index;
+@@ -454,8 +457,17 @@ static void pdev_create_continue_ep(unsigned long fid, struct smc_result *res)
+ 	if (PDEV_CATEGORY_FROM_FLAGS(sro_ctx->flags) == RMI_PDEV_ENDPOINT_ACCEL_OFF_CHIP) {
+ 		dparams.has_ide = true;
+ 		dparams.ecam_addr = ecam_addr;
++		rc = rmm_el3_ifc_bdf_to_root_port(ecam_addr, (unsigned int)bdf,
++						  &root_port_id);
++		if (rc != E_RMM_OK) {
++			smc_rc = RMI_ERROR_INPUT;
++			goto out_unmap_pdev;
++		}
++		assert(root_port_id <= (unsigned int)UINT16_MAX);
++		dparams.rp_id = (uint16_t)root_port_id;
+ 	} else {
+ 		dparams.has_ide = false;
++		dparams.rp_id = 0U;
+ 	}
+ 
+ 	/* Map and initialise the stream granule */
+@@ -526,6 +538,7 @@ static void pdev_create_continue_ep(unsigned long fid, struct smc_result *res)
+ 
+ 	buffer_pdev_app_aux_unmap(aux_mapped_addr, num_app_aux_granules);
+ 
++out_unmap_pdev:
+ 	/*
+ 	 * Unlock and transit the PDEV granule state to GRANULE_STATE_PARTIAL.
+ 	 */
+@@ -1411,6 +1424,8 @@ void smc_pdev_set_pubkey(unsigned long pdev_addr,
+ 	struct pdev *pd;
+ 	struct rmi_public_key_params rmi_pubkey_params;
+ 	struct public_key_params pubkey_params = { 0 };
++	unsigned char pubkey_hash[SHA512_SIZE];
++	size_t pubkey_hash_len;
+ 	unsigned long smc_rc;
+ 	int rc;
+ 
+@@ -1498,8 +1513,19 @@ void smc_pdev_set_pubkey(unsigned long pdev_addr,
+ 
+ 	rc = dev_assign_set_public_key(&pd->da_app_data, &pubkey_params);
+ 	if (rc == DEV_ASSIGN_STATUS_SUCCESS) {
++		pubkey_hash_len = measurement_get_size(
++			(enum hash_algo)pd->rmi_hash_algo);
++		measurement_hash_compute((enum hash_algo)pd->rmi_hash_algo,
++					 pubkey_params.key, pubkey_params.key_len,
++					 pubkey_hash);
++		pd->pubkey_digest.len = MIN(pubkey_hash_len,
++						sizeof(pd->pubkey_digest.value));
++		(void)memcpy(pd->pubkey_digest.value, pubkey_hash,
++			     pd->pubkey_digest.len);
+ 		pdev_comm_begin_key(pd);
+ 		smc_rc = RMI_SUCCESS;
++	} else if (rc == DEV_ASSIGN_STATUS_INVALID_PARAMS) {
++		smc_rc = RMI_ERROR_INPUT;
+ 	} else {
+ 		smc_rc = RMI_ERROR_DEVICE;
+ 	}
+diff --git a/runtime/rmi/psmmu.c b/runtime/rmi/psmmu.c
+index 66933e9e988bf995a2fc486e677ecb522aadf1a5..9f8133b6e3269af0ec0302ead78747ee042cd2d4 100644
+--- a/runtime/rmi/psmmu.c
++++ b/runtime/rmi/psmmu.c
+@@ -13,6 +13,122 @@
+ #include <status.h>
+ #include <xlat_defs.h>
+ 
++static bool dpt_l0_created;
++static bool dpt_l1_created;
++static unsigned long dpt_l1_addr;
++
++#define DPT_L1_ADDR_ALIGN	(1UL << 30)
++#define DPT_ADDR_BOUND		(1UL << 48)
++
++static unsigned long dpt_feature_check(void)
++{
++	if (!is_rmi_feat_da_enabled() || !is_rmi_feat_ats_enabled()) {
++		return RMI_ERROR_NOT_SUPPORTED;
++	}
++
++	return RMI_SUCCESS;
++}
++
++/* cppcheck-suppress misra-c2012-8.7 */
++void smc_dpt_l0_create(struct smc_result *res)
++{
++	unsigned long ret = dpt_feature_check();
++
++	if (ret != RMI_SUCCESS) {
++		res->x[0] = ret;
++		return;
++	}
++
++	if (dpt_l0_created) {
++		res->x[0] = RMI_ERROR_INPUT;
++		return;
++	}
++
++	dpt_l0_created = true;
++	res->x[0] = RMI_SUCCESS;
++}
++
++/* cppcheck-suppress misra-c2012-8.7 */
++void smc_dpt_l0_destroy(struct smc_result *res)
++{
++	unsigned long ret = dpt_feature_check();
++
++	if (ret != RMI_SUCCESS) {
++		res->x[0] = ret;
++		return;
++	}
++
++	if (!dpt_l0_created) {
++		res->x[0] = RMI_ERROR_INPUT;
++		return;
++	}
++
++	dpt_l0_created = false;
++	dpt_l1_created = false;
++	res->x[0] = RMI_SUCCESS;
++}
++
++/* cppcheck-suppress misra-c2012-8.7 */
++void smc_dpt_l1_create(unsigned long addr, struct smc_result *res)
++{
++	unsigned long ret = dpt_feature_check();
++
++	if (ret != RMI_SUCCESS) {
++		res->x[0] = ret;
++		return;
++	}
++
++	if (!dpt_l0_created) {
++		res->x[0] = RMI_ERROR_GLOBAL;
++		return;
++	}
++
++	if ((addr >= DPT_ADDR_BOUND) ||
++	    ((addr & (DPT_L1_ADDR_ALIGN - 1UL)) != 0UL)) {
++		res->x[0] = RMI_ERROR_INPUT;
++		return;
++	}
++
++	if (dpt_l1_created && (dpt_l1_addr == addr)) {
++		res->x[0] = RMI_ERROR_INPUT;
++		return;
++	}
++
++	dpt_l1_created = true;
++	dpt_l1_addr = addr;
++	res->x[0] = RMI_SUCCESS;
++}
++
++/* cppcheck-suppress misra-c2012-8.7 */
++void smc_dpt_l1_destroy(unsigned long addr, struct smc_result *res)
++{
++	unsigned long ret = dpt_feature_check();
++
++	if (ret != RMI_SUCCESS) {
++		res->x[0] = ret;
++		return;
++	}
++
++	if (!dpt_l0_created) {
++		res->x[0] = RMI_ERROR_GLOBAL;
++		return;
++	}
++
++	if ((addr >= DPT_ADDR_BOUND) ||
++	    ((addr & (DPT_L1_ADDR_ALIGN - 1UL)) != 0UL)) {
++		res->x[0] = RMI_ERROR_INPUT;
++		return;
++	}
++
++	if (!dpt_l1_created || (dpt_l1_addr != addr)) {
++		res->x[0] = RMI_ERROR_INPUT;
++		return;
++	}
++
++	dpt_l1_created = false;
++	res->x[0] = RMI_SUCCESS;
++}
++
+ /*
+  * Return PSMMU information.
+  *
+@@ -31,7 +147,7 @@ void smc_psmmu_info(unsigned long psmmu_ptr, unsigned long info_ptr,
+ {
+ 	/* TODO: derive these from Boot Manifest */
+ 	struct rmi_psmmu_info info = {
+-		.flags = INPLACE(RMI_PSMMU_INFO_FLAGS_IRQ_CFG, RMI_IRQ_MSI)
++		.flags = INPLACE(RMI_PSMMU_INFO_FLAGS_IRQ_CFG, RMI_IRQ_WIRED)
+ 	};
+ 	struct smmuv3_dev *smmu;
+ 
+@@ -60,6 +176,61 @@ void smc_psmmu_info(unsigned long psmmu_ptr, unsigned long info_ptr,
+ 	res->x[0] = RMI_SUCCESS;
+ }
+ 
++/* cppcheck-suppress misra-c2012-8.7 */
++void smc_psmmu_irq_notify(unsigned long psmmu_ptr, unsigned long irq_set,
++			  struct smc_result *res)
++{
++	struct smmuv3_dev *smmu;
++
++	(void)irq_set;
++
++	if (!is_rmi_feat_da_enabled()) {
++		res->x[0] = RMI_ERROR_NOT_SUPPORTED;
++		return;
++	}
++
++	smmu = smmuv3_psmmu_find(psmmu_ptr);
++	if (smmu == NULL) {
++		res->x[0] = RMI_ERROR_INPUT;
++		return;
++	}
++
++	if (!smmuv3_psmmu_is_active(smmu)) {
++		res->x[0] = RMI_ERROR_INPUT;
++		return;
++	}
++
++	res->x[0] = RMI_SUCCESS;
++	res->x[1] = 0UL;
++}
++
++/* cppcheck-suppress misra-c2012-8.7 */
++void smc_psmmu_event_consume(unsigned long psmmu_ptr, unsigned long irq,
++			      struct smc_result *res)
++{
++	struct smmuv3_dev *smmu;
++
++	(void)irq;
++
++	if (!is_rmi_feat_da_enabled()) {
++		res->x[0] = RMI_ERROR_NOT_SUPPORTED;
++		return;
++	}
++
++	smmu = smmuv3_psmmu_find(psmmu_ptr);
++	if (smmu == NULL) {
++		res->x[0] = RMI_ERROR_INPUT;
++		return;
++	}
++
++	if (!smmuv3_psmmu_is_active(smmu)) {
++		res->x[0] = RMI_ERROR_INPUT;
++		return;
++	}
++
++	res->x[0] = RMI_SUCCESS;
++}
++
+ /*
+  * Activate a PSMMU.
+  *
+diff --git a/runtime/rmi/realm.c b/runtime/rmi/realm.c
+index e8fa1e6c677f8bd7b6f16535931e530cff8d6052..064af75868602cf4970b24dbfba5b8b59a6d6cee 100644
+--- a/runtime/rmi/realm.c
++++ b/runtime/rmi/realm.c
+@@ -710,7 +710,7 @@ void smc_realm_create(unsigned long rd_addr,
+ 	}
+ 
+ 	ret = sro_ctx_reserve(SMC_RMI_REALM_CREATE, num_rd_aux * GRANULE_SIZE,
+-			      false, false, SMC_RMI_OP_MEM_DONATE);
++			      true, false, SMC_RMI_OP_MEM_DONATE);
+ 	if (ret != RMI_SUCCESS) {
+ 		granule_unlock(g_rd);
+ 		res->x[0] = ret;
+@@ -757,6 +757,18 @@ static void realm_create_continue(unsigned long fid, struct smc_result *res)
+ 	int smmuv3_ret __unused;
+ 
+ 	assert(sro != NULL);
++
++	if (fid == SMC_RMI_OP_CANCEL) {
++		sro_aux_op_start_reclaim(sro, res,
++					 sro->aux_op_ctx.obj_addr,
++					 false,
++					 RMI_SUCCESS,
++					 sro->aux_op_ctx.total_transferred,
++					 GRANULE_STATE_RD_AUX);
++		res->x[1] = sro_ctx_my_handle();
++		return;
++	}
++
+ 	assert(fid == SMC_RMI_OP_CONTINUE);
+ 	(void)fid;
+ 
+diff --git a/runtime/rmi/rtt_unmap.c b/runtime/rmi/rtt_unmap.c
+index f243b65a39161d5e1fec02bbe2e438f3fbf0ec34..cef002cf65a3369ba34dec2ecee6a0fcbc3bec23 100644
+--- a/runtime/rmi/rtt_unmap.c
++++ b/runtime/rmi/rtt_unmap.c
+@@ -100,6 +100,7 @@ static unsigned long validate_unmap_inputs(unsigned long base,
+ 	case RMI_ADDR_TYPE_LIST: {
+ 		unsigned long offset_slots;
+ 		unsigned long granule_remaining;
++		unsigned long ns_word;
+ 
+ 		if (list_count == 0UL) {
+ 			return RMI_ERROR_INPUT;
+@@ -107,6 +108,12 @@ static unsigned long validate_unmap_inputs(unsigned long base,
+ 		if (!ALIGNED(oaddr, sizeof(unsigned long))) {
+ 			return RMI_ERROR_INPUT;
+ 		}
++		/* Validate NS access before changing any RTT entries. */
++		if (!ns_buffer_read_addr(SLOT_NS, oaddr & GRANULE_MASK,
++					 (unsigned int)(oaddr & ~GRANULE_MASK),
++					 sizeof(ns_word), &ns_word)) {
++			return RMI_ERROR_INPUT;
++		}
+ 		/*
+ 		 * The host buffer cannot cross a granule. Clip @list_count
+ 		 * to the descriptor slots that fit between @oaddr and the
+@@ -1089,12 +1096,12 @@ static void rtt_unmap_format_result(unsigned int oaddr_type,
+ 					 &base, &level, &cnt, &st);
+ 		assert(ok);
+ 		(void)ok;
+-		(void)st;
+ 		blk_size = XLAT_BLOCK_SIZE(level);
+ 		res->x[2] = base |
+ 			INPLACE(RMI_ADDR_RDESC_4K_CNT, cnt) |
+ 			INPLACE(RMI_ADDR_RDESC_4K_SZ,
+-				xlat_blk_sz_to_addr_list_sz(blk_size));
++				xlat_blk_sz_to_addr_list_sz(blk_size)) |
++			INPLACE(RMI_ADDR_RDESC_4K_ST, st);
+ 	} else if (oaddr_type == RMI_ADDR_TYPE_LIST) {
+ 		unsigned int copied = 0U;
+ 
+diff --git a/runtime/rmi/run.c b/runtime/rmi/run.c
+index 6d9e0a3c110e1c57ffb75c8957d72fb91671f650..6ff027f25daba75d7948768899186cfda89fd4b3 100644
+--- a/runtime/rmi/run.c
++++ b/runtime/rmi/run.c
+@@ -321,7 +321,6 @@ void smc_rec_enter(unsigned long rec_addr,
+ 	struct rd *rd;
+ 	struct rmi_rec_run rec_run;
+ 	unsigned long ret;
+-	bool success;
+ 	void *rec_aux;
+ 
+ 	/*
+@@ -336,6 +335,13 @@ void smc_rec_enter(unsigned long rec_addr,
+ 		return;
+ 	}
+ 
++	/* The Run PAS check precedes REC and Realm state checks. */
++	if (!ns_buffer_read_addr(SLOT_NS, rec_run_addr, 0U,
++				 sizeof(struct rmi_rec_enter), &rec_run.enter)) {
++		res->x[0] = RMI_ERROR_INPUT;
++		return;
++	}
++
+ 	/* For a REC to be runnable, it should be unused (refcount = 0) */
+ 	ret = tr_find_lock_granule(rec_addr, GRANULE_SIZE,
+ 				  GRANULE_STATE_REC, &g_rec);
+@@ -381,20 +387,6 @@ void smc_rec_enter(unsigned long rec_addr,
+ 	/* Unlock the granule before switching to realm world. */
+ 	granule_unlock(g_rec);
+ 
+-	success = ns_buffer_read_addr(SLOT_NS, rec_run_addr, 0U,
+-				 sizeof(struct rmi_rec_enter), &rec_run.enter);
+-
+-	if (!success) {
+-		buffer_unmap(rec);
+-		/*
+-		 * Decrement refcount. Lock-free access to REC, thus atomic and
+-		 * release semantics is required.
+-		 */
+-		atomic_granule_put_release(g_rec);
+-		res->x[0] = RMI_ERROR_INPUT;
+-		return;
+-	}
+-
+ 	g_rd = rec->realm_info.g_rd;
+ 
+ 	/*
+diff --git a/runtime/rmi/vdev.c b/runtime/rmi/vdev.c
+index 5efb87e1f3accadca32fedc5a511e895f6fc42a8..fa506ae15838cf6837604892dc40212c561b84af 100644
+--- a/runtime/rmi/vdev.c
++++ b/runtime/rmi/vdev.c
+@@ -575,11 +575,12 @@ void smc_vdev_create(unsigned long rd_addr, unsigned long pdev_addr,
+ 	s2_cfg.vmid = plane_0_s2_context->vmid;
+ 	s2_cfg.mecid = plane_0_s2_context->mecid;
+ 
+-	/* If the TDI is already in use, this call would fail */
+-	if (smmuv3_configure_stream(pd->dev.ecam_addr,
+-				   (unsigned int)vdev_params.tdi_id,
+-				   &s2_cfg, &sid, &smmu_idx) != 0) {
+-		rc = RMI_ERROR_DEVICE;
++	ret = smmuv3_configure_stream(pd->dev.ecam_addr,
++				     (unsigned int)vdev_params.tdi_id,
++				     &s2_cfg, &sid, &smmu_idx);
++	if (ret != 0) {
++		rc = ((ret == -EEXIST) || (ret == -ENOENT)) ?
++			RMI_ERROR_INPUT : RMI_ERROR_DEVICE;
+ 		goto out_unmap_vd;
+ 	}
+ 
+diff --git a/runtime/rsi/psci.c b/runtime/rsi/psci.c
+index 1e93901c6e1b9e80439a39683b25c48fb8803f45..fac39630e2f2f3fedfecaa6d7781355bbbe2f67e 100644
+--- a/runtime/rsi/psci.c
++++ b/runtime/rsi/psci.c
+@@ -49,10 +49,9 @@ static void psci_cpu_suspend(struct rec_plane *plane,
+ 
+ 	/*
+ 	 * We treat all target power states as suspend requests,
+-	 * so all we need to do is forward the FID to the NS hypervisor,
+-	 * and we can ignore all the parameters.
++	 * but forward the FID and all PSCI arguments to the NS hypervisor.
+ 	 */
+-	forward_args_to_host(1U, plane, rec_exit);
++	forward_args_to_host(4U, plane, rec_exit);
+ 
+ 	/*
+ 	 * The exit to the Host is just a notification; the Host does not need
+@@ -178,11 +177,11 @@ static void psci_cpu_on(struct rec *rec, struct rmi_rec_exit *rec_exit,
+ 	rec_set_pending_op(rec, REC_PENDING_PSCI_COMPLETE);
+ 
+ 	/*
+-	 * Notify the Host, passing the FID and MPIDR arguments.
++	 * Notify the Host, passing the FID and all PSCI arguments.
+ 	 * Leave REC registers unchanged; these will be read and updated by
+ 	 * psci_complete_request.
+ 	 */
+-	forward_args_to_host(2U, plane, rec_exit);
++	forward_args_to_host(4U, plane, rec_exit);
+ 	res->action = EXIT_TO_HOST;
+ }
+ 
+@@ -324,17 +323,17 @@ static void psci_features(struct rec_plane *plane, struct rsi_result *res)
+ 	unsigned int psci_func_id = (unsigned int)plane->regs[1];
+ 
+ 	switch (psci_func_id) {
+-	case SMC32_PSCI_VERSION:
++	case SMC64_PSCI_VERSION:
+ 	case SMC32_PSCI_CPU_SUSPEND:
+ 	case SMC64_PSCI_CPU_SUSPEND:
+-	case SMC32_PSCI_CPU_OFF:
++	case SMC64_PSCI_CPU_OFF:
+ 	case SMC32_PSCI_CPU_ON:
+ 	case SMC64_PSCI_CPU_ON:
+ 	case SMC32_PSCI_AFFINITY_INFO:
+ 	case SMC64_PSCI_AFFINITY_INFO:
+-	case SMC32_PSCI_SYSTEM_OFF:
+-	case SMC32_PSCI_SYSTEM_RESET:
+-	case SMC32_PSCI_FEATURES:
++	case SMC64_PSCI_SYSTEM_OFF:
++	case SMC64_PSCI_SYSTEM_RESET:
++	case SMC64_PSCI_FEATURES:
+ 	case SMCCC_VERSION:
+ 		res->smc_res.x[0] = PSCI_RETURN_SUCCESS;
+ 		break;
+@@ -353,14 +352,14 @@ void handle_psci(struct rec *rec,
+ 	unsigned int function_id = psci_function_id(plane);
+ 
+ 	switch (function_id) {
+-	case SMC32_PSCI_VERSION:
++	case SMC64_PSCI_VERSION:
+ 		psci_version(res);
+ 		break;
+ 	case SMC32_PSCI_CPU_SUSPEND:
+ 	case SMC64_PSCI_CPU_SUSPEND:
+ 		psci_cpu_suspend(plane, rec_exit, res);
+ 		break;
+-	case SMC32_PSCI_CPU_OFF:
++	case SMC64_PSCI_CPU_OFF:
+ 		psci_cpu_off(rec, rec_exit, res);
+ 		break;
+ 	case SMC32_PSCI_CPU_ON:
+@@ -371,11 +370,11 @@ void handle_psci(struct rec *rec,
+ 	case SMC64_PSCI_AFFINITY_INFO:
+ 		psci_affinity_info(rec, res);
+ 		break;
+-	case SMC32_PSCI_SYSTEM_OFF:
+-	case SMC32_PSCI_SYSTEM_RESET:
++	case SMC64_PSCI_SYSTEM_OFF:
++	case SMC64_PSCI_SYSTEM_RESET:
+ 		psci_system_off_reset(rec, rec_exit, res);
+ 		break;
+-	case SMC32_PSCI_FEATURES:
++	case SMC64_PSCI_FEATURES:
+ 		psci_features(plane, res);
+ 		break;
+ 	default:
+diff --git a/runtime/rsi/vdev.c b/runtime/rsi/vdev.c
+index 6e78916ff50a95c7d6baa51251390eb064a20777..d5a716a71eb8398d810b1f68b3f4361afd4207f1 100644
+--- a/runtime/rsi/vdev.c
++++ b/runtime/rsi/vdev.c
+@@ -99,9 +99,7 @@ void handle_rsi_vdev_dma_enable(struct rec *rec,
+ 	assert(lock_set.vd != NULL);
+ 	assert(lock_set.rd != NULL);
+ 
+-	if ((lock_set.rd->num_aux_planes > 0U) &&
+-	    ((non_ats_plane == 0U) || (non_ats_plane > lock_set.rd->num_aux_planes))) {
+-		/* TODO_ALP17: Check the above condition in latest spec */
++	if (non_ats_plane > lock_set.rd->num_aux_planes) {
+ 		res->smc_res.x[0] = RSI_ERROR_INPUT;
+ 		goto out;
+ 	}
+@@ -295,7 +293,8 @@ static void vdev_get_info(struct pdev *pd, struct vdev *vd, struct rsi_vdev_info
+ 		     pd->vca_digest.len);
+ 	(void)memcpy(vdev_info->cert_digest, pd->cert_digest.value,
+ 		     pd->cert_digest.len);
+-	/* TODO_ALP17: Set proper public_key */
++	(void)memcpy(vdev_info->pubkey_digest, pd->pubkey_digest.value,
++		     pd->pubkey_digest.len);
+ 	(void)memcpy(vdev_info->meas_digest, vd->meas_digest.value,
+ 		     vd->meas_digest.len);
+ 	(void)memcpy(vdev_info->report_digest, vd->ifc_report_digest.value,

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2026, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -9,13 +9,11 @@
 
 enum test_intent {
     REC_UNALIGNED = 0X0,
-    REC_OUTSIDE_OF_PERMITTED_PA = 0X1,
-    REC_DEV_MEM = 0X2,
-    REC_GRAN_STATE_UNDELEGATED = 0X3,
-    REC_GRAN_STATE_RD = 0X4,
-    REC_GRAN_STATE_REC_AUX = 0X5,
-    REC_GRAN_STATE_RTT = 0X6,
-    REC_GRAN_STATE_DATA = 0X7
+    REC_GRAN_STATE_DELEGATED = 0X1,
+    REC_GRAN_STATE_UNDELEGATED = 0X2,
+    REC_GRAN_STATE_RD = 0X3,
+    REC_GRAN_STATE_RTT = 0X4,
+    REC_GRAN_STATE_DATA = 0X5,
 };
 
 struct stimulus {
@@ -32,14 +30,9 @@ static struct stimulus test_data[] = {
     .label = REC_UNALIGNED,
     .status = RMI_ERROR_INPUT,
     .index = 0},
-    {.msg = "rec_bound",
+    {.msg = "rec_gran_state",
     .abi = RMI_REC_DESTROY,
-    .label = REC_OUTSIDE_OF_PERMITTED_PA,
-    .status = RMI_ERROR_INPUT,
-    .index = 0},
-    {.msg = "rec_bound",
-    .abi = RMI_REC_DESTROY,
-    .label = REC_DEV_MEM,
+    .label = REC_GRAN_STATE_DELEGATED,
     .status = RMI_ERROR_INPUT,
     .index = 0},
     {.msg = "rec_gran_state",
@@ -50,11 +43,6 @@ static struct stimulus test_data[] = {
     {.msg = "rec_gran_state",
     .abi = RMI_REC_DESTROY,
     .label = REC_GRAN_STATE_RD,
-    .status = RMI_ERROR_INPUT,
-    .index = 0},
-    {.msg = "rec_gran_state",
-    .abi = RMI_REC_DESTROY,
-    .label = REC_GRAN_STATE_REC_AUX,
     .status = RMI_ERROR_INPUT,
     .index = 0},
     {.msg = "rec_gran_state",

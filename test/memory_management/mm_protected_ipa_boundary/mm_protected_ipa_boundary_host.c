@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2025, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2025-2026, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -18,7 +18,8 @@ void mm_protected_ipa_boundary_host(void)
     uint64_t protected_ipa, unprotected_ipa;
     uint64_t protected_src_pa, protected_target_pa;
     uint64_t unprotected_pa;
-    val_host_data_destroy_ts data_destroy;
+    val_host_rmi_rtt_unmap_flags_ts data_unmap_flags;
+    uint64_t unmap_flags = 0;
 
     val_memset(&realm, 0, sizeof(realm));
 
@@ -99,7 +100,13 @@ void mm_protected_ipa_boundary_host(void)
         goto destroy_realm;
     }
 
-    ret = val_host_rmi_data_destroy(realm.rd, protected_ipa, &data_destroy);
+    val_memset(&data_unmap_flags, 0x0, sizeof(data_unmap_flags));
+    data_unmap_flags.oaddr_type = RMI_ADDR_TYPE_SINGLE;
+    val_memcpy(&unmap_flags, &data_unmap_flags, sizeof(data_unmap_flags));
+
+    ret = val_host_rmi_rtt_data_unmap(realm.rd, protected_ipa,
+                                      protected_ipa + PAGE_SIZE,
+                                      unmap_flags, 0);
     if (ret)
     {
         LOG(ERROR, "Data destroy failed, ipa=0x%lx, ret=0x%x\n", protected_ipa, ret);

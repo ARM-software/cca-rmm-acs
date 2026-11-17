@@ -1,5 +1,6 @@
+
 /*
- * Copyright (c) 2023-2025, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023-2026, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -28,54 +29,6 @@ static struct argument_store {
 struct arguments {
     uint64_t rec_ptr;
 };
-
-static uint64_t g_rec_aux_prep_sequence(void)
-{
-    /* Delegate granule for the REC */
-    uint64_t rec = g_delegated_prep_sequence();
-    if (rec == VAL_TEST_PREP_SEQ_FAILED)
-        return VAL_TEST_PREP_SEQ_FAILED;
-
-    /* Track for reuse/destruction */
-    realm[VALID_REALM].rec[1] = rec;
-
-    val_host_rec_params_ts *params = val_host_mem_alloc(PAGE_SIZE, PAGE_SIZE);
-
-    uint64_t i;
-
-    for (i = 0; i < (sizeof(params->gprs) / sizeof(params->gprs[0])); i++)
-        params->gprs[i] = 0x0;
-
-    /* Populate params structure */
-    params->pc = 0;
-    params->flags = RMI_RUNNABLE;
-    params->mpidr = 1;
-
-    uint64_t aux_count;
-    uint64_t rd = realm[VALID_REALM].rd;
-
-    if (val_host_rmi_rec_aux_count(rd, &aux_count))
-        return VAL_TEST_PREP_SEQ_FAILED;
-
-    params->num_aux = aux_count;
-
-    /* Create all aux granules */
-    for (i = 0; i < aux_count; i++) {
-        uint64_t aux_rec = g_delegated_prep_sequence();
-        if (aux_rec == VAL_TEST_PREP_SEQ_FAILED)
-            return VAL_TEST_PREP_SEQ_FAILED;
-
-        params->aux[i] = aux_rec;
-    }
-
-    /* Create the REC */
-    if (val_host_rmi_rec_create(rd, rec, (uint64_t)params)) {
-        LOG(ERROR, " REC create failed \n");
-        return VAL_TEST_PREP_SEQ_FAILED;
-    }
-
-    return params->aux[0];
-}
 
 static uint64_t rec_valid_prep_sequence(void)
 {
@@ -125,12 +78,10 @@ static uint64_t intent_to_seq(struct stimulus *test_data, struct arguments *args
             args->rec_ptr = g_unaligned_prep_sequence(c_args.rec_ptr_valid);
             break;
 
-        case REC_OUTSIDE_OF_PERMITTED_PA:
-            args->rec_ptr = g_outside_of_permitted_pa_prep_sequence();
-            break;
-
-        case REC_DEV_MEM:
-            args->rec_ptr = g_dev_mem_prep_sequence();
+        case REC_GRAN_STATE_DELEGATED:
+            args->rec_ptr = g_delegated_prep_sequence();
+            if (args->rec_ptr == VAL_TEST_PREP_SEQ_FAILED)
+                return VAL_ERROR;
             break;
 
         case REC_GRAN_STATE_UNDELEGATED:
@@ -141,12 +92,6 @@ static uint64_t intent_to_seq(struct stimulus *test_data, struct arguments *args
 
         case REC_GRAN_STATE_RD:
             args->rec_ptr = realm[VALID_REALM].rd;
-            break;
-
-        case REC_GRAN_STATE_REC_AUX:
-            args->rec_ptr = g_rec_aux_prep_sequence();
-            if (args->rec_ptr == VAL_TEST_PREP_SEQ_FAILED)
-                return VAL_ERROR;
             break;
 
         case REC_GRAN_STATE_RTT:
@@ -187,7 +132,7 @@ void cmd_rec_destroy_host(void)
             goto exit;
         }
 
-        ret = val_host_rmi_rec_destroy(args.rec_ptr);
+        ret = val_host_rmi_rec_destroy_smc(args.rec_ptr).x0;
         if (ret != PACK_CODE(test_data[i].status, test_data[i].index)) {
             LOG(ERROR, "Test Failure!The ABI call returned: %xExpected: %x\n",
                 ret, PACK_CODE(test_data[i].status, test_data[i].index));

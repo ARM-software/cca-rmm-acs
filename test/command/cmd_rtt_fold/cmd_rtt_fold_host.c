@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2025, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2025-2026, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -175,17 +175,6 @@ static uint64_t intent_to_seq(struct stimulus *test_data, struct arguments *args
             args->level = c_args.level_valid;
             break;
 
-        case RD_OUTSIDE_OF_PERMITTED_PA:
-            args->rd = g_outside_of_permitted_pa_prep_sequence();
-            args->ipa = c_args.ipa_valid;
-            args->level = c_args.level_valid;
-            break;
-
-        case RD_DEV_MEM:
-            args->rd = g_dev_mem_prep_sequence();
-            args->ipa = c_args.ipa_valid;
-            args->level = c_args.level_valid;
-            break;
 
         case RD_STATE_UNDELEGATED:
             args->rd = g_undelegated_prep_sequence();
@@ -378,6 +367,8 @@ void cmd_rtt_fold_host(void)
         goto exit;
     }
 
+    val_set_status(RESULT_PASS(VAL_SUCCESS));
+
 exit:
 
     ret = val_host_rmi_rtt_read_entry(c_args.rd_valid, c_args.ipa_valid,
@@ -423,8 +414,6 @@ exit:
             return;
         }
     }
-
-    val_set_status(RESULT_PASS(VAL_SUCCESS));
 
     return;
 }

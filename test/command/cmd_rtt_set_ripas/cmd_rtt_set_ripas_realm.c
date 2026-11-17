@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023-2025, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023-2026, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -19,7 +19,7 @@ void cmd_rtt_set_ripas_realm(void)
 {
     val_smc_param_ts cmd_ret;
     uint64_t ret;
-    /* Set RIPAS of the first 4KB granule to RAM */
+    /* Request a RIPAS change for the first 4KB granule. */
     uint64_t ipa_base = 0x0000, ipa_top = 0x1000;
 
     if (val_get_primary_mpidr() != val_read_mpidr())
@@ -73,7 +73,8 @@ void cmd_rtt_set_ripas_realm(void)
     }
 
     /* Executing IPA_STATE_SET in Primary vCPU to return valid base, top */
-    cmd_ret = val_realm_rsi_ipa_state_set(ipa_base, ipa_top, RSI_RAM, RSI_NO_CHANGE_DESTROYED);
+    cmd_ret = val_realm_rsi_ipa_state_set(ipa_base, ipa_top, RSI_RAM,
+                                         RSI_NO_CHANGE_DESTROYED);
     ret = cmd_ret.x0;
     if (ret) {
         LOG(ERROR, " IPA_STATE_SET failed with ret value: %d \n", ret);

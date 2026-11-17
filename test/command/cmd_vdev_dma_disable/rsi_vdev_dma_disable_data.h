@@ -6,6 +6,7 @@
  */
 
 #include "val_rmm.h"
+#include "val_realm_rsi_types.h"
 
 enum test_intent {
     VDEV_IDS_INVALID_VDEV_ID = 0X0

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2025, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2025-2026, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -39,13 +39,14 @@ void cmd_cpu_off_host(void)
 
     /* Calling PSCI_CPU_OFF from realm should cause REC exit due to PSCI and exit.gprs
      * contains parameters from PSCI call */
-    if (
-            ((rec_exit->exit_reason) != RMI_EXIT_PSCI) ||
-            /* gprs[0] holds the function is of psci call*/
-            ((rec_exit->gprs[0]) != PSCI_CPU_OFF)
-       )
+    if (((rec_exit->exit_reason) != RMI_EXIT_PSCI) ||
+        /* gprs[0] holds the function ID of the PSCI call. */
+        ((rec_exit->gprs[0]) != PSCI_CPU_OFF) ||
+        ((rec_exit->gprs[1]) != 0) ||
+        ((rec_exit->gprs[2]) != 0) ||
+        ((rec_exit->gprs[3]) != 0))
     {
-        LOG(ERROR, "Rec Exit not due to  PSCI_CPU_OFF\n");
+        LOG(ERROR, "Invalid REC exit for PSCI_CPU_OFF\n");
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(3)));
         goto destroy_realm;
     }

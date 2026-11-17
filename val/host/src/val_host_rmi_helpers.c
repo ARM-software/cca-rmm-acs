@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023-2025, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023-2026, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -67,6 +67,7 @@ uint32_t validate_rec_exit_da(val_host_rec_exit_ts *rec_exit, uint64_t hpfar,
                 break;
 
         case NON_EMULATABLE_DA:
+        case NON_EMULATABLE_DA_UNPROTECTED:
                 if (!((VAL_EXTRACT_BITS(rec_exit->esr, 11, 12) == ESR_ISS_SET_UER) &&
                     (VAL_EXTRACT_BITS(rec_exit->esr, 9, 9) == ESR_ISS_EA) &&
                     (VAL_EXTRACT_BITS(rec_exit->esr, 10, 10) == ESR_FnV) &&
@@ -74,6 +75,18 @@ uint32_t validate_rec_exit_da(val_host_rec_exit_ts *rec_exit, uint64_t hpfar,
                     (VAL_EXTRACT_BITS(rec_exit->esr, 26, 31) == ESR_EC_LOWER_EL)))
                 {
                     LOG(ERROR, "REC exit ESR params mismatch: %lx\n", rec_exit->esr);
+                    return VAL_ERROR;
+                }
+
+                /*
+                 * For a non-emulatable Data Abort at an Unprotected IPA,
+                 * validate the reported WnR and IL values.
+                 */
+                if ((abort_type == NON_EMULATABLE_DA_UNPROTECTED) &&
+                    ((VAL_EXTRACT_BITS(rec_exit->esr, 6, 6) != wnr) ||
+                     (VAL_EXTRACT_BITS(rec_exit->esr, 25, 25) != ESR_IL_32BIT)))
+                {
+                    LOG(ERROR, "REC exit ESR WnR/IL mismatch: %lx\n", rec_exit->esr);
                     return VAL_ERROR;
                 }
 
@@ -89,8 +102,9 @@ uint32_t validate_rec_exit_da(val_host_rec_exit_ts *rec_exit, uint64_t hpfar,
                     VAL_EXTRACT_BITS(rec_exit->esr, 21, 21) ||  //SSE
                     VAL_EXTRACT_BITS(rec_exit->esr, 24, 24) ||  //ISV
                     VAL_EXTRACT_BITS(rec_exit->esr, 22, 23) ||  //SAS
-                    VAL_EXTRACT_BITS(rec_exit->esr, 6, 6) ||   //WnR
-                    VAL_EXTRACT_BITS(rec_exit->esr, 25, 25))    //IL
+                    ((abort_type == NON_EMULATABLE_DA) &&
+                     (VAL_EXTRACT_BITS(rec_exit->esr, 6, 6) ||  //WnR
+                      VAL_EXTRACT_BITS(rec_exit->esr, 25, 25)))) //IL
                 {
                     LOG(ERROR, "REC exit ESR MBZ fail: esr %lx\n", rec_exit->esr);
                     return VAL_ERROR;

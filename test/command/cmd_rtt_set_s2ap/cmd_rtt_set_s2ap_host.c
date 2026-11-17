@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024-2025, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2024-2026, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -122,8 +122,7 @@ static uint64_t rd_valid_prep_sequence(void)
     }
 
     /* Complete pending PSCI by returning a RUNNABLE target REC*/
-    ret = val_host_rmi_psci_complete(realm[VALID_REALM].rec[0], realm[VALID_REALM].rec[1],
-                                                                             PSCI_E_SUCCESS);
+    ret = val_host_rmi_psci_complete(realm[VALID_REALM].rec[0], PSCI_E_SUCCESS);
     if (ret)
     {
         LOG(ERROR, " PSCI_COMPLETE Failed, ret=%x\n", ret);

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2025, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2025-2026, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -91,6 +91,8 @@ void cmd_measurement_read_realm(void)
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(3)));
         goto exit;
     }
+
+    val_set_status(RESULT_PASS(VAL_SUCCESS));
 
 exit:
     val_realm_return_to_host();

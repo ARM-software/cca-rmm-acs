@@ -82,7 +82,8 @@ int val_host_get_public_key_from_cert_chain(uint8_t *cert_chain,
     mbedtls_x509_crt_init(&crt);
 
     if (mbedtls_x509_crt_parse_der(&crt, leaf_cert, leaf_cert_len) != 0) {
-        return -1;
+        rc = -1;
+        goto out_crt_free;
     }
 
     pk_type = mbedtls_pk_get_type(&crt.pk);
@@ -164,9 +165,7 @@ int val_host_get_public_key_from_cert_chain(uint8_t *cert_chain,
     }
 
 out_crt_free:
-
-  /*TODO: Debug and free mbedtls crt*/
-    // mbedtls_x509_crt_free(&crt);
+    mbedtls_x509_crt_free(&crt);
 
     return rc;
 }

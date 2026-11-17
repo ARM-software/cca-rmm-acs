@@ -1,5 +1,5 @@
  /*
- * Copyright (c) 2023-2025, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023-2026, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -8,6 +8,7 @@
 #include "val_host_rmi.h"
 #include "val_host_realm.h"
 #include "val_host_command.h"
+#include "val_host_sro.h"
 
 #define L3_SIZE PAGE_SIZE
 #define L2_SIZE (512 * L3_SIZE)
@@ -95,7 +96,8 @@ uint64_t val_host_delegate_granule(void)
     uint64_t *gran = val_host_mem_alloc(PAGE_SIZE, PAGE_SIZE);
 
     if (gran != NULL) {
-        if (val_host_rmi_granule_delegate((uint64_t)gran)) {
+        if (val_host_rmi_granule_range_delegate((uint64_t)gran,
+                                                (uint64_t)gran + PAGE_SIZE)) {
             LOG(ERROR, "Error! granule couldn't be delegated!\n");
             return VAL_ERROR;
         } else {

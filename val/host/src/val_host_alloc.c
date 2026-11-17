@@ -17,6 +17,8 @@ static int number_of_regions;
 
 static uint64_t heap_base;
 static uint64_t heap_top;
+static uint64_t tracking_base;
+static uint64_t tracking_top;
 static uint16_t curr_vmid;
 
 /* get vmid */
@@ -67,6 +69,32 @@ void val_host_mem_alloc_init(void)
     heap_top = PLATFORM_HEAP_REGION_BASE + PLATFORM_HEAP_REGION_SIZE;
     number_of_regions = 0;
     curr_vmid = 0;
+}
+
+void val_host_tracking_alloc_init(void)
+{
+    tracking_base = PLATFORM_RMM_TRACKING_SETUP_POOL_BASE;
+    tracking_top = tracking_base + PLATFORM_RMM_TRACKING_SETUP_POOL_SIZE;
+}
+
+void *val_host_tracking_alloc(size_t alignment, size_t size)
+{
+    uint64_t addr;
+
+    if ((tracking_top == 0U) || (size == 0U) || (alignment == 0U) ||
+        ((alignment & (alignment - 1U)) != 0U) ||
+        (tracking_base > UINT64_MAX - (alignment - 1U)))
+        return NULL;
+
+    addr = ADDR_ALIGN(tracking_base, alignment);
+    if ((addr > tracking_top) || (size > tracking_top - addr))
+    {
+        LOG(ERROR, "Not enough tracking setup memory available\n");
+        return NULL;
+    }
+
+    tracking_base = addr + size;
+    return (void *)addr;
 }
 
 /**
@@ -122,7 +150,22 @@ void val_host_mem_free(void *ptr)
  **/
 void *val_buffer_alloc_calloc(size_t n, size_t size)
 {
-  return val_host_mem_alloc(PAGE_SIZE, n*size);
+    void *ptr;
+    size_t bytes;
+
+    if ((size != 0U) && (n > SIZE_MAX / size))
+    {
+        return NULL;
+    }
+
+    bytes = n * size;
+    ptr = val_host_mem_alloc(PAGE_SIZE, bytes);
+    if (ptr != NULL)
+    {
+        val_memset(ptr, 0, bytes);
+    }
+
+    return ptr;
 }
 
 /**

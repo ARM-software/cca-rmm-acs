@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2025, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2025-2026, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -9,9 +9,20 @@
 #include "val_realm_rsi.h"
 #include "val_realm_framework.h"
 #include "rsi_attestation_token_continue_data.h"
+#include "attestation_realm.h"
+
+#define IPA_ADDR_PROTECTED_UNASSIGNED_EMPTY    (3 * PAGE_SIZE)
 
 __attribute__((aligned (PAGE_SIZE))) uint64_t token[MAX_REALM_CCA_TOKEN_SIZE/8] = {0,};
 uint64_t max_size;
+static uint64_t challenge[8] = {0xb4ea40d262abaf22,
+                                0xe8d966127b6d78e2,
+                                0x7ce913f20b954277,
+                                0x3155ff12580f9e60,
+                                0x8a3843cb95120bf6,
+                                0xd52c4fca64420f43,
+                                0xb75961661d52e8ce,
+                                0xc7f17650fe9fca60};
 static struct argument_store {
     uint64_t addr_valid;
     uint64_t offset_valid;
@@ -29,15 +40,6 @@ static uint64_t valid_argument_prep_sequence(void)
     val_smc_param_ts args = {0,};
     uint64_t offset = 0;
     uint64_t *granule = token;
-    uint64_t challenge[8] = {0xb4ea40d262abaf22,
-                             0xe8d966127b6d78e2,
-                             0x7ce913f20b954277,
-                             0x3155ff12580f9e60,
-                             0x8a3843cb95120bf6,
-                             0xd52c4fca64420f43,
-                             0xb75961661d52e8ce,
-                             0xc7f17650fe9fca60};
-
     args = val_realm_rsi_attestation_token_init(challenge[0], challenge[1],
                                                 challenge[2], challenge[3], challenge[4],
                                                 challenge[5], challenge[6], challenge[7]);
@@ -68,6 +70,11 @@ static uint64_t address_unprotected_prep_sequence(void)
 
     ipa_width = val_realm_get_ipa_width();
     return 1ULL << (ipa_width - 1);
+}
+
+static uint64_t address_empty_prep_sequence(void)
+{
+    return IPA_ADDR_PROTECTED_UNASSIGNED_EMPTY;
 }
 
 static uint64_t offset_bound_prep_sequence(uint64_t offset)
@@ -103,6 +110,14 @@ static uint64_t intent_to_seq(struct stimulus *test_data, struct arguments *args
             args->size = c_args.size_valid;
             break;
 
+        case ADDR_EMPTY:
+            args->addr = address_empty_prep_sequence();
+            if (args->addr == VAL_TEST_PREP_SEQ_FAILED)
+                return VAL_TEST_PREP_SEQ_FAILED;
+            args->offset = c_args.offset_valid;
+            args->size = c_args.size_valid;
+            break;
+
         case OFFSET_BOUND:
             args->addr = c_args.addr_valid;
             args->offset = offset_bound_prep_sequence(c_args.offset_valid);
@@ -111,7 +126,7 @@ static uint64_t intent_to_seq(struct stimulus *test_data, struct arguments *args
 
         case SIZE_OVERFLOW:
             args->addr = c_args.addr_valid;
-            args->offset = c_args.offset_valid;
+            args->offset = 1U;
             args->size = size_overflow_prep_sequence();
             break;
 
@@ -131,10 +146,11 @@ static uint64_t intent_to_seq(struct stimulus *test_data, struct arguments *args
 
 void cmd_attestation_token_continue_realm(void)
 {
-    uint64_t ret, size;
+    uint64_t ret, size, token_size = 0;
     struct arguments args;
     uint64_t i, len;
     val_smc_param_ts cmd_ret;
+    attestation_token_ts attestation_token;
 
     /* Prepare valid arguments */
     if (valid_argument_prep_sequence() == VAL_TEST_PREP_SEQ_FAILED) {
@@ -161,6 +177,7 @@ void cmd_attestation_token_continue_realm(void)
             val_set_status(RESULT_FAIL(VAL_ERROR_POINT(3)));
             goto exit;
         }
+
     }
 
     LOG(TEST, "Check %2d : Positive Observability\n", ++i);
@@ -171,7 +188,17 @@ void cmd_attestation_token_continue_realm(void)
             size = PAGE_SIZE - offset;
             cmd_ret = val_realm_rsi_attestation_token_continue(c_args.addr_valid, offset,
                                                                              size, &len);
+            if ((len > size) || (token_size + len < token_size) ||
+                (token_size + len > max_size))
+            {
+                LOG(ERROR, "Invalid token length, len=0x%lx size=0x%lx total=0x%lx\n",
+                           len, size, token_size);
+                val_set_status(RESULT_FAIL(VAL_ERROR_POINT(4)));
+                goto exit;
+            }
+
             offset += len;
+            token_size += len;
         } while (cmd_ret.x0 == RSI_ERROR_INCOMPLETE && offset < PAGE_SIZE);
 
         if (cmd_ret.x0 == RSI_ERROR_INCOMPLETE)
@@ -185,11 +212,38 @@ void cmd_attestation_token_continue_realm(void)
     if (cmd_ret.x0)
     {
         LOG(ERROR, "Positive Observability Check failed, ret=%x\n", cmd_ret.x0);
-        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(4)));
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(5)));
         goto exit;
     }
+
+    if (token_size == 0)
+    {
+        LOG(ERROR, "No attestation token data was returned\n");
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(6)));
+        goto exit;
+    }
+
+    if (val_attestation_verify_token(&attestation_token, challenge,
+                                     ATTEST_CHALLENGE_SIZE_64, token,
+                                     token_size) != VAL_SUCCESS)
+    {
+        LOG(ERROR, "Returned token data is invalid\n");
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(7)));
+        goto exit;
+    }
+
+    cmd_ret = val_realm_rsi_attestation_token_continue((uint64_t)token, 0,
+                                                        PAGE_SIZE, &len);
+    if (cmd_ret.x0 != RSI_ERROR_STATE)
+    {
+        LOG(ERROR, "Expected RSI_ERROR_STATE after token completion, ret=0x%lx\n",
+                   cmd_ret.x0);
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(8)));
+        goto exit;
+    }
+
+    val_set_status(RESULT_PASS(VAL_SUCCESS));
 
 exit:
     val_realm_return_to_host();
 }
-

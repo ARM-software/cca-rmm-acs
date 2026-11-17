@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2026, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -431,6 +431,14 @@ unsigned int gicv3_get_ispendr(unsigned int interrupt_id)
     return !!(ispendr & (1U << bit_pos));
 }
 
+void gicv3_set_ispendr(unsigned int interrupt_id)
+{
+    assert(gicd_base_addr);
+    assert(IS_SPI(interrupt_id));
+
+    gicd_set_ispendr(gicd_base_addr, interrupt_id);
+}
+
 void gicv3_set_icpendr(unsigned int interrupt_id)
 {
     unsigned int core_pos;
@@ -673,4 +681,3 @@ void gicv3_init(uintptr_t gicr_base, uintptr_t gicd_base)
     gicr_base_addr = gicr_base;
     gicd_base_addr = gicd_base;
 }
-

@@ -21,7 +21,6 @@
 
 /*
  * Measurement max supported is 4KB.
- * todo: This will be increased if device supports returning more measurements
  */
 #define VAL_HOST_PDEV_MEAS_LEN_MAX        (4 * 1024)
 #define VAL_HOST_VDEV_MEAS_LEN_MAX        (4 * 1024)
@@ -30,7 +29,7 @@
 typedef struct{
     /* PDEV related fields */
     uint64_t pdev;
-    unsigned long pdev_flags;
+    val_host_pdev_flags_ts pdev_flags;
     void *pdev_aux[PDEV_PARAM_AUX_GRANULES_MAX];
     uint32_t pdev_aux_num;
     val_host_dev_comm_data_ts *dev_comm_data;
@@ -52,20 +51,33 @@ typedef struct{
     uint32_t bdf;
     uint32_t doe_cap_base;
     uint16_t root_id;
+    uint32_t rid_base;
+    uint32_t rid_top;
     unsigned long ncoh_num_addr_range;
     val_host_address_range_ts ncoh_addr_range[NCOH_ADDR_RANGE_NUM];
 } val_host_pdev_ts;
+
+typedef struct {
+    uint64_t psmmu;
+    uint64_t stream_handle;
+    uint32_t endpoint_bdf;
+    uint32_t psmmu_active;
+    uint32_t psmmu_l2_created;
+    uint32_t rp_pdev_delegated;
+    uint32_t rp_pdev_created;
+    val_host_pdev_ts rp_pdev_obj;
+} val_host_pdev_stream_ts;
 
 typedef struct {
     uint64_t vdev;
     uint64_t pdev;
     uint64_t vdev_id;
 
-    /*
-     * The TEE device interface ID. Currently NS host assigns the whole
-     * device, this value is same as PDEV's bdf.
-     */
+    /* The TEE device interface ID assigned to this VDEV. */
     uint64_t tdi_id;
+
+    unsigned long num_addr_range;
+    val_host_address_range_ts addr_range[NCOH_ADDR_RANGE_NUM];
 
     uint64_t flags;
 
@@ -84,12 +96,24 @@ typedef struct {
     uint16_t vmid;
     uint64_t rec_count;
     uint64_t realm_rd;
+    val_host_pdev_stream_ts *pdev_stream;
 } val_host_vdev_ts;
+
+void val_host_set_pdev_flags(val_host_pdev_flags_ts *pdev_flags);
+uint64_t g_pdev_new_prep_sequence(val_host_pdev_ts *pdev_dev);
+uint64_t g_vdev_state_prep_sequence(val_host_pdev_ts *pdev_dev, val_host_vdev_ts *vdev_dev,
+                                    val_host_realm_ts *realm, uint8_t vdev_state);
 
 uint64_t val_host_dev_communicate(val_host_realm_ts *realm,
                 val_host_pdev_ts *pdev_obj,
                 val_host_vdev_ts *vdev_obj,
                 unsigned char target_state);
+
+uint64_t val_host_dev_communicate_error(val_host_realm_ts *realm,
+                val_host_pdev_ts *pdev_obj,
+                val_host_vdev_ts *vdev_obj);
+
+bool val_host_dev_comm_complete(uint64_t flags);
 
 void val_host_get_addr_range(val_host_pdev_ts *pdev_obj);
 
@@ -97,7 +121,25 @@ uint32_t val_host_vdev_teardown(val_host_realm_ts *realm,
                 val_host_pdev_ts *pdev_obj,
                 val_host_vdev_ts *vdev_obj);
 
+uint64_t da_create_vdev(val_host_realm_ts *realm,
+                val_host_pdev_ts *pdev_obj,
+                val_host_vdev_ts *vdev_obj,
+                uint64_t vdev_id,
+                uint8_t vdev_state);
+
 uint32_t val_host_pdev_teardown(val_host_pdev_ts *pdev_obj,
                 uint64_t pdev_ptr);
+
+uint32_t val_host_pdev_stream_communicate(
+                val_host_pdev_ts *pdev_obj,
+                val_host_pdev_ts *rp_pdev_obj);
+
+uint32_t val_host_pdev_stream_setup(val_host_pdev_ts *pdev_obj,
+                uint32_t rp_bdf,
+                uint64_t psmmu,
+                val_host_pdev_stream_ts *pdev_stream);
+
+uint32_t val_host_pdev_stream_teardown(val_host_pdev_ts *pdev_obj,
+                val_host_pdev_stream_ts *pdev_stream);
 
 #endif /* VAL_HOST_DA_H */

@@ -11,12 +11,14 @@
 #define VAL_HOST_DOE_HEADER_1        0x10001
 #define VAL_HOST_DOE_HEADER_2        0x20001
 #define VAL_HOST_DOE_HEADER_LENGTH   0x2
+#define VAL_HOST_DOE_LENGTH_END_BIT  17
 
 uint64_t val_host_pcie_doe_communicate(uint32_t bdf, uint32_t doe_cap_base,
-             void *req_buf, size_t req_sz, void *rsp_buf, size_t *rsp_sz, uint8_t req_type);
+             void *req_buf, size_t req_sz, void *rsp_buf, size_t rsp_buf_sz,
+             size_t *rsp_sz, uint8_t req_type);
 uint32_t val_host_pcie_doe_send_req(uint32_t bdf, uint32_t doe_cap_base, uint32_t *req_addr,
                                                         uint64_t req_len, uint8_t req_type);
 uint32_t val_host_pcie_doe_recv_resp(uint32_t bdf, uint32_t doe_cap_base, uint32_t *resp_addr,
-                                                                 uint64_t *resp_len);
+                                      size_t resp_buf_sz, uint64_t *resp_len);
 
 #endif /* __VAL_HOST_DOE_H__ */

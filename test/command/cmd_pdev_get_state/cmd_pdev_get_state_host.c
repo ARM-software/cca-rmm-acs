@@ -67,13 +67,6 @@ static uint64_t intent_to_seq(struct stimulus *test_data, struct arguments *args
             args->pdev_ptr = g_unaligned_prep_sequence(c_args.pdev_ptr_valid);
             break;
 
-        case PDEV_OUTSIDE_OF_PERMITTED_PA:
-            args->pdev_ptr = g_outside_of_permitted_pa_prep_sequence();
-            break;
-
-        case PDEV_DEV_MEM_MMIO:
-            args->pdev_ptr = g_dev_mem_prep_sequence();
-            break;
 
         case PDEV_GRAN_STATE_UNDELEGATED:
             args->pdev_ptr = g_undelegated_prep_sequence();

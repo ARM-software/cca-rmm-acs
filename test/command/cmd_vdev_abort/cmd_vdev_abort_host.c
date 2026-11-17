@@ -94,6 +94,7 @@ static uint64_t valid_input_args_prep_sequence(void)
     val_host_vdev_ts vdev_dev;
     val_host_realm_ts realm;
     val_host_pdev_flags_ts pdev_flags;
+    val_smc_param_ts cmd_ret;
     uint32_t rp_bdf, status;
 
     val_memset(&pdev_dev, 0, sizeof(pdev_dev));
@@ -118,8 +119,9 @@ static uint64_t valid_input_args_prep_sequence(void)
     val_host_set_pdev_flags(&pdev_flags);
     val_memcpy(&pdev_dev.pdev_flags, &pdev_flags, sizeof(pdev_flags));
 
-    c_args.vdev_ptr_valid = g_vdev_new_prep_sequence(&pdev_dev, &vdev_dev, &realm);
-    if (vdev_dev.vdev == VAL_TEST_PREP_SEQ_FAILED)
+    c_args.vdev_ptr_valid = g_vdev_state_prep_sequence(
+        &pdev_dev, &vdev_dev, &realm, RMI_VDEV_UNLOCKED);
+    if (c_args.vdev_ptr_valid == VAL_TEST_PREP_SEQ_FAILED)
         return VAL_TEST_PREP_SEQ_FAILED;
 
     c_args.pdev_ptr_valid = pdev_dev.pdev;
@@ -127,6 +129,16 @@ static uint64_t valid_input_args_prep_sequence(void)
     c_args.vdev_dev_valid = vdev_dev;
     c_args.pdev_dev_valid = pdev_dev;
     c_args.realm_valid = realm;
+
+    /* Start an operation so RMI_VDEV_ABORT sees DEV_COMM_PENDING. */
+    cmd_ret = val_host_rmi_vdev_lock(c_args.rd_valid,
+                                     c_args.pdev_ptr_valid,
+                                     c_args.vdev_ptr_valid);
+    if (cmd_ret.x0 != RMI_SUCCESS)
+    {
+        LOG(ERROR, "RMI_VDEV_LOCK preparation failed, ret=0x%lx\n", cmd_ret.x0);
+        return VAL_TEST_PREP_SEQ_FAILED;
+    }
 
     return VAL_SUCCESS;
 }
@@ -143,19 +155,8 @@ static uint64_t intent_to_seq(struct stimulus *test_data, struct arguments *args
             args->vdev_ptr = c_args.vdev_ptr_valid;
             break;
 
-        case RD_OUTSIDE_OF_PERMITTED_PA:
-            args->rd = g_outside_of_permitted_pa_prep_sequence();
-            args->pdev_ptr = c_args.pdev_ptr_valid;
-            args->vdev_ptr = c_args.vdev_ptr_valid;
-            break;
 
-        case RD_DEV_MEM_MMIO:
-            args->rd = g_dev_mem_prep_sequence();
-            args->pdev_ptr = c_args.pdev_ptr_valid;
-            args->vdev_ptr = c_args.vdev_ptr_valid;
-            break;
-
-        case RD_GRAN_STATE_UNDELEGATED:
+        case RD_STATE_UNDELEGATED:
             args->rd = g_undelegated_prep_sequence();
             args->pdev_ptr = c_args.pdev_ptr_valid;
             args->vdev_ptr = c_args.vdev_ptr_valid;
@@ -167,17 +168,6 @@ static uint64_t intent_to_seq(struct stimulus *test_data, struct arguments *args
             args->vdev_ptr = c_args.vdev_ptr_valid;
             break;
 
-        case PDEV_OUTSIDE_OF_PERMITTED_PA:
-            args->rd = c_args.rd_valid;
-            args->pdev_ptr = g_outside_of_permitted_pa_prep_sequence();
-            args->vdev_ptr = c_args.vdev_ptr_valid;
-            break;
-
-        case PDEV_DEV_MEM_MMIO:
-            args->rd = c_args.rd_valid;
-            args->pdev_ptr = g_dev_mem_prep_sequence();
-            args->vdev_ptr = c_args.vdev_ptr_valid;
-            break;
 
         case PDEV_GRAN_STATE_UNDELEGATED:
             args->rd = c_args.rd_valid;
@@ -191,17 +181,6 @@ static uint64_t intent_to_seq(struct stimulus *test_data, struct arguments *args
             args->vdev_ptr = g_unaligned_prep_sequence(c_args.vdev_ptr_valid);
             break;
 
-        case VDEV_OUTSIDE_OF_PERMITTED_PA:
-            args->rd = c_args.rd_valid;
-            args->pdev_ptr = c_args.pdev_ptr_valid;
-            args->vdev_ptr = g_outside_of_permitted_pa_prep_sequence();
-            break;
-
-        case VDEV_DEV_MEM_MMIO:
-            args->rd = c_args.rd_valid;
-            args->pdev_ptr = c_args.pdev_ptr_valid;
-            args->vdev_ptr = g_dev_mem_prep_sequence();
-            break;
 
         case VDEV_GRAN_STATE_UNDELEGATED:
             args->rd = c_args.rd_valid;
@@ -263,9 +242,8 @@ void cmd_vdev_abort_host(void)
             goto destroy_device;
         }
 
-        /*TODO: Update once TF-RMM correct vdev_abort command */
-        // cmd_ret = val_host_rmi_vdev_abort(args.rd, args.pdev_ptr, args.vdev_ptr);
-        cmd_ret = val_host_rmi_vdev_abort(args.vdev_ptr);
+        cmd_ret = val_host_rmi_vdev_abort(args.rd, args.pdev_ptr,
+                                          args.vdev_ptr);
         if (cmd_ret.x0 != PACK_CODE(test_data[i].status, test_data[i].index)) {
             LOG(ERROR, "\tTest Failure!\n\tThe ABI call returned: %x\n\tExpected: %x\n",
                 cmd_ret.x0, PACK_CODE(test_data[i].status, test_data[i].index));
@@ -275,13 +253,12 @@ void cmd_vdev_abort_host(void)
     }
 
     LOG(TEST, "\n\tPositive Observability Check\n");
-    /*TODO: Update once TF-RMM correct vdev_abort command */
-    // cmd_ret = val_host_rmi_vdev_abort(c_args.rd_valid, c_args.pdev_ptr_valid,
-                                                     //  c_args.vdev_ptr_valid);
-    cmd_ret = val_host_rmi_vdev_abort(c_args.vdev_ptr_valid);
+    cmd_ret = val_host_rmi_vdev_abort(c_args.rd_valid,
+                                      c_args.pdev_ptr_valid,
+                                      c_args.vdev_ptr_valid);
     if (cmd_ret.x0 != 0)
     {
-        LOG(ERROR, "Command failed. %x\n", cmd_ret.x0);
+        LOG(ERROR, "RMI_VDEV_ABORT failed, ret=0x%x\n", cmd_ret.x0);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(4)));
         goto destroy_device;
     }

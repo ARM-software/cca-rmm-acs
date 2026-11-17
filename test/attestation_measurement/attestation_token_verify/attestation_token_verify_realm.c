@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2025, Arm Limited or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2025-2026, Arm Limited or its affiliates. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -10,12 +10,16 @@
 #include "val_realm_rsi.h"
 #include "attestation_realm.h"
 
+#define TOKEN_BUFFER_SIZE (4U * PAGE_SIZE)
+
+static uint64_t token[TOKEN_BUFFER_SIZE / sizeof(uint64_t)]
+                      __aligned(PAGE_SIZE);
+
 void attestation_token_verify_realm(void)
 {
     val_smc_param_ts args = {0,};
     uint64_t token_size = 0, ret, size, max_size, len;
-    __attribute__((aligned (PAGE_SIZE))) uint64_t token[MAX_REALM_CCA_TOKEN_SIZE/8] = {0,};
-    uint64_t *granule = token;
+    uint8_t *token_bytes = (uint8_t *)token;
     uint64_t gran_offset = 0, gran_size;
     uint64_t challenge[8] = {0xb4ea40d262abaf22,
                              0xe8d966127b6d78e2,
@@ -27,9 +31,11 @@ void attestation_token_verify_realm(void)
                              0xc7f17650fe9fca60};
     attestation_token_ts attestation_token;
 
+    val_memset(token, 0, sizeof(token));
+
     /* REC Attest state should be in ATTEST_IN_PROGRESS */
     gran_size = PAGE_SIZE - gran_offset;
-    args = val_realm_rsi_attestation_token_continue((uint64_t)granule, gran_offset,
+    args = val_realm_rsi_attestation_token_continue((uint64_t)token, gran_offset,
                                                                   gran_size, &len);
     if (args.x0 != RSI_ERROR_STATE)
     {
@@ -49,24 +55,34 @@ void attestation_token_verify_realm(void)
     }
 
     max_size = args.x1;
+    if (max_size == 0U || max_size > sizeof(token))
+    {
+        LOG(ERROR, "Token size bound is invalid: 0x%lx\n", max_size);
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(3)));
+        goto exit;
+    }
 
     do {
-        uint64_t offset = 0;
-        do {
-            size = PAGE_SIZE - offset;
-            args = val_realm_rsi_attestation_token_continue((uint64_t)granule, offset, size, &len);
-            offset += len;
-            token_size = token_size + len;
-        } while (args.x0 == RSI_ERROR_INCOMPLETE && offset < PAGE_SIZE);
+        uint64_t page_base = token_size - (token_size % PAGE_SIZE);
+        uint64_t offset = token_size % PAGE_SIZE;
 
-        if (args.x0 == RSI_ERROR_INCOMPLETE)
+        size = PAGE_SIZE - offset;
+        len = 0;
+        args = val_realm_rsi_attestation_token_continue(
+                    (uint64_t)(token_bytes + page_base), offset, size, &len);
+        if ((args.x0 != RSI_SUCCESS && args.x0 != RSI_ERROR_INCOMPLETE) ||
+            len > size || len > max_size - token_size ||
+            (args.x0 == RSI_ERROR_INCOMPLETE && len == 0U))
         {
-            granule += PAGE_SIZE;
+            LOG(ERROR, "Invalid token continuation: status=0x%lx, len=0x%lx\n",
+                args.x0, len);
+            val_set_status(RESULT_FAIL(VAL_ERROR_POINT(3)));
+            goto exit;
         }
+        token_size += len;
+    } while (args.x0 == RSI_ERROR_INCOMPLETE && token_size < max_size);
 
-    } while ((args.x0 == RSI_ERROR_INCOMPLETE) && (granule < token + max_size));
-
-    if (args.x0)
+    if (args.x0 != RSI_SUCCESS || token_size == 0U)
     {
         LOG(ERROR, "Token continue failed, ret=%x\n", args.x0);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(3)));
