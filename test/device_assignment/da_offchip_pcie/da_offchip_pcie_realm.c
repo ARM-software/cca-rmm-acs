@@ -119,6 +119,7 @@ void da_offchip_pcie_realm(void)
     val_smc_param_ts args;
     val_realm_rsi_host_call_t *gv_realm_host_call;
     uint64_t vdev_id;
+    uint8_t pattern_offset;
     PAGE_SIZE_ALIGNED val_realm_rsi_vdev_info_ts vdev_info = {0};
     uint64_t ret, i;
     uint8_t *shared_report_buff = (val_get_shared_region_base() + TEST_USE_OFFSET4);
@@ -132,7 +133,7 @@ void da_offchip_pcie_realm(void)
     uint64_t non_ats_plane;
     uint64_t map_size;
     int rc;
-    bool res = true;
+    uint32_t dma_status = RESULT_PASS(VAL_SUCCESS);
     val_realm_rsi_dev_mem_flags_ts dev_mem_flags;
     uint64_t flags;
 
@@ -146,6 +147,7 @@ void da_offchip_pcie_realm(void)
 
     gv_realm_host_call = val_realm_rsi_host_call_ripas(VAL_SWITCH_TO_HOST);
     vdev_id = gv_realm_host_call->gprs[1];
+    pattern_offset = (uint8_t)gv_realm_host_call->gprs[2];
 
     args = val_realm_rsi_vdev_get_info(vdev_id, (uint64_t)&vdev_info);
     if (args.x0)
@@ -274,14 +276,15 @@ void da_offchip_pcie_realm(void)
         non_ats_plane = 0UL;
     }
 
+    val_memset(dst_buf, 0, sizeof(dst_buf));
     for (i = 0; i < sizeof(src_buf); i++) {
-        src_buf[i] = (uint8_t)(i % 255U);
+        src_buf[i] = (uint8_t)(1U + ((i + pattern_offset) % 255U));
     }
 
     LOG(DBG, "\nDMA copy 0x%lx -> 0x%lx\n", (uintptr_t)src_buf, (uintptr_t)dst_buf);
 
-    rc = pal_smmu_configure_testengine(mmio_range_struct[0].first_page,
-                            (uintptr_t)src_buf, (uintptr_t)dst_buf);
+    (void)pal_smmu_configure_testengine(mmio_range_struct[0].first_page,
+                                       (uintptr_t)src_buf, (uintptr_t)dst_buf);
 
     /* Dump Source */
     LOG(DBG, "\nSource:");
@@ -295,12 +298,13 @@ void da_offchip_pcie_realm(void)
         LOG(DBG, " %02x", (unsigned int)dst_buf[i]);
     LOG(DBG, "\n");
 
-    /* Check SMMUv3TestEngine return code and memcmp() result */
-    res = ((rc >= 0) && (val_memcmp(src_buf, dst_buf, PAGE_SIZE) == 0));
-
-    if (res) {
-        LOG(ERROR, "\nDMA copy should failed.\n");
-        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(8)));
+    /* Every source byte is nonzero. The destination must still be all zero. */
+    for (i = 0; i < sizeof(dst_buf); i++) {
+        if (dst_buf[i] != 0U) {
+            LOG(ERROR, "DMA destination changed before enable at offset 0x%lx\n", i);
+            dma_status = RESULT_FAIL(VAL_ERROR_POINT(8));
+            break;
+        }
     }
 
     args = val_realm_rsi_vdev_dma_enable(vdev_id, 0, non_ats_plane,
@@ -329,16 +333,12 @@ void da_offchip_pcie_realm(void)
     LOG(DBG, "\n");
 
     /* Check SMMUv3TestEngine return code and memcmp() result */
-    res = ((rc >= 0) && (val_memcmp(src_buf, dst_buf, PAGE_SIZE) == 0));
-
-    if (res) {
-        LOG(TEST, "\nDMA copy successful\n");
-        val_set_status(RESULT_PASS(VAL_SUCCESS));
-    } else {
+    if ((rc < 0) || val_memcmp(src_buf, dst_buf, PAGE_SIZE)) {
         LOG(ERROR, "DMA copy failed, rc = %d\n", rc);
         val_set_status(RESULT_FAIL(VAL_ERROR_POINT(10)));
         goto exit;
     }
+    LOG(TEST, "\nDMA copy successful\n");
 
     do {
         args = val_realm_rsi_vdev_dma_disable(vdev_id);
@@ -370,6 +370,8 @@ void da_offchip_pcie_realm(void)
             base = args.x1;
         }
     }
+
+    val_set_status(dma_status);
 
 exit:
     val_realm_return_to_host();
