@@ -65,7 +65,8 @@ static uint32_t validate_rec_exit_zero_fields(val_host_rec_exit_ts *rec_exit)
     return VAL_ERROR;
 }
 
-void da_offchip_pcie_host(void)
+static void exercise_pcie_assignment(uint32_t bdf, uint32_t doe_cap_base, uint32_t rp_bdf,
+                                     uint8_t pattern_offset)
 {
     uint64_t pdev, ret, req_addr, resp_addr, vdev;
     uint64_t rp_pdev = 0, stream_hnd = 0;
@@ -76,7 +77,6 @@ void da_offchip_pcie_host(void)
     val_host_rmi_vdev_params_ts *vdev_params;
     val_smc_param_ts args;
     uint64_t i;
-    uint32_t num_bdf;
     int rc;
     uint8_t public_key_algo;
     uint8_t *shared_vca_buff = (val_get_shared_region_base() + TEST_USE_OFFSET1);
@@ -97,7 +97,6 @@ void da_offchip_pcie_host(void)
     val_host_rec_enter_ts *rec_enter = NULL;
     val_host_public_key_params_ts *pubkey_params;
     val_host_pdev_flags_ts pdev_flags;
-    uint32_t rp_bdf, status;
     uint32_t psmmu_active = 0, psmmu_l2_created = 0;
     uint32_t vdev_stream_present;
     val_host_pdev_ts pdev_obj;
@@ -111,15 +110,10 @@ void da_offchip_pcie_host(void)
     uint64_t ripas_base, ripas_top, out_top;
 
     val_memset(&pdev_obj, 0, sizeof(pdev_obj));
+    pdev_obj.bdf = bdf;
+    pdev_obj.doe_cap_base = doe_cap_base;
     val_memset(&rp_pdev_obj, 0, sizeof(rp_pdev_obj));
     val_memset(&vdev_obj, 0, sizeof(vdev_obj));
-
-    /* Check whether RMM supports Device Assignment */
-    if (!val_host_rmm_supports_da()) {
-        LOG(ERROR, "DA feature not supported.\n");
-        val_set_status(RESULT_SKIP(VAL_SKIP_CHECK));
-        goto destroy_realm;
-    }
 
     psmmu_params = val_host_mem_alloc(PAGE_SIZE, PAGE_SIZE);
     if (psmmu_params == NULL)
@@ -168,27 +162,6 @@ void da_offchip_pcie_host(void)
         goto destroy_realm;
     }
     val_memset(pdev_params, 0, PAGE_SIZE_4K);
-
-    num_bdf = val_pcie_get_num_bdf();
-    if (num_bdf == VAL_ERROR)
-    {
-        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(6)));
-        goto destroy_realm;
-    }
-
-    if (val_pcie_find_doe_capability(&num_bdf, &pdev_obj.bdf,
-                                                     &pdev_obj.doe_cap_base))
-    {
-        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(7)));
-        goto destroy_realm;
-    }
-
-    status = val_pcie_get_rootport((uint32_t)pdev_obj.bdf, &rp_bdf);
-    if (status != 0)
-    {
-        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(8)));
-        goto destroy_realm;
-    }
 
     ret = val_host_rmi_psmmu_st_l2_create(
                 PLATFORM_OVERRIDE_SMMUV3_BASE, pdev_obj.bdf);
@@ -746,6 +719,7 @@ void da_offchip_pcie_host(void)
     }
 
     rec_enter->gprs[1] = vdev_params->vdev_id;
+    rec_enter->gprs[2] = pattern_offset;
 
     /* Enter REC[0]  */
     ret = val_host_rmi_rec_enter(realm.rec[0], realm.run[0]);
@@ -948,8 +922,6 @@ void da_offchip_pcie_host(void)
 
     realm.dev_granules_mapped_count = 0;
 
-    val_set_status(RESULT_PASS(VAL_SUCCESS));
-
 destroy_vdev:
     vdev_stream_present = (vdev_obj.pdev_stream != NULL);
 
@@ -1025,4 +997,46 @@ destroy_realm:
     }
 
     return;
+}
+
+void da_offchip_pcie_host(void)
+{
+    uint32_t num_bdf, bdf, doe_cap_base, rp_bdf;
+
+    if (!val_host_rmm_supports_da()) {
+        LOG(ERROR, "DA feature not supported.\n");
+        val_set_status(RESULT_SKIP(VAL_SKIP_CHECK));
+        return;
+    }
+
+    num_bdf = val_pcie_get_num_bdf();
+    if (num_bdf == VAL_ERROR) {
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(6)));
+        return;
+    }
+    if (val_pcie_find_doe_capability(&num_bdf, &bdf, &doe_cap_base)) {
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(7)));
+        return;
+    }
+    if (val_pcie_get_rootport(bdf, &rp_bdf)) {
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(8)));
+        return;
+    }
+
+    exercise_pcie_assignment(bdf, doe_cap_base, rp_bdf, 0U);
+    if (!IS_TEST_PASS(val_get_status()))
+        return;
+
+    /* Destroy the first Realm before reusing its test heap for the next owner. */
+    if (val_host_postamble()) {
+        LOG(ERROR, "First Realm teardown failed\n");
+        val_set_status(RESULT_FAIL(VAL_ERROR_POINT(82)));
+        return;
+    }
+    val_host_reset_mem_tack();
+    val_host_mem_alloc_init();
+
+    LOG(TEST, "\nReassigning PCIe function 0x%x to a new Realm\n", bdf);
+    val_set_status(RESULT_START(VAL_STATUS_INVALID));
+    exercise_pcie_assignment(bdf, doe_cap_base, rp_bdf, 128U);
 }
